@@ -231,6 +231,45 @@ export class Sidebar {
     }
     for (const entry of entries) ul.append(this.entry(root, rootPath, entry))
     this.setActive(this.activeFile)
+    void this.decorate(ul)
+  }
+
+  /** The git status of a listed folder: changed files, folders holding changes, the branch at the top. */
+  private async decorate(ul: HTMLElement): Promise<void> {
+    const root = ul.dataset.root ?? ''
+    const rel = ul.dataset.rel ?? ''
+    const rootPath = ul.dataset.rootPath ?? ''
+    const status = await folio().gitStatus(root, rel)
+    const files = status?.files ?? {}
+    const changed = Object.keys(files)
+    for (const row of ul.querySelectorAll<HTMLElement>(':scope > li > .row')) {
+      if (row.dataset.abs) {
+        const s = files[row.dataset.abs]
+        if (s) row.dataset.status = s
+        else delete row.dataset.status
+      } else if (row.dataset.rel !== undefined) {
+        const dir = this.abs(rootPath, row.dataset.rel) + this.sep
+        row.classList.toggle('changed', changed.some((p) => p.startsWith(dir)))
+      }
+    }
+    if (rel === '') {
+      const head = ul.closest('.project')?.querySelector<HTMLElement>('.project-row') ?? ul.closest('.side-section')?.querySelector<HTMLElement>('header')
+      let badge = head?.querySelector<HTMLElement>('.branch-badge') ?? null
+      if (status?.branch && head) {
+        if (!badge) {
+          badge = document.createElement('span')
+          badge.className = 'branch-badge'
+          head.insertBefore(badge, head.querySelector('.icon') ?? null)
+        }
+        badge.textContent = status.branch
+        badge.title = status.branch
+      } else badge?.remove()
+    }
+  }
+
+  /** Statuses again (after a commit, which the disk watcher does not see). */
+  refreshStatus(): void {
+    for (const ul of this.o.el.querySelectorAll<HTMLElement>('ul.tree')) void this.decorate(ul)
   }
 
   private entry(root: string, rootPath: string, entry: Entry): HTMLElement {
@@ -294,6 +333,8 @@ export class Sidebar {
         if (dirs.has(ul.dataset.rel ?? '')) await this.fill(ul)
       }
     }
+    // A change anywhere below changes the folders' marks above it.
+    this.refreshStatus()
   }
 
   /** Rename or group a project in place. */

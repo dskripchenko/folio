@@ -30,6 +30,22 @@ export interface RestoredTab {
 
 export type SaveResult = { saved: OpenResult; baseline: string } | { conflict: true } | { canceled: true } | { error: string }
 
+export interface GitInfo {
+  root: string | null
+  branch: string | null
+  autoCommit: boolean
+  canStart: boolean
+  canAutoCommit: boolean
+}
+
+export interface Version {
+  oid: string
+  message: string
+  author: string
+  email: string
+  time: number
+}
+
 export interface Entry {
   name: string
   path: string
@@ -76,6 +92,15 @@ export interface FolioBridge {
   save(path: string, text: string, baseline: string | null, force: boolean): Promise<SaveResult>
   saveAs(text: string, name: string, dir: string | null): Promise<SaveResult>
   confirmClose(name: string): Promise<'save' | 'discard' | 'cancel'>
+  gitInfo(path: string): Promise<GitInfo | null>
+  gitHistory(path: string): Promise<Version[]>
+  gitTextAt(path: string, oid: string): Promise<string | null>
+  gitStart(path: string): Promise<GitInfo | null>
+  gitAuto(path: string, on: boolean): Promise<GitInfo | null>
+  gitCommit(path: string, message: string): Promise<string | null>
+  gitStatus(root: string, rel: string): Promise<{ branch: string | null; files: Record<string, 'new' | 'modified' | 'deleted'> } | null>
+  onCommitted: Listener
+  onToggleHistory: Listener
   onNewNote: Listener
   onSave: Listener
   onSaveAs: Listener

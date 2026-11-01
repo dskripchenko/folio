@@ -51,16 +51,34 @@ Dateien, die folio öffnet, Ordner zuerst, und folgen der Festplatte: eine
 anderswo hinzugefügte, geänderte oder gelöschte Datei erscheint sofort, ein
 offenes Dokument wird neu gezeichnet. `Cmd/Strg+B` blendet die Leiste aus.
 
-## Verlauf mit git (Stufe 4)
+## Verlauf mit git
 
-Optional und pro Ordner: ein Ordner, der ein git-Repository ist, führt seinen
-Verlauf in folio — die Versionen eines Dokuments, der Unterschied zwischen zwei
-(Text und gezeichnetes Dokument samt Diagrammen), Rückkehr zu einer Version; der
-Status der Dateien im Baum; ein Commit beim Speichern (Speichervorgänge einer
-Datei innerhalb weniger Minuten ergeben einen Commit); Branches; Pull und Push.
-folio bringt git mit (reines JavaScript), der Verlauf funktioniert also auch ohne
-installiertes git; ist git installiert, läuft die Synchronisierung darüber, mit
-seinen SSH-Schlüsseln und Zugangsdaten.
+Pro Ordner — „Gemeinsam“ und jedes Projekt — und nur, wenn Sie es wollen. Ein
+Ordner, der ein git-Repository ist (oder darin liegt), zeigt seinen Verlauf
+sofort; ein anderer beginnt einen mit **Verlauf führen** im Bereich **Verlauf**
+(`Cmd/Strg+Umschalt+H`): ein Repository auf dem Branch `main` und ein erster
+Commit dessen, was da ist.
+
+- **Beim Speichern committen** — an für einen Verlauf, den folio begonnen hat,
+  aus für ein schon vorhandenes Repository (folio committet nicht von selbst in
+  ein Projekt). Eine gespeicherte Datei wird 3 Minuten nach ihrem letzten
+  Speichern committet, eine Reihe von Speichervorgängen ergibt also einen
+  Commit; beim Verlassen von folio wird Wartendes sofort committet. Nur die
+  gespeicherte Datei wird committet, als *Update <Pfad>*; **Committen** mit einer
+  eigenen Nachricht tut es sofort.
+- **Versionen** der offenen Datei, neueste zuerst. Eine öffnet sich nur zum
+  Lesen, wie sie war; **Änderungen** zeigt den Unterschied zu jetzt Zeile für
+  Zeile, **Nebeneinander** die beiden gezeichneten Dokumente samt Diagrammen.
+  **Diese Version wiederherstellen** legt ihren Text als ungespeicherte Änderung
+  in den Editor — ob gespeichert wird, entscheiden Sie.
+- **Im Baum**: geänderte Dateien sind markiert, ein Ordner mit Änderungen darin
+  trägt einen Punkt, ein Projekt zeigt seinen Branch.
+- Der Autor ist `user.name` / `user.email` aus der Konfiguration des
+  Repositorys, dann aus `~/.gitconfig`, sonst der Systembenutzer.
+
+git steckt in folio (isomorphic-git, reines JavaScript), das funktioniert also
+auch ohne installiertes git. Als Nächstes: Branches, Pull und Push, ein
+Repository als Projekt klonen (Stufe 4b) und ein Graph der Commits (4c).
 
 ## Ungespeichertes und schnelle Notizen
 

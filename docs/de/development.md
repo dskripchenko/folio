@@ -18,7 +18,7 @@ pnpm test:e2e       # die gebaute App starten und prüfen (Playwright)
 ```
 
 Aus den Quellen gestartet, legt folio seine Daten in `.folio-data/` im
-Arbeitsverzeichnis ab; `FOLIO_DATA=/some/dir pnpm start` legt sie woanders ab.
+Arbeitsverzeichnis ab; `FOLIO_DATA=/some/dir pnpm start` legt sie woanders ab. `FOLIO_COMMIT_PAUSE` (Millisekunden) verkürzt die Pause vor einem Commit beim Speichern, für Tests.
 
 Unter Linux ohne Bildschirm laufen die End-to-End-Tests unter einem virtuellen:
 `xvfb-run --auto-servernum pnpm test:e2e`.

@@ -5,7 +5,10 @@
  * or a restart loses nothing, and the file changes only on Save (ADR-001).
  */
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type OpenResult, type Opened, type SaveResult } from './bridge'
+import { diffLines } from './diff'
+import { HistoryPanel, type HistoryText } from './history'
 import { Sidebar, type SidebarText } from './sidebar'
+import type { Version } from './bridge'
 
 const TEXT = {
   en: {
@@ -23,6 +26,16 @@ const TEXT = {
     keepMine: 'Keep my version',
     missing: 'The file is gone; your text is kept — save it somewhere.',
     saveFailed: 'Not saved: {error}',
+    history: 'History',
+    versionOf: 'Version of {date}',
+    showVersion: 'This version',
+    showDiff: 'Changes',
+    showSide: 'Side by side',
+    restore: 'Restore this version',
+    back: 'Back to the document',
+    then: 'Then',
+    now: 'Now',
+    historyPanel: { title: 'History', noFile: 'Open a file to see its history.', outside: 'This file is outside the projects and Shared: no history here.', noHistory: 'This folder keeps no history yet.', start: 'Keep a history', autoCommit: 'Commit when saved', commitNow: 'Commit now', commitPlaceholder: 'What changed…', commit: 'Commit', noVersions: 'No versions of this file yet.', nothingToCommit: 'Nothing to commit: the changes are in the history already.', close: 'Close' } as HistoryText,
     sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project folder', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', noProjects: 'Add a folder as a project with +.', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group' } as SidebarText,
   },
   ru: {
@@ -40,6 +53,16 @@ const TEXT = {
     keepMine: 'Оставить мою версию',
     missing: 'Файла больше нет; ваш текст сохранён — сохраните его куда-нибудь.',
     saveFailed: 'Не сохранено: {error}',
+    history: 'История',
+    versionOf: 'Версия от {date}',
+    showVersion: 'Эта версия',
+    showDiff: 'Изменения',
+    showSide: 'Рядом',
+    restore: 'Вернуть эту версию',
+    back: 'К документу',
+    then: 'Тогда',
+    now: 'Сейчас',
+    historyPanel: { title: 'История', noFile: 'Откройте файл, чтобы увидеть его историю.', outside: 'Файл вне проектов и «Общих»: истории здесь нет.', noHistory: 'Эта папка пока не ведёт историю.', start: 'Вести историю', autoCommit: 'Фиксировать при сохранении', commitNow: 'Зафиксировать сейчас', commitPlaceholder: 'Что изменилось…', commit: 'Зафиксировать', noVersions: 'У этого файла пока нет версий.', nothingToCommit: 'Нечего фиксировать: изменения уже в истории.', close: 'Закрыть' } as HistoryText,
     sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить папку проекта', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', noProjects: 'Добавьте папку проектом кнопкой +.', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы' } as SidebarText,
   },
 }
@@ -55,6 +78,8 @@ const welcomeEl = document.querySelector<HTMLElement>('.welcome')!
 const bannerEl = document.querySelector<HTMLElement>('.banner')!
 const noticeEl = document.querySelector<HTMLElement>('.notice')!
 const editButton = document.querySelector<HTMLButtonElement>('.toggle-edit')!
+const historyButton = document.querySelector<HTMLButtonElement>('.toggle-history')!
+let lang: 'en' | 'ru' = 'en'
 
 /** How long typing settles before the buffer is written. */
 const BUFFER_DELAY = 700
@@ -75,6 +100,8 @@ interface Tab {
   conflict: boolean
   blocked: string[]
   scroll: number
+  /** A version from the history shown instead of the document. */
+  version: { oid: string; text: string; message: string; time: number; mode: 'version' | 'diff' | 'side' } | null
   timer: ReturnType<typeof setTimeout> | null
   pane: HTMLElement
   button: HTMLButtonElement
@@ -121,8 +148,103 @@ function syncLabel(tab: Tab): void {
 
 // Drawing -----------------------------------------------------------------------
 
+/** A document drawn read-only: embed's markdown with the document's folder as its base. */
+function markdownView(text: string, base: string | undefined): HTMLElement {
+  const md = document.createElement('dsk-markdown')
+  if (base) {
+    md.setAttribute('image-base', base)
+    md.setAttribute('link-base', base)
+  }
+  const source = document.createElement('script')
+  source.type = 'text/markdown'
+  source.textContent = text
+  md.append(source)
+  return md
+}
+
+/** A version from the history: as it was, its changes against now, or the two side by side. */
+function renderVersion(tab: Tab): void {
+  const v = tab.version!
+  const bar = document.createElement('div')
+  bar.className = 'version-bar'
+  bar.dataset.testid = 'version-bar'
+  const title = document.createElement('span')
+  title.className = 'title'
+  const date = new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v.time * 1000))
+  const strong = document.createElement('strong')
+  strong.textContent = t.versionOf.replace('{date}', date)
+  title.append(strong, ` — ${v.message.split('\n')[0] ?? ''}`)
+  bar.append(title)
+  const modes: [typeof v.mode, string][] = [['version', t.showVersion], ['diff', t.showDiff], ['side', t.showSide]]
+  for (const [mode, label] of modes) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = label
+    b.dataset.mode = mode
+    b.setAttribute('aria-pressed', String(v.mode === mode))
+    b.addEventListener('click', () => {
+      v.mode = mode
+      render(tab)
+    })
+    bar.append(b)
+  }
+  const restore = document.createElement('button')
+  restore.type = 'button'
+  restore.className = 'restore'
+  restore.textContent = t.restore
+  restore.addEventListener('click', () => {
+    // Into the editor as an unsaved edit: saving it is the person's call.
+    tab.text = v.text
+    tab.version = null
+    tab.view = 'edit'
+    render(tab)
+    edited(tab)
+    showBanners()
+    history.show(tab.path)
+  })
+  const back = document.createElement('button')
+  back.type = 'button'
+  back.textContent = t.back
+  back.addEventListener('click', () => {
+    tab.version = null
+    render(tab)
+    void history.refresh()
+  })
+  bar.append(restore, back)
+  tab.pane.append(bar)
+  const base = tab.doc?.base
+  if (v.mode === 'version') tab.pane.append(markdownView(v.text, base))
+  else if (v.mode === 'diff') {
+    const pre = document.createElement('div')
+    pre.className = 'diff'
+    pre.dataset.testid = 'diff'
+    for (const line of diffLines(v.text, tab.text)) {
+      const div = document.createElement('div')
+      div.className = line.kind
+      div.textContent = line.text === '' ? ' ' : line.text
+      pre.append(div)
+    }
+    tab.pane.append(pre)
+  } else {
+    const grid = document.createElement('div')
+    grid.className = 'side-by-side'
+    for (const [label, text] of [[t.then, v.text], [t.now, tab.text]] as const) {
+      const col = document.createElement('section')
+      const h = document.createElement('h4')
+      h.textContent = label
+      col.append(h, markdownView(text, base))
+      grid.append(col)
+    }
+    tab.pane.append(grid)
+  }
+}
+
 function render(tab: Tab): void {
   tab.pane.replaceChildren()
+  if (tab.version) {
+    renderVersion(tab)
+    return
+  }
   if (tab.error && tab.saved !== null && !tab.buffer) {
     const err = document.createElement('p')
     err.className = 'doc-error'
@@ -181,6 +303,8 @@ function showBanners(): void {
     noticeEl.querySelector<HTMLElement>('[data-action="disk"]')!.hidden = !active.conflict
     noticeEl.querySelector<HTMLElement>('[data-action="mine"]')!.hidden = !active.conflict
   }
+  historyButton.hidden = !active?.path
+  historyButton.setAttribute('aria-pressed', String(history.visible))
   editButton.hidden = active === null
   editButton.textContent = active?.view === 'edit' ? t.read : t.edit
   editButton.setAttribute('aria-pressed', String(active?.view === 'edit'))
@@ -229,6 +353,7 @@ function activate(tab: Tab | null): void {
   }
   welcomeEl.hidden = tab !== null
   sidebar.setActive(tab?.path ?? null)
+  history.show(tab?.path ?? null)
   showBanners()
   if (tab) requestAnimationFrame(() => (viewEl.scrollTop = tab.scroll))
   report()
@@ -259,6 +384,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
     conflict: false,
     blocked: [],
     scroll: 0,
+    version: null,
     timer: null,
     ...init,
     pane,
@@ -328,6 +454,7 @@ async function close(tab: Tab): Promise<void> {
 function toggleEdit(tab: Tab | null): void {
   if (!tab || (tab.error && !tab.buffer && tab.saved !== null)) return
   const ratio = viewEl.scrollHeight > 0 ? viewEl.scrollTop / viewEl.scrollHeight : 0
+  tab.version = null
   tab.view = tab.view === 'edit' ? 'read' : 'edit'
   render(tab)
   showBanners()
@@ -359,6 +486,8 @@ function savedAs(tab: Tab, result: Extract<SaveResult, { saved: OpenResult }>): 
   // The base may be new (a note saved into a folder): its pictures resolve there now.
   if (tab.view === 'read') render(tab)
   sidebar.setActive(active?.path ?? null)
+  sidebar.refreshStatus()
+  void history.refresh()
   showBanners()
   report()
 }
@@ -416,6 +545,33 @@ const sidebar = new Sidebar({
   el: sidebarEl,
   text: () => t.sidebar,
   open: (root, rel) => void folio.openEntry(root, rel).then((result) => add(result)),
+})
+
+const history = new HistoryPanel({
+  el: document.querySelector<HTMLElement>('.history')!,
+  text: () => t.historyPanel,
+  locale: () => lang,
+  current: () => active?.version?.oid ?? null,
+  open: async (path: string, v: Version) => {
+    const tab = tabs.find((x) => x.path === path)
+    const text = await folio.gitTextAt(path, v.oid)
+    if (!tab || text === null) return
+    tab.version = { oid: v.oid, text, message: v.message, time: v.time, mode: tab.version?.mode ?? 'version' }
+    render(tab)
+    viewEl.scrollTop = 0
+  },
+})
+function toggleHistory(): void {
+  history.setVisible(!history.visible)
+  prefs.set('historyOpen', history.visible)
+  showBanners()
+}
+historyButton.addEventListener('click', toggleHistory)
+folio.onToggleHistory(() => toggleHistory())
+folio.onCommitted((value) => {
+  const { path } = value as { path: string }
+  if (active?.path === path) void history.refresh()
+  sidebar.refreshStatus()
 })
 
 // The network consent banner: allow, then draw the document again so what was blocked loads.
@@ -531,6 +687,9 @@ window.addEventListener(
         if (active) void close(active)
       },
       e: () => toggleEdit(active),
+      h: () => {
+        if (event.shiftKey) toggleHistory()
+      },
       b: () => {
         const hidden = !document.body.classList.contains('no-sidebar')
         document.body.classList.toggle('no-sidebar', hidden)
@@ -538,7 +697,7 @@ window.addEventListener(
       },
     }
     const fn = act[key]
-    if (!fn || (key !== 's' && event.shiftKey)) return
+    if (!fn || (key !== 's' && key !== 'h' && event.shiftKey) || (key === 'h' && !event.shiftKey)) return
     event.preventDefault()
     event.stopPropagation()
     fn()
@@ -582,9 +741,10 @@ function startupFailed(error: unknown): void {
 
 // Start: what was open comes back — files, unsaved edits, quick notes.
 void folio.startup().then(async ({ tabs: restored, active: activeIndex, locale, shared }) => {
-  const lang = locale.toLowerCase().startsWith('ru') ? 'ru' : 'en'
+  lang = locale.toLowerCase().startsWith('ru') ? 'ru' : 'en'
   t = TEXT[lang]
   sharedDir = shared
+  history.setVisible(prefs.get('historyOpen', false))
   document.documentElement.lang = lang
   applyText()
   window.DskEmbed?.configure({ theme: 'system', locale: lang })

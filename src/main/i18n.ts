@@ -23,6 +23,7 @@ const LABELS = {
     cancel: 'Cancel',
     unsavedQuestion: 'Save the changes to {name}?',
     unsavedDetail: 'Without saving, the changes are lost.',
+    history: 'History',
   },
   ru: {
     file: 'Файл',
@@ -47,6 +48,7 @@ const LABELS = {
     cancel: 'Отмена',
     unsavedQuestion: 'Сохранить изменения в «{name}»?',
     unsavedDetail: 'Без сохранения изменения пропадут.',
+    history: 'История',
   },
 }
 

@@ -1,6 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, session as electronSession, shell } from 'electron'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
+import { userInfo } from 'node:os'
+import { AutoCommitter } from './autoCommit'
+import { authorOf, branchOf, commitFile, historyOf, repoOf, startHistory, statusUnder, textAt } from './git'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
@@ -32,6 +35,25 @@ const roots = new Roots()
 const consent = new Consent(data)
 const session = new Session(data)
 const buffers = new Buffers(data)
+
+/** Who commits when git is not configured: the system user. */
+const fallbackAuthor = () => {
+  const name = (() => {
+    try {
+      return userInfo().username
+    } catch {
+      return 'folio'
+    }
+  })()
+  return { name, email: `${name}@localhost` }
+}
+const autoCommit = new AutoCommitter({
+  repoOf,
+  commitFile,
+  authorOf: (root) => authorOf(root, fallbackAuthor()),
+  message: (root, path) => `Update ${relative(root, path).split(sep).join('/')}`,
+  committed: (_root, path) => send('git:committed', { path }),
+}, Number(process.env.FOLIO_COMMIT_PAUSE) || 3 * 60 * 1000)
 let gate: NetworkGate | null = null
 /** Native menus speak the system's language; known once the app is ready. */
 const L = () => labels(app.isReady() ? app.getLocale() : 'en')
@@ -136,6 +158,7 @@ function buildMenu(): void {
       label: L().view,
       submenu: [
         { label: L().toggleEdit, accelerator: 'CmdOrCtrl+E', registerAccelerator: false, click: () => send('menu:toggle-edit') },
+        { label: L().history, accelerator: 'CmdOrCtrl+Shift+H', registerAccelerator: false, click: () => send('menu:toggle-history') },
         { label: L().toggleSidebar, accelerator: 'CmdOrCtrl+B', registerAccelerator: false, click: () => send('menu:toggle-sidebar') },
         { type: 'separator' },
         { role: 'resetZoom' },
@@ -239,6 +262,80 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
   ]).popup({ window: win })
 })
 
+// History (git) -------------------------------------------------------------------
+
+/** The folder a file belongs to, for its history settings: a project, Shared, or none. */
+function ownerFolder(path: string): { kind: 'project'; id: string; dir: string } | { kind: 'shared'; dir: string } | null {
+  const owner = workspace.ownerOf(path)
+  if (owner?.kind === 'project') return { kind: 'project', id: owner.project.id, dir: owner.project.path }
+  if (owner?.kind === 'shared') return { kind: 'shared', dir: workspace.shared() }
+  return null
+}
+
+async function gitInfo(path: string) {
+  const root = await repoOf(path)
+  const owner = ownerFolder(path)
+  return {
+    root,
+    branch: root ? await branchOf(root) : null,
+    autoCommit: workspace.autoCommits(path),
+    // History can be started in the file's project or Shared folder.
+    canStart: root === null && owner !== null,
+    canAutoCommit: owner !== null,
+  }
+}
+
+ipcMain.handle('git:info', (_e, path: unknown) => (typeof path === 'string' ? gitInfo(path) : null))
+ipcMain.handle('git:history', async (_e, path: unknown) => {
+  if (typeof path !== 'string') return []
+  const root = await repoOf(path)
+  return root ? historyOf(root, path) : []
+})
+ipcMain.handle('git:text-at', async (_e, path: unknown, oid: unknown) => {
+  if (typeof path !== 'string' || typeof oid !== 'string' || !/^[0-9a-f]{40}$/.test(oid)) return null
+  const root = await repoOf(path)
+  return root ? textAt(root, path, oid) : null
+})
+/** Keep a history in the file's folder: a repository, a first commit, commits on save. */
+ipcMain.handle('git:start', async (_e, path: unknown) => {
+  if (typeof path !== 'string') return null
+  const owner = ownerFolder(path)
+  if (!owner || (await repoOf(path))) return gitInfo(path)
+  await startHistory(owner.dir, authorOf(owner.dir, fallbackAuthor()), 'Start the history')
+  if (owner.kind === 'project') workspace.updateProject(owner.id, { autoCommit: true })
+  else workspace.setSharedAutoCommit(true)
+  // The first commit: the tree's statuses and branch change.
+  send('git:committed', { path })
+  return gitInfo(path)
+})
+ipcMain.handle('git:auto', async (_e, path: unknown, on: unknown) => {
+  if (typeof path !== 'string' || typeof on !== 'boolean') return null
+  const owner = ownerFolder(path)
+  if (owner?.kind === 'project') workspace.updateProject(owner.id, { autoCommit: on })
+  else if (owner?.kind === 'shared') workspace.setSharedAutoCommit(on)
+  return gitInfo(path)
+})
+/** Commit the file now, with a message of one's own. */
+ipcMain.handle('git:commit', async (_e, path: unknown, message: unknown) => {
+  if (typeof path !== 'string' || typeof message !== 'string' || message.trim() === '') return null
+  const root = await repoOf(path)
+  if (!root) return null
+  autoCommit.cancel(path)
+  const oid = await commitFile(root, path, message.trim(), authorOf(root, fallbackAuthor()))
+  if (oid) send('git:committed', { path })
+  return oid
+})
+/** The status of a tree's folder: changed files by path, and the branch for the folder's top. */
+ipcMain.handle('git:status', async (_e, root: unknown, rel: unknown) => {
+  const top = typeof root === 'string' ? roots.dir(root) : undefined
+  if (top === undefined || typeof rel !== 'string') return null
+  const dir = rel === '' ? top : join(top, ...rel.split('/'))
+  const repo = await repoOf(dir)
+  if (!repo) return null
+  const statuses = await statusUnder(repo, dir)
+  return { branch: rel === '' ? await branchOf(repo) : null, files: Object.fromEntries(statuses) }
+})
+
 ipcMain.handle('app:startup', () => {
   const fromArgv = filesFromArgv(process.argv, process.cwd())
   type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean }
@@ -324,6 +421,8 @@ ipcMain.handle('doc:hash', (_e, text: unknown) => (typeof text === 'string' ? ha
 
 function writeDocument(path: string, text: string): Opened {
   writeFileSync(path, text)
+  // Its folder keeps a history: the save goes into it after a pause.
+  if (workspace.autoCommits(path)) autoCommit.saved(path)
   return open(path)
 }
 
@@ -386,6 +485,15 @@ app.on('second-instance', (_event, argv, cwd) => {
 app.on('open-file', (event, path) => {
   event.preventDefault()
   if (app.isReady() && win) openInWindow([path])
+})
+
+// Leaving: what waits for a commit is committed first.
+let committedOnQuit = false
+app.on('before-quit', (event) => {
+  if (committedOnQuit || autoCommit.pending().length === 0) return
+  event.preventDefault()
+  committedOnQuit = true
+  void autoCommit.flush().finally(() => app.quit())
 })
 
 app.on('will-quit', () => watcher.close())
