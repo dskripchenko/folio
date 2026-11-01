@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
-import { resolveInside } from './paths'
+import { real, resolveInside } from './paths'
 
 /**
  * The folders a document may read from, by id: `folio://app/r/<id>/<path>`.
@@ -10,13 +10,14 @@ import { resolveInside } from './paths'
 export class Roots {
   private readonly dirs = new Map<string, string>()
 
+  /** By the real folder: the same folder reached two ways is one root. */
   static idOf(dir: string): string {
-    return createHash('sha256').update(resolve(dir)).digest('hex').slice(0, 16)
+    return createHash('sha256').update(real(resolve(dir)) ?? resolve(dir)).digest('hex').slice(0, 16)
   }
 
   register(dir: string): string {
     const id = Roots.idOf(dir)
-    this.dirs.set(id, resolve(dir))
+    this.dirs.set(id, real(resolve(dir)) ?? resolve(dir))
     return id
   }
 

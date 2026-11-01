@@ -39,7 +39,24 @@ everything (by default `folio-data/library`, or a folder of your choice), and
 **projects** — any folders on disk added to folio. The list lives in
 `folio-data/workspace.json`; the folders stay where they are. A document of a
 project or of Shared may read the files of that whole folder; a file opened on
-its own may read its own folder. (The sidebar to manage them comes with stage 2.)
+its own may read its own folder.
+
+The sidebar shows Shared and the projects: pinned projects first, then by
+group, then the rest; a project's menu (right click) pins it, renames it, puts
+it in a group, hides it or removes it from folio (the folder stays on disk).
+The trees list folders and the files folio opens, folders first, and follow the
+disk: a file added, changed or removed elsewhere shows at once, and an open
+document is drawn again. `Cmd/Ctrl+B` hides the sidebar.
+
+## History with git (stage 4)
+
+Optional and per folder: a folder that is a git repository keeps its history in
+folio — the versions of a document, the difference between two of them (the
+text and the drawn document, diagrams included), going back to one; the status
+of files in the tree; a commit as you save (saves of one file within a few
+minutes make one commit); branches; pull and push. folio has git inside (pure
+JavaScript), so history works on a machine without git; when git is installed,
+syncing goes through it and its SSH keys and credentials.
 
 ## Unsaved changes and quick notes
 

@@ -2,38 +2,8 @@
  * The window: tabs of open documents, each a `<dsk-markdown>` of embed with
  * its relative paths on `folio://`, and the network consent banner.
  */
-interface Opened {
-  path: string
-  name: string
-  text: string
-  base: string
-  folder: string
-  owner: 'shared' | 'project' | 'file'
-  project: string | null
-}
-type OpenResult = Opened | { error: string; path: string }
-
-interface FolioBridge {
-  platform: string
-  startup(): Promise<{ documents: OpenResult[]; active: string | null; locale: string }>
-  openDialog(): Promise<OpenResult[]>
-  open(path: string): Promise<OpenResult>
-  openUrl(url: string): Promise<OpenResult>
-  external(url: string): void
-  pathOf(file: File): string
-  state(documents: string[], active: string | null): void
-  allowNetwork(scope: 'file' | 'folder', path: string): Promise<boolean>
-  onOpened(cb: (value: unknown) => void): () => void
-  onBlocked(cb: (value: unknown) => void): () => void
-  onCloseTab(cb: (value: unknown) => void): () => void
-}
-
-declare global {
-  interface Window {
-    folio: FolioBridge
-    DskEmbed?: { configure(options: Record<string, unknown>): void }
-  }
-}
+import { folio as bridge, prefs, type Changes, type OpenResult, type Opened } from './bridge'
+import { Sidebar, type SidebarText } from './sidebar'
 
 const TEXT = {
   en: {
@@ -43,6 +13,7 @@ const TEXT = {
     allowFile: 'Allow for this file',
     allowFolder: 'Allow for its folder',
     close: 'Close',
+    sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project folder', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', noProjects: 'Add a folder as a project with +.', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group' } as SidebarText,
   },
   ru: {
     open: 'Открыть…',
@@ -51,10 +22,11 @@ const TEXT = {
     allowFile: 'Разрешить для файла',
     allowFolder: 'Разрешить для его папки',
     close: 'Закрыть',
+    sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить папку проекта', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', noProjects: 'Добавьте папку проектом кнопкой +.', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы' } as SidebarText,
   },
 }
 
-const folio = window.folio
+const folio = bridge()
 document.documentElement.dataset.platform = folio.platform
 
 let t = TEXT.en
@@ -76,8 +48,8 @@ let active: Tab | null = null
 
 function applyText(): void {
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
-    const key = el.dataset.i18n as keyof typeof t
-    el.textContent = t[key]
+    const value = t[el.dataset.i18n as keyof typeof t]
+    if (typeof value === 'string') el.textContent = value
   }
 }
 
@@ -116,6 +88,13 @@ function showBanner(): void {
   bannerEl.hidden = false
 }
 
+const sidebarEl = document.querySelector<HTMLElement>('.sidebar')!
+const sidebar = new Sidebar({
+  el: sidebarEl,
+  text: () => t.sidebar,
+  open: (root, rel) => void folio.openEntry(root, rel).then((result) => add(result)),
+})
+
 function activate(tab: Tab | null): void {
   active = tab
   for (const other of tabs) {
@@ -123,6 +102,7 @@ function activate(tab: Tab | null): void {
     other.button.setAttribute('aria-selected', String(other === tab))
   }
   welcomeEl.hidden = tab !== null
+  sidebar.setActive(tab && isOpened(tab.result) ? tab.path : null)
   showBanner()
   report()
 }
@@ -205,6 +185,41 @@ folio.onBlocked((value) => {
   if (tab === active) showBanner()
 })
 folio.onOpened((value) => add(value as OpenResult))
+folio.onAddProject(() => void sidebar.addProject())
+
+// A document changed on disk: read it again, keep the place.
+folio.onFsChanged(async (value) => {
+  const files = new Set((value as Changes[]).flatMap((c) => c.files))
+  for (const tab of tabs) {
+    if (!files.has(tab.path)) continue
+    const result = await folio.open(tab.path)
+    if (!isOpened(result)) continue
+    const top = viewEl.scrollTop
+    tab.result = result
+    render(tab.pane, result)
+    if (tab === active) requestAnimationFrame(() => (viewEl.scrollTop = top))
+  }
+})
+
+// The sidebar: hidden with Cmd/Ctrl+B, its width dragged and remembered.
+document.body.classList.toggle('no-sidebar', prefs.get('sidebarHidden', false))
+document.documentElement.style.setProperty('--sidebar-width', `${prefs.get('sidebarWidth', 260)}px`)
+folio.onToggleSidebar(() => {
+  const hidden = !document.body.classList.contains('no-sidebar')
+  document.body.classList.toggle('no-sidebar', hidden)
+  prefs.set('sidebarHidden', hidden)
+})
+const resizer = document.querySelector<HTMLElement>('.resizer')!
+resizer.addEventListener('pointerdown', (event) => {
+  resizer.setPointerCapture(event.pointerId)
+  const move = (e: PointerEvent) => {
+    const width = Math.min(560, Math.max(180, e.clientX))
+    document.documentElement.style.setProperty('--sidebar-width', `${width}px`)
+    prefs.set('sidebarWidth', width)
+  }
+  resizer.addEventListener('pointermove', move)
+  resizer.addEventListener('pointerup', () => resizer.removeEventListener('pointermove', move), { once: true })
+})
 folio.onCloseTab(() => {
   if (active) close(active)
 })
@@ -248,8 +263,8 @@ void folio.startup().then(({ documents, active: activePath, locale }) => {
   document.documentElement.lang = lang
   applyText()
   window.DskEmbed?.configure({ theme: 'system', locale: lang })
+  void sidebar.load()
   for (const result of documents) add(result, false)
   activate(tabs.find((tab) => tab.path === activePath) ?? tabs[tabs.length - 1] ?? null)
 })
 
-export {}

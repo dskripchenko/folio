@@ -10,6 +10,9 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <aside class="sidebar" data-testid="sidebar" aria-label="Workspace"></aside>
+  <div class="resizer" aria-hidden="true"></div>
+  <div class="main">
   <header class="bar">
     <nav class="tabs" role="tablist" data-testid="tabs"></nav>
     <button type="button" class="open" data-testid="open" data-i18n="open"></button>
@@ -25,6 +28,7 @@
       <p data-i18n="welcome"></p>
     </section>
   </main>
+  </div>
   <script src="vendor/embed.bundle.js"></script>
   <script src="renderer.js"></script>
 </body>

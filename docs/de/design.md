@@ -41,7 +41,26 @@ Wahl), und **Projekte** — beliebige Ordner auf der Festplatte, die zu folio
 hinzugefügt wurden. Die Liste liegt in `folio-data/workspace.json`; die Ordner
 bleiben, wo sie sind. Ein Dokument eines Projekts oder von „Gemeinsam“ darf die
 Dateien dieses ganzen Ordners lesen; eine einzeln geöffnete Datei ihren eigenen
-Ordner. (Die Seitenleiste zur Verwaltung kommt mit Stufe 2.)
+Ordner.
+
+Die Seitenleiste zeigt „Gemeinsam“ und die Projekte: angeheftete zuerst, dann
+nach Gruppe, dann die übrigen; das Menü eines Projekts (Rechtsklick) heftet es
+an, benennt es um, ordnet es einer Gruppe zu, blendet es aus oder entfernt es
+aus folio (der Ordner bleibt auf der Festplatte). Die Bäume zeigen Ordner und die
+Dateien, die folio öffnet, Ordner zuerst, und folgen der Festplatte: eine
+anderswo hinzugefügte, geänderte oder gelöschte Datei erscheint sofort, ein
+offenes Dokument wird neu gezeichnet. `Cmd/Strg+B` blendet die Leiste aus.
+
+## Verlauf mit git (Stufe 4)
+
+Optional und pro Ordner: ein Ordner, der ein git-Repository ist, führt seinen
+Verlauf in folio — die Versionen eines Dokuments, der Unterschied zwischen zwei
+(Text und gezeichnetes Dokument samt Diagrammen), Rückkehr zu einer Version; der
+Status der Dateien im Baum; ein Commit beim Speichern (Speichervorgänge einer
+Datei innerhalb weniger Minuten ergeben einen Commit); Branches; Pull und Push.
+folio bringt git mit (reines JavaScript), der Verlauf funktioniert also auch ohne
+installiertes git; ist git installiert, läuft die Synchronisierung darüber, mit
+seinen SSH-Schlüsseln und Zugangsdaten.
 
 ## Ungespeichertes und schnelle Notizen
 

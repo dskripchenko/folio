@@ -1,5 +1,6 @@
 import { readFileSync, statSync } from 'node:fs'
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path'
+import { real } from './paths'
 import type { Roots } from './roots'
 import type { Workspace } from './workspace'
 
@@ -32,7 +33,8 @@ function urlPath(rel: string): string {
 }
 
 export function openDocument(file: string, workspace: Workspace, roots: Roots): OpenedDocument {
-  const path = resolve(file)
+  // The real path: one file is one tab, however it was reached (a link, the tree, /var or /private/var).
+  const path = real(resolve(file)) ?? resolve(file)
   let size: number
   try {
     const st = statSync(path)
@@ -46,9 +48,10 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
 
   // The root a document may read from: its project, Shared, or its own folder.
   const owner = workspace.ownerOf(path)
-  const rootDir = owner?.kind === 'project' ? owner.project.path : owner?.kind === 'shared' ? workspace.shared() : dirname(path)
+  const ownerDir = owner?.kind === 'project' ? owner.project.path : owner?.kind === 'shared' ? workspace.shared() : dirname(path)
+  const rootDir = real(ownerDir) ?? ownerDir
   const id = roots.register(rootDir)
-  const relDir = relative(resolve(rootDir), dirname(path))
+  const relDir = relative(rootDir, dirname(path))
 
   return {
     path,

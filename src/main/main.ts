@@ -8,7 +8,10 @@ import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { Session } from './session'
-import { Workspace } from './workspace'
+import { labels } from './i18n'
+import { listDir } from './tree'
+import { Watcher } from './watcher'
+import { Workspace, type Project } from './workspace'
 
 // Before anything reads it: settings, caches and session data live beside the program.
 const data = dataDir({ env: process.env, platform: process.platform, execPath: process.execPath, packaged: app.isPackaged, cwd: process.cwd() })
@@ -28,6 +31,9 @@ const roots = new Roots()
 const consent = new Consent(data)
 const session = new Session(data)
 let gate: NetworkGate | null = null
+/** Native menus speak the system's language; known once the app is ready. */
+const L = () => labels(app.isReady() ? app.getLocale() : 'en')
+const watcher = new Watcher((changes) => send('fs:changed', changes))
 let win: BrowserWindow | null = null
 
 /** Documents' windows have a session of their own: the main process's requests are not theirs. */
@@ -108,18 +114,21 @@ function buildMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(mac ? [{ role: 'appMenu' as const }] : []),
     {
-      label: 'File',
+      label: L().file,
       submenu: [
-        { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: () => void openDialog().then((docs) => docs.forEach((d) => send('doc:opened', d))) },
-        { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('menu:close-tab') },
+        { label: L().open, accelerator: 'CmdOrCtrl+O', click: () => void openDialog().then((docs) => docs.forEach((d) => send('doc:opened', d))) },
+        { label: L().addProject, click: () => send('menu:add-project') },
+        { label: L().closeTab, accelerator: 'CmdOrCtrl+W', click: () => send('menu:close-tab') },
         { type: 'separator' },
         mac ? { role: 'close' } : { role: 'quit' },
       ],
     },
     { role: 'editMenu' },
     {
-      label: 'View',
+      label: L().view,
       submenu: [
+        { label: L().toggleSidebar, accelerator: 'CmdOrCtrl+B', click: () => send('menu:toggle-sidebar') },
+        { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
@@ -132,6 +141,94 @@ function buildMenu(): void {
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
+
+// The workspace --------------------------------------------------------------
+
+/** What the sidebar shows: Shared and the projects, each with the root id its tree is listed by. */
+function workspaceView() {
+  const shared = workspace.shared()
+  const sharedId = roots.register(shared)
+  watcher.add(sharedId, roots.dir(sharedId) ?? shared)
+  return {
+    // `path` is the real folder: what open documents' paths are compared with.
+    shared: { root: sharedId, path: roots.dir(sharedId) ?? shared },
+    projects: workspace.projects().map((p: Project) => {
+      const root = roots.register(p.path)
+      const dir = roots.dir(root) ?? p.path
+      if (!p.hidden) watcher.add(root, dir)
+      return { ...p, path: dir, root, missing: !existsSync(p.path) }
+    }),
+  }
+}
+
+function workspaceChanged(): void {
+  send('ws:changed', workspaceView())
+}
+
+ipcMain.handle('ws:get', () => workspaceView())
+ipcMain.handle('ws:add-project', async () => {
+  if (!win) return workspaceView()
+  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'multiSelections', 'createDirectory'] })
+  if (!result.canceled) for (const dir of result.filePaths) workspace.addProject(dir)
+  return workspaceView()
+})
+ipcMain.handle('ws:update-project', (_e, id: unknown, changes: unknown) => {
+  if (typeof id !== 'string' || typeof changes !== 'object' || changes === null) return workspaceView()
+  const c = changes as Record<string, unknown>
+  const allowed: Partial<Project> = {}
+  if (typeof c.name === 'string' && c.name.trim() !== '') allowed.name = c.name.trim()
+  if (typeof c.group === 'string') allowed.group = c.group.trim() === '' ? undefined : c.group.trim()
+  if (typeof c.pinned === 'boolean') allowed.pinned = c.pinned
+  if (typeof c.hidden === 'boolean') allowed.hidden = c.hidden
+  workspace.updateProject(id, allowed)
+  return workspaceView()
+})
+ipcMain.handle('ws:set-shared', async (_e, reset: unknown) => {
+  if (reset === true) workspace.setShared(null)
+  else if (win) {
+    const result = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] })
+    if (!result.canceled && result.filePaths[0]) workspace.setShared(result.filePaths[0])
+  }
+  return workspaceView()
+})
+ipcMain.handle('tree:list', (_e, root: unknown, rel: unknown, all: unknown) => {
+  const dir = typeof root === 'string' ? roots.dir(root) : undefined
+  return dir === undefined || typeof rel !== 'string' ? null : listDir(dir, rel, all === true)
+})
+ipcMain.handle('tree:open', (_e, root: unknown, rel: unknown) => {
+  const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
+  return file === null ? { error: 'Not a file of this folder', path: String(rel) } : open(file)
+})
+ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
+  const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
+  if (file === null || !win) return
+  Menu.buildFromTemplate([{ label: L().reveal, click: () => shell.showItemInFolder(file) }]).popup({ window: win })
+})
+/** A project's menu, native: pin, rename, group, hide, reveal, remove. */
+ipcMain.on('ws:project-menu', (_e, id: unknown) => {
+  const project = workspace.projects().find((p) => p.id === id)
+  if (!project || !win) return
+  const update = (changes: Partial<Project>) => {
+    workspace.updateProject(project.id, changes)
+    workspaceChanged()
+  }
+  Menu.buildFromTemplate([
+    { label: project.pinned ? L().unpin : L().pin, click: () => update({ pinned: !project.pinned }) },
+    { label: L().rename, click: () => send('ws:edit', { id: project.id, field: 'name' }) },
+    { label: L().group, click: () => send('ws:edit', { id: project.id, field: 'group' }) },
+    { label: project.hidden ? L().show : L().hide, click: () => update({ hidden: !project.hidden }) },
+    { type: 'separator' },
+    { label: L().reveal, click: () => void shell.openPath(project.path) },
+    {
+      label: L().remove,
+      click: () => {
+        workspace.removeProject(project.id)
+        watcher.remove(roots.register(project.path))
+        workspaceChanged()
+      },
+    },
+  ]).popup({ window: win })
+})
 
 ipcMain.handle('app:startup', () => {
   const fromArgv = filesFromArgv(process.argv, app.isPackaged, process.cwd())
@@ -170,6 +267,8 @@ app.on('open-file', (event, path) => {
   event.preventDefault()
   if (app.isReady() && win) openInWindow([path])
 })
+
+app.on('will-quit', () => watcher.close())
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
