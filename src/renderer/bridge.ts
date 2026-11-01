@@ -138,6 +138,7 @@ export interface FolioBridge {
   onSave: Listener
   onSaveAs: Listener
   onToggleEdit: Listener
+  onPrint: Listener
   allowNetwork(scope: 'file' | 'folder', path: string): Promise<boolean>
   workspace(): Promise<WorkspaceView>
   addProject(): Promise<WorkspaceView>
@@ -160,7 +161,7 @@ export interface FolioBridge {
 declare global {
   interface Window {
     folio: FolioBridge
-    DskEmbed?: { configure(options: Record<string, unknown>): void }
+    DskEmbed?: { configure(options: Record<string, unknown>): void; print?: { prepare(root?: ParentNode): Promise<() => void> } }
   }
 }
 

@@ -16,8 +16,8 @@ importers:
         version: 1.44.3
     devDependencies:
       '@dskripchenko/embed':
-        specifier: 1.9.0
-        version: 1.9.0
+        specifier: 1.10.1
+        version: 1.10.1
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.14.0)
@@ -58,8 +58,8 @@ packages:
     resolution: {integrity: sha512-5IF96MS+QKkEZNecMwRBw0IFmFqLh9tJ5q084R0rLAidmjlxXXahZr5QvUwkIcO2Omo4k/O8vcY06m8vndj93A==}
     engines: {node: '>=20'}
 
-  '@dskripchenko/embed@1.9.0':
-    resolution: {integrity: sha512-44B9JWHxYhrI5ANu60UV7OIwce60EX2JtpvFmHPyz6eKCpcNZxe8UVuUtEs9iZoXRZGsHLicN+TjCQn0LW/50A==}
+  '@dskripchenko/embed@1.10.1':
+    resolution: {integrity: sha512-6wUgqesatlvrxWHkOkqEP83rI0lX4QcL/QJlcNeTzGDryUgXKkvT5KkRns+QxnAy7a2TuKdV0Hga+zmomNZkRg==}
     engines: {node: '>=20'}
 
   '@electron-internal/extract-zip@1.0.8':
@@ -1257,7 +1257,7 @@ snapshots:
 
   '@dskripchenko/diagrams@1.4.0': {}
 
-  '@dskripchenko/embed@1.9.0': {}
+  '@dskripchenko/embed@1.10.1': {}
 
   '@electron-internal/extract-zip@1.0.8': {}
 

@@ -691,6 +691,7 @@ window.addEventListener(
         if (active) void close(active)
       },
       e: () => toggleEdit(active),
+      p: () => void printActive(),
       h: () => {
         if (event.shiftKey) toggleHistory()
       },
@@ -708,6 +709,30 @@ window.addEventListener(
   },
   true,
 )
+
+// Printing ----------------------------------------------------------------------------
+
+/**
+ * The active document on paper: read, not edited; every widget in its print
+ * form (embed's `print.prepare`) — the whole diagram, every page, a reference
+ * as its static view; folio's own chrome stays off paper (style.css).
+ */
+async function printActive(): Promise<void> {
+  const tab = active
+  if (!tab) return
+  if (tab.view === 'edit' && canEdit(formatOf(tab))) toggleEdit(tab)
+  // Paper is light: the widgets too, for the time of printing.
+  window.DskEmbed?.configure({ theme: 'light' })
+  // It waits for the widgets still drawing (a document just switched to reading), then makes the forms.
+  const restore = (await window.DskEmbed?.print?.prepare(tab.pane)) ?? (() => {})
+  try {
+    window.print()
+  } finally {
+    restore()
+    window.DskEmbed?.configure({ theme: 'system' })
+  }
+}
+folio.onPrint(() => void printActive())
 
 // Going away: what is still settling is written now.
 window.addEventListener('beforeunload', () => {

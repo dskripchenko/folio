@@ -175,3 +175,15 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
 .source-editor .source:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: -1px; }
 .source-editor .preview { min-width: 0; overflow: auto; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
 @media (max-width: 820px) { .source-editor { grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr 1fr; } }
+
+/* Paper: the document alone — no sidebar, tabs, buttons, banners or history (stage 6). */
+@media print {
+  /* Paper is light, whatever the screen is. */
+  :root { color-scheme: light; --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --tab: #f6f8fa; --accent: #0969da; }
+  html, body { height: auto; }
+  body { display: block; overflow: visible; background: #fff; }
+  .sidebar, .resizer, .bar, .banner, .notice, .history, .welcome { display: none !important; }
+  .main, .content, .view { display: block; height: auto; overflow: visible; }
+  .doc { max-width: none; margin: 0; padding: 0; }
+  .version-bar { display: none !important; }
+}

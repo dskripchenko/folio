@@ -144,6 +144,18 @@ and keeps both: take the file from disk, or keep your version and save over it.
 A quick note is saved with **Save** into Shared (or anywhere), named by its
 first line.
 
+## Printing
+
+**File → Print** (`Cmd/Ctrl+P`) prints the active document as a document:
+read, not edited; folio's sidebar, tabs, buttons and history stay off paper,
+and paper is light whatever the screen is. Every widget prints in its print
+form from embed (`DskEmbed.print.prepare`): a BPMN or DMN diagram whole (a
+DMN file with its decision tables), every draw.io page, a flow or a board
+whole, an API reference as its static document, a video as its poster and
+chapters, a kanban or a calendar without their controls. The system's print
+dialog follows; saving a PDF with page settings, headers and footers, a table
+of contents and bookmarks comes in stage 7.
+
 ## Editing
 
 `Cmd/Ctrl+E` (or **Edit** on the bar) turns a document into the editor and back.

@@ -158,6 +158,20 @@ nehmen oder die eigene Version behalten und darüber speichern. Eine schnelle
 Notiz speichert **Speichern** in „Gemeinsam“ (oder anderswo), benannt nach
 ihrer ersten Zeile.
 
+## Drucken
+
+**Datei → Drucken** (`Cmd/Strg+P`) druckt das aktive Dokument als Dokument:
+gelesen, nicht bearbeitet; Seitenleiste, Tabs, Knöpfe und Verlauf von folio
+bleiben vom Papier fern, und das Papier ist hell, wie auch immer der
+Bildschirm ist. Jedes Widget druckt in seiner Druckform aus embed
+(`DskEmbed.print.prepare`): ein BPMN- oder DMN-Diagramm ganz (eine DMN-Datei
+mit ihren Entscheidungstabellen), jede draw.io-Seite, ein Prozess oder ein
+Board ganz, eine API-Referenz als ihr statisches Dokument, ein Video als
+Posterbild und Kapitel, Kanban und Kalender ohne ihre Bedienelemente. Dann
+folgt der Druckdialog des Systems; das Speichern als PDF mit
+Seiteneinstellungen, Kopf- und Fußzeilen, Inhaltsverzeichnis und Lesezeichen
+kommt in Stufe 7.
+
 ## Bearbeiten
 
 `Cmd/Strg+E` (oder **Bearbeiten** in der Leiste) macht aus einem Dokument den

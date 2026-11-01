@@ -8,6 +8,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Printing (stage 6): **File → Print** (`Cmd/Ctrl+P`) prints the active
+  document read, without folio's chrome, on light paper, every widget in its
+  print form from embed 1.10 (`DskEmbed.print.prepare`): diagrams whole, DMN
+  with its tables, every draw.io page, flows and boards whole, an API
+  reference as its static document, video as poster and chapters.
 - Diagram and API files open directly (stage 5), each in its embed element:
   `.bpmn`/`.dmn` in `<dsk-bpmn>`/`<dsk-dmn>` and their editors, draw.io
   (`.drawio`, `.dio`, `.drawio.svg`) shown, OpenAPI/Swagger in the reference
