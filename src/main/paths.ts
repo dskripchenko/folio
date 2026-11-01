@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs'
-import { isAbsolute, relative, resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 /** `child` is `dir` itself or inside it (by the path as written). */
 export function isInside(dir: string, child: string): boolean {
@@ -14,6 +14,19 @@ export function real(path: string): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * The real path as far as it exists: the nearest existing ancestor resolved
+ * (`/var` → `/private/var`), the rest appended — for comparing a file that
+ * may not exist yet with folders that do.
+ */
+export function realish(path: string): string {
+  const full = resolve(path)
+  const found = real(full)
+  if (found !== null) return found
+  const parent = dirname(full)
+  return parent === full ? full : join(realish(parent), basename(full))
 }
 
 /**

@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { readJson, writeJson } from './jsonFile'
-import { isInside } from './paths'
+import { isInside, realish } from './paths'
 
 /**
  * The workspace (ADR-001): "Shared" — one folder for common documents — and
@@ -82,11 +82,12 @@ export class Workspace {
 
   /** Where a file belongs: the innermost project holding it, else Shared, else nothing. */
   ownerOf(file: string): { kind: 'project'; project: Project } | { kind: 'shared' } | null {
-    const holding = this.data.projects
-      .filter((p) => isInside(p.path, file))
-      .sort((a, b) => b.path.length - a.path.length)
+    // Compared by real paths: a project added as /var/x holds /private/var/x/a.md.
+    const target = realish(file)
+    const inside = (dir: string) => isInside(realish(dir), target)
+    const holding = this.data.projects.filter((p) => inside(p.path)).sort((a, b) => b.path.length - a.path.length)
     if (holding[0]) return { kind: 'project', project: { ...holding[0] } }
-    if (isInside(this.shared(), file)) return { kind: 'shared' }
+    if (inside(this.shared())) return { kind: 'shared' }
     return null
   }
 }

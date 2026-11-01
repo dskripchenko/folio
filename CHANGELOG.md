@@ -8,6 +8,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- The workspace in a sidebar: Shared and the projects (any folders added to
+  folio) — pinned first, then by group; a project's native menu pins, renames,
+  groups, hides, reveals or removes it. Lazily listed file trees, folders first,
+  documents only, expanded folders remembered; they follow the disk (recursive
+  watching), and an open document is drawn again when its file changes.
+  `Cmd/Ctrl+B` hides the sidebar, its width is dragged. Native menus speak the
+  system's language (ru/en).
+- Paths are compared as real paths: one file is one tab however it was reached.
 - Reading: a Markdown file opens with every block of embed live — diagrams of
   all notations, OpenAPI and AsyncAPI, BPMN, draw.io, kanban, calendar, media —
   offline (embed is inside the app). Pictures, media and specifications load by
