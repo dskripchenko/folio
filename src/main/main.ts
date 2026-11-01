@@ -41,6 +41,7 @@ import { Session } from './session'
 import { labels } from './i18n'
 import { listDir } from './tree'
 import { FileIndex } from './fileIndex'
+import { Consoles } from './pty'
 import { replaceInFiles, searchFiles, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
@@ -176,6 +177,8 @@ function createWindow(): BrowserWindow {
   })
   void w.loadURL('folio://app/ui/index.html')
   w.on('closed', () => {
+    // The window's shells end with it.
+    consoles.closeAll()
     win = null
   })
   return w
@@ -226,6 +229,7 @@ function buildMenu(): void {
         { label: L().toggleEdit, accelerator: 'CmdOrCtrl+E', registerAccelerator: false, click: () => send('menu:toggle-edit') },
         { label: L().history, accelerator: 'CmdOrCtrl+Shift+H', registerAccelerator: false, click: () => send('menu:toggle-history') },
         { label: L().toggleSidebar, accelerator: 'CmdOrCtrl+B', registerAccelerator: false, click: () => send('menu:toggle-sidebar') },
+        { label: L().console, accelerator: 'Ctrl+`', registerAccelerator: false, click: () => send('menu:toggle-console') },
         { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
@@ -356,6 +360,26 @@ ipcMain.handle('search:replace', async (_e, query: unknown, options: unknown, re
   }
   return { files: changed.length, replacements, commits }
 })
+// Consoles: a shell per tab, in a folder (Shared when none is named).
+const consoles = new Consoles({
+  data: (id, data) => send('console:data', id, data),
+  exit: (id, code) => send('console:exit', id, code),
+})
+ipcMain.handle('console:open', (_e, cwd: unknown, cols: unknown, rows: unknown) => {
+  const dir = typeof cwd === 'string' && existsSync(cwd) && statSync(cwd).isDirectory() ? cwd : workspace.shared()
+  const opened = consoles.open(dir, Number(cols) || 80, Number(rows) || 24)
+  return 'id' in opened ? { ...opened, cwd: dir } : opened
+})
+ipcMain.on('console:input', (_e, id: unknown, data: unknown) => {
+  if (typeof id === 'number' && typeof data === 'string') consoles.write(id, data)
+})
+ipcMain.on('console:resize', (_e, id: unknown, cols: unknown, rows: unknown) => {
+  if (typeof id === 'number') consoles.resize(id, Number(cols), Number(rows))
+})
+ipcMain.on('console:close', (_e, id: unknown) => {
+  if (typeof id === 'number') consoles.close(id)
+})
+
 ipcMain.on('search:cancel', () => {
   searchId++
 })
@@ -369,6 +393,7 @@ ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
   const folder = existsSync(file) && statSync(file).isDirectory()
   Menu.buildFromTemplate([
     { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
+    { label: L().consoleHere, click: () => send('menu:console', folder ? file : dirname(file)) },
     { type: 'separator' },
     { label: L().reveal, click: () => shell.showItemInFolder(file) },
   ]).popup({ window: win })
@@ -388,6 +413,7 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
     { label: project.hidden ? L().show : L().hide, click: () => update({ hidden: !project.hidden }) },
     { type: 'separator' },
     { label: L().exportFolderPdf, click: () => send('menu:export-folder', project.path) },
+    { label: L().consoleHere, click: () => send('menu:console', project.path) },
     { label: L().reveal, click: () => void shell.openPath(project.path) },
     {
       label: L().remove,

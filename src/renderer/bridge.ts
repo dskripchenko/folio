@@ -140,6 +140,14 @@ export interface FolioBridge {
   onToggleEdit: Listener
   onFind: Listener
   onGoToFile: Listener
+  onToggleConsole: Listener
+  onConsoleHere: Listener
+  openConsole(cwd: string | null, cols: number, rows: number): Promise<{ id: number; cwd: string } | { error: string }>
+  consoleInput(id: number, data: string): void
+  consoleResize(id: number, cols: number, rows: number): void
+  closeConsole(id: number): void
+  onConsoleData(callback: (id: number, data: string) => void): () => void
+  onConsoleExit(callback: (id: number, code: number) => void): () => void
   searchScopes(): Promise<{ root: string; label: string | null }[]>
   search(id: number, query: string, options: Record<string, boolean>, scope: string): Promise<{ files: number; matches: number; truncated: boolean; canceled: boolean } | { error: string }>
   cancelSearch(): void
