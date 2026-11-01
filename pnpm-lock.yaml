@@ -15,8 +15,8 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0
       '@dskripchenko/terminal':
-        specifier: link:../terminal
-        version: link:../terminal
+        specifier: ^0.1.0
+        version: 0.1.0
       isomorphic-git:
         specifier: 1.44.3
         version: 1.44.3
@@ -73,6 +73,10 @@ packages:
 
   '@dskripchenko/syntax@0.3.0':
     resolution: {integrity: sha512-Zhd+DmN2S40wewixKf0sN4daj0UPjH4+dSeryKC64WNIwbV9gIo9dfcSWvO90D8dac4Wl7teejPeeFH+VsF27w==}
+    engines: {node: '>=20'}
+
+  '@dskripchenko/terminal@0.1.0':
+    resolution: {integrity: sha512-SUL+drvkU6R2oDifMD220dISqJis2Iryr/xVa5NdxD9KGnXSyvRzbL6bz84rWWu36KRNeX4a8yghc5oIt2BOiQ==}
     engines: {node: '>=20'}
 
   '@electron-internal/extract-zip@1.0.8':
@@ -1279,6 +1283,8 @@ snapshots:
   '@dskripchenko/embed@1.12.0': {}
 
   '@dskripchenko/syntax@0.3.0': {}
+
+  '@dskripchenko/terminal@0.1.0': {}
 
   '@electron-internal/extract-zip@1.0.8': {}
 

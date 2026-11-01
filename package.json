@@ -40,7 +40,7 @@
   "dependencies": {
     "@dskripchenko/diagrams": "^1.4.0",
     "@dskripchenko/syntax": "^0.3.0",
-    "@dskripchenko/terminal": "link:../terminal",
+    "@dskripchenko/terminal": "^0.1.0",
     "isomorphic-git": "1.44.3",
     "node-pty": "^1.1.0"
   }
