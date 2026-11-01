@@ -39,7 +39,9 @@ Die Mitte gehört der Seite; die Bedienung liegt an ihren Rändern.
   Klick fährt dessen Baum über der Seite aus, bis ein Dokument geöffnet ist.
 - **Oben — die Tabs**, sonst nichts.
 - **Die Toolbar des Editors schwebt über der Seite** und bleibt zur Hand, wie
-  weit der Text auch nach unten geht; die Seite selbst hat keinen Rahmen.
+  weit der Text auch nach unten geht; die Seite selbst hat keinen Rahmen. Im Modus **Markdown** nimmt der Text
+  den ganzen Arbeitsbereich ein, von Rand zu Rand; **neben der Seite** treffen
+  sich die zwei Hälften an einer Linie und scrollen jede für sich.
 - **Rechts — die Leiste.** Wie das Dokument gezeigt wird: **Lesen**,
   **Visuell bearbeiten**, **Markdown**, **Markdown neben der Seite** (eine
   Zeichnung bietet Lesen und Bearbeiten, draw.io nur Lesen). Dann der Verlauf,

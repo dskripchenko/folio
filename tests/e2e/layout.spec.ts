@@ -35,8 +35,30 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
     await rail.getByTestId('mode-source').click()
     await expect(doc.locator('dsk-markdown-editor textarea')).toBeVisible()
     await expect(bar).toBeHidden()
+    // Edge to edge: the whole workspace, no frame, the page itself not scrolling (the text does).
+    const fill = async () =>
+      win.evaluate(() => {
+        const view = document.querySelector('[data-testid="view"]')!.getBoundingClientRect()
+        const area = document.querySelector('article.doc:not([hidden]) .dsk-md__source')!
+        const r = area.getBoundingClientRect()
+        const preview = document.querySelector('article.doc:not([hidden]) .dsk-md__preview')
+        const p = preview?.getBoundingClientRect()
+        const v = document.querySelector('[data-testid="view"]')!
+        return {
+          left: Math.round(r.left - view.left),
+          right: Math.round((p ?? r).right - view.right),
+          top: Math.round(r.top - view.top),
+          bottom: Math.round(r.bottom - view.bottom),
+          border: getComputedStyle(area).borderTopWidth,
+          viewScrolls: v.scrollHeight > v.clientHeight + 1,
+          seam: p ? { gap: Math.round(p.left - r.right), line: getComputedStyle(preview!).borderLeftWidth } : null,
+        }
+      })
+    expect(await fill()).toEqual({ left: 0, right: 0, top: 0, bottom: 0, border: '0px', viewScrolls: false, seam: null })
     await rail.getByTestId('mode-split').click()
     await expect(doc.locator('.dsk-md--split')).toBeVisible()
+    // Side by side: two halves meeting at a line.
+    expect(await fill()).toEqual({ left: 0, right: 0, top: 0, bottom: 0, border: '0px', viewScrolls: false, seam: { gap: 0, line: '1px' } })
     await rail.getByTestId('mode-read').click()
     await expect(doc.locator('dsk-markdown-editor')).toHaveCount(0)
 

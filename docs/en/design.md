@@ -37,7 +37,9 @@ The page takes the middle; the controls stay at its edges.
   a click slides that tree out over the page until a document is opened.
 - **Top — the tabs**, nothing else.
 - **The editor's toolbar floats over the page**, at hand however far down
-  the text goes; the page itself has no frame.
+  the text goes; the page itself has no frame. In **Markdown** the text takes the whole
+  workspace, edge to edge; **beside the page**, the two halves meet at a line
+  and scroll on their own.
 - **Right — the rail.** How the document is shown: **Read**, **Edit
   visually**, **Markdown**, **Markdown beside the page** (a drawing offers
   read and edit; draw.io, read). Then the history, print and PDF; settings at

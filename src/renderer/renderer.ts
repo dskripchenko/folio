@@ -175,6 +175,22 @@ function syncLabel(tab: Tab): void {
 
 // Drawing -----------------------------------------------------------------------
 
+/**
+ * The editor's layout on the pane: Markdown alone or beside the page takes the
+ * whole workspace (style.css), the visual editor reads as a page.
+ */
+function markLayout(tab: Tab): void {
+  const format = formatOf(tab)
+  let edit = ''
+  if (tab.view === 'edit' && !tab.version) {
+    if (format === 'markdown') edit = tab.mode === 'visual' ? '' : tab.mode
+    else if (format === 'diagram' || format === 'asyncapi') edit = 'split'
+    else if (format === 'text') edit = 'source'
+  }
+  if (edit) tab.pane.dataset.edit = edit
+  else delete tab.pane.dataset.edit
+}
+
 /** The tab's format: a note is Markdown. */
 function formatOf(tab: Tab): Format {
   return tab.doc?.format ?? 'markdown'
@@ -262,6 +278,7 @@ function renderVersion(tab: Tab): void {
 
 function render(tab: Tab): void {
   tab.pane.replaceChildren()
+  markLayout(tab)
   if (tab.version) {
     renderVersion(tab)
     return
@@ -275,6 +292,7 @@ function render(tab: Tab): void {
   }
   const format = formatOf(tab)
   tab.pane.dataset.format = format
+  markLayout(tab)
   if (tab.view === 'read' || !canEdit(format)) {
     tab.pane.append(viewOf(format, tab.text, viewOptions(tab, true)))
   } else if (format !== 'markdown') {
@@ -312,6 +330,7 @@ function render(tab: Tab): void {
     })
     ed.addEventListener('dsk:modechange', (e) => {
       tab.mode = ((e as CustomEvent).detail?.mode ?? tab.mode) as EditorMode
+      markLayout(tab)
       edited(tab)
       syncRail()
     })
@@ -367,6 +386,7 @@ function setMode(tab: Tab | null, mode: ViewMode): void {
     const ed = tab.pane.querySelector<HTMLElement & { mode: string }>('dsk-markdown-editor')
     if (tab.view === 'edit' && ed && !tab.version) {
       ed.mode = mode
+      markLayout(tab)
       edited(tab)
     } else toggleEditTo(tab, 'edit')
   } else if (tab.view !== 'edit' || tab.version) toggleEditTo(tab, 'edit')

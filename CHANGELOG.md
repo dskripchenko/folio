@@ -8,6 +8,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Changed
+- Markdown, and Markdown beside the page, take the whole workspace edge to
+  edge; side by side the halves meet at a line and scroll on their own (a
+  drawing's source beside its picture too).
 - The window: the page in the middle, the controls at its edges. The
   editor's toolbar floats over the page (embed 1.11, `toolbar-target`); the
   right rail switches Read / Edit visually / Markdown / Markdown beside the
