@@ -11,7 +11,8 @@ async function addProject(app: ElectronApplication, win: Page, dir: string): Pro
   await app.evaluate(({ dialog }, paths) => {
     dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: paths })) as typeof dialog.showOpenDialog
   }, [dir])
-  await win.getByTestId('sidebar').getByRole('button', { name: /Add a project folder|Добавить папку проекта/ }).click()
+  await win.getByTestId('add-project').click()
+  await win.getByTestId('add-folder').click()
 }
 
 async function openInTree(win: Page, project: string, file: string): Promise<void> {
@@ -21,7 +22,7 @@ async function openInTree(win: Page, project: string, file: string): Promise<voi
 }
 
 async function editHeading(win: Page, text: string): Promise<void> {
-  if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await win.getByTestId('toggle-edit').click()
+  if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await win.getByTestId('mode-visual').click()
   const h1 = win.locator('article.doc:not([hidden]) dsk-markdown-editor [contenteditable="true"] h1').first()
   await h1.click()
   await win.keyboard.press('End')

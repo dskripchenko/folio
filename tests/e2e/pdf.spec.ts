@@ -52,7 +52,7 @@ test('a document and a folder exported as PDF: page size, header and footer, con
     await expect(win.locator('article.doc:not([hidden]) dsk-markdown h1')).toHaveText('Handbook')
 
     // One document, with an edit not saved yet: exported as shown.
-    if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await win.getByTestId('toggle-edit').click()
+    if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await win.getByTestId('mode-visual').click()
     const h1 = win.locator('article.doc:not([hidden]) dsk-markdown-editor [contenteditable="true"] h1').first()
     await h1.click()
     await win.keyboard.press('End')

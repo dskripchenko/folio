@@ -25,6 +25,27 @@ nicht:
 - es kann das Fenster nicht auf eine andere Seite führen und keine neuen Fenster
   öffnen; ein Link geht an den Systembrowser.
 
+## Das Fenster
+
+Die Mitte gehört der Seite; die Bedienung liegt an ihren Rändern.
+
+- **Links — der Arbeitsbereich.** Gemeinsam und die Projekte, jedes ein Baum
+  seiner Dokumente. Oben: eine Datei öffnen, eine neue schnelle Notiz,
+  einklappen. Jeder Abschnitt hat sein eigenes Menü: Gemeinsam — sein Ordner;
+  Projekte — **+** fügt einen Ordner hinzu oder klont ein Repository, **⋯**
+  zeigt die verborgenen Projekte. Der Branch eines Repositorys ist ein Chip
+  neben seinem Namen. **Eingeklappt** (`Cmd/Strg+B`) ist die Seitenleiste eine
+  schmale Leiste — Gemeinsam und jedes Projekt als seine Initialen —, und ein
+  Klick fährt dessen Baum über der Seite aus, bis ein Dokument geöffnet ist.
+- **Oben — die Tabs**, sonst nichts.
+- **Die Toolbar des Editors schwebt über der Seite** und bleibt zur Hand, wie
+  weit der Text auch nach unten geht; die Seite selbst hat keinen Rahmen.
+- **Rechts — die Leiste.** Wie das Dokument gezeigt wird: **Lesen**,
+  **Visuell bearbeiten**, **Markdown**, **Markdown neben der Seite** (eine
+  Zeichnung bietet Lesen und Bearbeiten, draw.io nur Lesen). Dann der Verlauf,
+  Drucken und PDF; unten die Einstellungen (das Theme: wie das System, hell,
+  dunkel).
+
 ## Dokumente öffnen
 
 Eine Markdown-Datei öffnet sich über **Datei → Öffnen**, durch Ablegen auf dem

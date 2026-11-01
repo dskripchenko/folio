@@ -10,7 +10,8 @@ async function addProject(app: ElectronApplication, win: Page, dir: string): Pro
   await app.evaluate(({ dialog }, paths) => {
     dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: paths })) as typeof dialog.showOpenDialog
   }, [dir])
-  await win.getByTestId('sidebar').getByRole('button', { name: /Add a project folder|Добавить папку проекта/ }).click()
+  await win.getByTestId('add-project').click()
+  await win.getByTestId('add-folder').click()
 }
 
 test('diagram files and API descriptions open directly, drawn by their elements, edited where they can be', async () => {
@@ -43,10 +44,10 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     await expect(win.getByRole('tab', { name: /order\.bpmn/ })).toHaveAttribute('aria-selected', 'true')
     await expect(doc).toHaveAttribute('data-format', 'bpmn')
     await expect(doc.locator('dsk-bpmn svg').first()).toBeVisible({ timeout: 15_000 })
-    await expect(win.getByTestId('toggle-edit')).toBeVisible()
+    await expect(win.getByTestId('mode-visual')).toBeVisible()
 
     // Edited in the BPMN editor: a task removed, the tab edited, the file changed on Save.
-    await win.getByTestId('toggle-edit').click()
+    await win.getByTestId('mode-visual').click()
     const task = doc.locator('dsk-bpmn[editable] [data-element-id="Task_Reject"]').first()
     await task.click()
     await win.keyboard.press('Delete')
@@ -62,7 +63,7 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     // draw.io: drawn, not edited.
     await open('architecture.drawio')
     await expect(doc.locator('dsk-drawio svg').first()).toBeVisible({ timeout: 15_000 })
-    await expect(win.getByTestId('toggle-edit')).toBeHidden()
+    await expect(win.getByTestId('mode-visual')).toBeHidden()
 
     await open('events.yaml')
     await expect(doc).toHaveAttribute('data-format', 'asyncapi')
@@ -74,14 +75,14 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     // No server in the spec: samples name localhost, never folio's own address.
     await expect(doc.locator('dsk-openapi')).toContainText('http://localhost/orders')
     await expect(doc.locator('dsk-openapi')).not.toContainText('folio://')
-    await win.getByTestId('toggle-edit').click()
+    await win.getByTestId('mode-visual').click()
     await expect(doc.locator('dsk-openapi[mode="editor"]')).toBeVisible()
-    await win.getByTestId('toggle-edit').click()
+    await win.getByTestId('mode-read').click()
 
     // A text notation: the source beside a live preview; saved as text.
     await open('flow.mmd')
     await expect(doc.locator('dsk-diagram svg.dg')).toContainText('Review', { timeout: 15_000 })
-    await win.getByTestId('toggle-edit').click()
+    await win.getByTestId('mode-visual').click()
     const source = doc.getByTestId('source')
     await expect(source).toHaveValue('flowchart LR\n  Draft --> Review\n')
     await source.click()

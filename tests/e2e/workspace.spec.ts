@@ -26,7 +26,8 @@ test('projects in the sidebar: add, browse, open, follow the disk, group and pin
     await expect(sidebar.getByTestId('shared')).toBeVisible()
 
     await pickFolders(app, f.folder, second)
-    await sidebar.getByRole('button', { name: /Add a project folder|Добавить папку проекта/ }).click()
+    await win.getByTestId('add-project').click()
+    await win.getByTestId('add-folder').click()
     const projects = sidebar.getByTestId('projects')
     await expect(projects.locator('.project-row')).toHaveText([/notes/, /second/])
 

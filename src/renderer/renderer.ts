@@ -8,6 +8,8 @@
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
 import { canEdit, editorOf, viewOf, type ViewOptions } from './formats'
+import { iconButton, type IconName } from './icons'
+import { popMenu } from './menu'
 import { openCloneDialog, type CloneText } from './clone'
 import { openPdfDialog, type PdfTarget, type PdfText } from './pdfDialog'
 import { describeRefusal, HistoryPanel, type HistoryText } from './history'
@@ -39,10 +41,16 @@ const TEXT = {
     back: 'Back to the document',
     then: 'Then',
     now: 'Now',
+    viewModes: 'View',
+    modeNames: { read: 'Read', visual: 'Edit visually', source: 'Markdown', split: 'Markdown beside the page' } as Record<'read' | 'visual' | 'source' | 'split', string>,
+    print: 'Print',
+    exportPdf: 'Export as PDF',
+    settings: 'Settings',
+    themes: { system: 'Theme: as the system', light: 'Theme: light', dark: 'Theme: dark' } as Record<'system' | 'light' | 'dark', string>,
     historyPanel: { title: 'History', noFile: 'Open a file to see its history.', outside: 'This file is outside the projects and Shared: no history here.', noHistory: 'This folder keeps no history yet.', start: 'Keep a history', autoCommit: 'Commit when saved', commitNow: 'Commit now', commitPlaceholder: 'What changed…', commit: 'Commit', noVersions: 'No versions of this file yet.', nothingToCommit: 'Nothing to commit: the changes are in the history already.', close: 'Close', scopeFile: 'This file', scopeAll: 'All commits', graph: 'Commit graph', branches: 'Branches', newBranch: 'New branch', create: 'Create', switched: 'On branch {branch}.', remotePlaceholder: 'Remote: https://… or git@…', connect: 'Connect', sync: 'Sync', syncing: 'Syncing…', synced: { 'up-to-date': 'Up to date.', pushed: 'Sent.', pulled: 'Received.', merged: 'Merged and sent.', conflict: 'Conflicts: resolve them in the text, then finish the merge.' }, username: 'User', token: 'Token or password', remember: 'Remember on this computer', signIn: 'Sign in and sync', mergeConflicts: 'Merging: conflicts in {n} file(s). Edit the text between the <<<<<<< and >>>>>>> lines, save, then finish.', mergeReady: 'Merging: every conflict is resolved.', finishMerge: 'Finish the merge', abortMerge: 'Cancel the merge', mergeDone: 'Merged. Sync to send it.', errors: { dirty: 'Save or commit the changes first: {files}', merging: 'A merge is in progress: finish or cancel it first.', 'no-remote': 'No remote yet.', detached: 'Not on a branch.', auth: 'The remote asks for a login ({detail}).', authSystem: 'git could not log in ({detail}). Set up its credentials as for a terminal: a credential helper or an SSH key.', network: 'Could not reach the remote: {detail}', invalid: 'Not a valid name or address.', markers: 'Conflict markers are still in: {files}', exists: 'Already exists: {detail}', canceled: '' } } as HistoryText,
     pdf: { title: 'Export as PDF', folderTitle: 'Export the folder as one PDF', pageSize: 'Page size', orientation: 'Orientation', portrait: 'Portrait', landscape: 'Landscape', margins: 'Margins', marginNames: ['None', 'Narrow', 'Normal', 'Wide'], header: 'Title at the top of each page', footer: 'Page numbers at the bottom', toc: 'Table of contents', outline: 'Bookmarks from the headings', background: 'Colours and backgrounds', export: 'Export…', exporting: 'Exporting…', cancel: 'Cancel', saved: 'Saved: {file}', failed: 'Not exported: {error}' } as PdfText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
-    sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project folder', cloneRepo: 'Clone a repository', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', noProjects: 'Add a folder as a project with +.', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group' } as SidebarText,
+    sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project', addFolder: 'Add a folder…', cloneRepo: 'Clone a repository…', sharedMenu: 'Shared: folder', projectsMenu: 'Projects: view', resetShared: 'The default folder', openFile: 'Open a file (⌘O)', newNote: 'New quick note (⌘N)', collapse: 'Collapse the sidebar (⌘B)', expand: 'Expand the sidebar (⌘B)', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', noProjects: 'Add a folder as a project with +.', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group' } as SidebarText,
   },
   ru: {
     open: 'Открыть…',
@@ -68,14 +76,22 @@ const TEXT = {
     back: 'К документу',
     then: 'Тогда',
     now: 'Сейчас',
+    viewModes: 'Вид',
+    modeNames: { read: 'Чтение', visual: 'Править визуально', source: 'Markdown', split: 'Markdown рядом со страницей' } as Record<'read' | 'visual' | 'source' | 'split', string>,
+    print: 'Печать',
+    exportPdf: 'Экспорт в PDF',
+    settings: 'Настройки',
+    themes: { system: 'Тема: как в системе', light: 'Тема: светлая', dark: 'Тема: тёмная' } as Record<'system' | 'light' | 'dark', string>,
     historyPanel: { title: 'История', noFile: 'Откройте файл, чтобы увидеть его историю.', outside: 'Файл вне проектов и «Общих»: истории здесь нет.', noHistory: 'Эта папка пока не ведёт историю.', start: 'Вести историю', autoCommit: 'Фиксировать при сохранении', commitNow: 'Зафиксировать сейчас', commitPlaceholder: 'Что изменилось…', commit: 'Зафиксировать', noVersions: 'У этого файла пока нет версий.', nothingToCommit: 'Нечего фиксировать: изменения уже в истории.', close: 'Закрыть', scopeFile: 'Этот файл', scopeAll: 'Все коммиты', graph: 'Граф коммитов', branches: 'Ветки', newBranch: 'Новая ветка', create: 'Создать', switched: 'Ветка {branch}.', remotePlaceholder: 'Удалённый репозиторий: https://… или git@…', connect: 'Подключить', sync: 'Синхронизировать', syncing: 'Синхронизация…', synced: { 'up-to-date': 'Всё совпадает.', pushed: 'Отправлено.', pulled: 'Получено.', merged: 'Слито и отправлено.', conflict: 'Конфликты: разрешите их в тексте и завершите слияние.' }, username: 'Пользователь', token: 'Токен или пароль', remember: 'Запомнить на этом компьютере', signIn: 'Войти и синхронизировать', mergeConflicts: 'Слияние: конфликты в файлах — {n}. Поправьте текст между строками <<<<<<< и >>>>>>>, сохраните и завершите.', mergeReady: 'Слияние: все конфликты разрешены.', finishMerge: 'Завершить слияние', abortMerge: 'Отменить слияние', mergeDone: 'Слито. Синхронизируйте, чтобы отправить.', errors: { dirty: 'Сначала сохраните или зафиксируйте изменения: {files}', merging: 'Идёт слияние: сначала завершите или отмените его.', 'no-remote': 'Удалённого репозитория пока нет.', detached: 'Вы не на ветке.', auth: 'Удалённый репозиторий просит войти ({detail}).', authSystem: 'git не смог войти ({detail}). Настройте его вход как для терминала: помощник учётных данных или SSH-ключ.', network: 'Не удалось связаться с удалённым репозиторием: {detail}', invalid: 'Неверное имя или адрес.', markers: 'Маркеры конфликта ещё есть в: {files}', exists: 'Уже существует: {detail}', canceled: '' } } as HistoryText,
     pdf: { title: 'Экспорт в PDF', folderTitle: 'Экспорт папки одним PDF', pageSize: 'Размер страницы', orientation: 'Ориентация', portrait: 'Книжная', landscape: 'Альбомная', margins: 'Поля', marginNames: ['Без полей', 'Узкие', 'Обычные', 'Широкие'], header: 'Название вверху каждой страницы', footer: 'Номера страниц внизу', toc: 'Оглавление', outline: 'Закладки по заголовкам', background: 'Цвета и фоны', export: 'Экспортировать…', exporting: 'Экспорт…', cancel: 'Отмена', saved: 'Сохранено: {file}', failed: 'Не экспортировано: {error}' } as PdfText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
-    sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить папку проекта', cloneRepo: 'Клонировать репозиторий', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', noProjects: 'Добавьте папку проектом кнопкой +.', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы' } as SidebarText,
+    sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить проект', addFolder: 'Добавить папку…', cloneRepo: 'Клонировать репозиторий…', sharedMenu: '«Общие»: папка', projectsMenu: 'Проекты: вид', resetShared: 'Папка по умолчанию', openFile: 'Открыть файл (⌘O)', newNote: 'Новая быстрая заметка (⌘N)', collapse: 'Свернуть панель (⌘B)', expand: 'Развернуть панель (⌘B)', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', noProjects: 'Добавьте папку проектом кнопкой +.', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы' } as SidebarText,
   },
 }
 
 const folio = bridge()
+/** The modifier key as the system writes it in shortcuts. */
+const mod = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl+'
 document.documentElement.dataset.platform = folio.platform
 
 let t = TEXT.en
@@ -85,14 +101,17 @@ const viewEl = document.querySelector<HTMLElement>('.view')!
 const welcomeEl = document.querySelector<HTMLElement>('.welcome')!
 const bannerEl = document.querySelector<HTMLElement>('.banner')!
 const noticeEl = document.querySelector<HTMLElement>('.notice')!
-const editButton = document.querySelector<HTMLButtonElement>('.toggle-edit')!
-const historyButton = document.querySelector<HTMLButtonElement>('.toggle-history')!
+const railRight = document.querySelector<HTMLElement>('.rail-right')!
 let lang: 'en' | 'ru' = 'en'
 
 /** How long typing settles before the buffer is written. */
 const BUFFER_DELAY = 700
 
+let tabSeq = 0
+
 interface Tab {
+  /** For the elements of its pane (its toolbar's id). */
+  id: number
   /** The file, or null for a quick note. */
   path: string | null
   doc: Opened | null
@@ -267,13 +286,21 @@ function render(tab: Tab): void {
     )
   } else {
     const base = tab.doc?.base
+    // The editor's toolbar floats over the page, at hand however far down the text goes; the modes are the rail's.
+    const bar = document.createElement('div')
+    bar.className = 'doc-toolbar'
+    bar.id = `doc-toolbar-${tab.id}`
+    bar.dataset.testid = 'doc-toolbar'
+    tab.pane.append(bar)
     const ed = document.createElement('dsk-markdown-editor') as HTMLElement & { value: string; mode: string }
+    ed.setAttribute('toolbar-target', `#${bar.id}`)
+    ed.setAttribute('mode-switch', 'false')
     if (base) {
       ed.setAttribute('image-base', base)
       ed.setAttribute('link-base', base)
     }
     ed.setAttribute('mode', tab.mode)
-    ed.setAttribute('min-height', 'calc(100vh - 160px)')
+    ed.setAttribute('min-height', 'calc(100vh - 140px)')
     const source = document.createElement('script')
     source.type = 'text/plain'
     // textContent, not markup: a `</script>` in the text stays text.
@@ -286,6 +313,7 @@ function render(tab: Tab): void {
     ed.addEventListener('dsk:modechange', (e) => {
       tab.mode = ((e as CustomEvent).detail?.mode ?? tab.mode) as EditorMode
       edited(tab)
+      syncRail()
     })
     tab.pane.append(ed)
   }
@@ -304,11 +332,106 @@ function showBanners(): void {
     noticeEl.querySelector<HTMLElement>('[data-action="disk"]')!.hidden = !active.conflict
     noticeEl.querySelector<HTMLElement>('[data-action="mine"]')!.hidden = !active.conflict
   }
-  historyButton.hidden = !active?.path
-  historyButton.setAttribute('aria-pressed', String(history.visible))
-  editButton.hidden = active === null || !canEdit(formatOf(active))
-  editButton.textContent = active?.view === 'edit' ? t.read : t.edit
-  editButton.setAttribute('aria-pressed', String(active?.view === 'edit'))
+  syncRail()
+}
+
+// The right rail: how the document is shown, then tools; settings at the bottom ------
+
+type ViewMode = 'read' | 'visual' | 'source' | 'split'
+const MODES: [ViewMode, IconName][] = [['read', 'read'], ['visual', 'visual'], ['source', 'source'], ['split', 'split']]
+
+/** The modes a document offers: all four for Markdown, read and edit for a drawing with an editor, read alone otherwise. */
+function modesOf(tab: Tab | null): Set<ViewMode> {
+  if (!tab || (tab.error && !tab.buffer && tab.saved !== null)) return new Set()
+  const format = formatOf(tab)
+  if (format === 'markdown') return new Set(['read', 'visual', 'source', 'split'])
+  return new Set(canEdit(format) ? ['read', 'visual'] : ['read'])
+}
+
+function modeOf(tab: Tab): ViewMode {
+  if (tab.view === 'read' || tab.version) return 'read'
+  return formatOf(tab) === 'markdown' ? (tab.mode as ViewMode) : 'visual'
+}
+
+function setMode(tab: Tab | null, mode: ViewMode): void {
+  if (!tab || !modesOf(tab).has(mode)) return
+  if (mode === 'read') {
+    if (tab.view === 'edit' || tab.version) {
+      tab.version = null
+      toggleEditTo(tab, 'read')
+    }
+    return syncRail()
+  }
+  if (formatOf(tab) === 'markdown') {
+    tab.mode = mode as EditorMode
+    const ed = tab.pane.querySelector<HTMLElement & { mode: string }>('dsk-markdown-editor')
+    if (tab.view === 'edit' && ed && !tab.version) {
+      ed.mode = mode
+      edited(tab)
+    } else toggleEditTo(tab, 'edit')
+  } else if (tab.view !== 'edit' || tab.version) toggleEditTo(tab, 'edit')
+  syncRail()
+}
+
+function buildRail(): void {
+  railRight.replaceChildren()
+  const modes = document.createElement('div')
+  modes.className = 'rail-group rail-modes'
+  modes.setAttribute('role', 'radiogroup')
+  modes.setAttribute('aria-label', t.viewModes)
+  for (const [mode, name] of MODES) {
+    const b = iconButton(name, t.modeNames[mode], () => setMode(active, mode), `mode-${mode}`)
+    b.setAttribute('role', 'radio')
+    b.dataset.mode = mode
+    modes.append(b)
+  }
+  const tools = document.createElement('div')
+  tools.className = 'rail-group'
+  tools.append(
+    iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
+    iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
+    iconButton('pdf', `${t.exportPdf} (${mod}⇧P)`, () => exportActive(), 'rail-pdf'),
+  )
+  const bottom = document.createElement('div')
+  bottom.className = 'rail-group rail-bottom'
+  bottom.append(iconButton('settings', t.settings, (e) => openSettings(e.currentTarget as HTMLElement), 'rail-settings'))
+  railRight.append(modes, tools, bottom)
+  syncRail()
+}
+
+function syncRail(): void {
+  const offered = modesOf(active)
+  const current = active ? modeOf(active) : null
+  for (const b of railRight.querySelectorAll<HTMLButtonElement>('[data-mode]')) {
+    const mode = b.dataset.mode as ViewMode
+    b.hidden = !offered.has(mode)
+    b.setAttribute('aria-checked', String(mode === current))
+    b.classList.toggle('on', mode === current)
+  }
+  const tools = railRight.querySelectorAll<HTMLButtonElement>('[data-testid="toggle-history"], [data-testid="rail-print"], [data-testid="rail-pdf"]')
+  for (const b of tools) b.disabled = !active
+  const h = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-history"]')
+  if (h) {
+    h.disabled = !active?.path
+    h.setAttribute('aria-pressed', String(history.visible))
+    h.classList.toggle('on', history.visible)
+  }
+}
+
+// Settings: the theme, for now; more as folio grows.
+type Theme = 'system' | 'light' | 'dark'
+let theme: Theme = prefs.get<Theme>('theme', 'system')
+function applyTheme(next: Theme): void {
+  theme = next
+  prefs.set('theme', next)
+  if (next === 'system') delete document.documentElement.dataset.theme
+  else document.documentElement.dataset.theme = next
+  window.DskEmbed?.configure({ theme: next })
+}
+function openSettings(anchor: HTMLElement): void {
+  popMenu(anchor, [
+    ...(['system', 'light', 'dark'] as const).map((value) => ({ label: t.themes[value], checked: theme === value, testid: `theme-${value}`, action: () => applyTheme(value) })),
+  ], 'end')
 }
 
 // Buffers -------------------------------------------------------------------------
@@ -376,6 +499,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   closer.setAttribute('aria-label', t.close)
   button.append(label, closer)
   const tab: Tab = {
+    id: ++tabSeq,
     doc: null,
     error: null,
     view: 'read',
@@ -453,10 +577,16 @@ async function close(tab: Tab): Promise<void> {
 }
 
 function toggleEdit(tab: Tab | null): void {
-  if (!tab || (tab.error && !tab.buffer && tab.saved !== null) || !canEdit(formatOf(tab))) return
+  if (!tab) return
+  toggleEditTo(tab, tab.view === 'edit' ? 'read' : 'edit')
+}
+
+/** Reading or editing: drawn again where the reader was, as near as the other view allows. */
+function toggleEditTo(tab: Tab, view: 'read' | 'edit'): void {
+  if ((tab.error && !tab.buffer && tab.saved !== null) || !canEdit(formatOf(tab))) return
   const ratio = viewEl.scrollHeight > 0 ? viewEl.scrollTop / viewEl.scrollHeight : 0
   tab.version = null
-  tab.view = tab.view === 'edit' ? 'read' : 'edit'
+  tab.view = view
   render(tab)
   showBanners()
   requestAnimationFrame(() => (viewEl.scrollTop = ratio * viewEl.scrollHeight))
@@ -544,9 +674,14 @@ noticeEl.querySelector('[data-action="mine"]')!.addEventListener('click', async 
 const sidebarEl = document.querySelector<HTMLElement>('.sidebar')!
 const sidebar = new Sidebar({
   el: sidebarEl,
-  text: () => t.sidebar,
+  rail: document.querySelector<HTMLElement>('.rail-left')!,
+  flyout: document.querySelector<HTMLElement>('.flyout')!,
+  // Shortcut hints as the system writes them: ⌘ on a Mac, Ctrl+ elsewhere.
+  text: () => Object.fromEntries(Object.entries(t.sidebar).map(([k, v]) => [k, v.replace('⌘', mod)])) as unknown as SidebarText,
   open: (root, rel) => void folio.openEntry(root, rel).then((result) => add(result)),
   clone: () => openClone(),
+  openFile: () => void openFiles(),
+  newNote: () => newNote(),
 })
 function openClone(): void {
   openCloneDialog(t.clone, (r) => describeRefusal(t.historyPanel.errors, r as GitRefusal))
@@ -569,11 +704,11 @@ const history = new HistoryPanel({
   },
 })
 function toggleHistory(): void {
+  if (!active?.path) return
   history.setVisible(!history.visible)
   prefs.set('historyOpen', history.visible)
   showBanners()
 }
-historyButton.addEventListener('click', toggleHistory)
 folio.onToggleHistory(() => toggleHistory())
 folio.onCommitted((value) => {
   const { path } = value as { path: string }
@@ -613,7 +748,6 @@ folio.onSaveAs(() => {
   if (active) void save(active, true)
 })
 folio.onToggleEdit(() => toggleEdit(active))
-editButton.addEventListener('click', () => toggleEdit(active))
 
 // A file changed on disk: a clean tab takes it, an edited one is told (nothing is overwritten).
 folio.onFsChanged(async (value) => {
@@ -640,9 +774,9 @@ folio.onFsChanged(async (value) => {
   }
 })
 
-document.querySelector<HTMLButtonElement>('.open')!.addEventListener('click', async () => {
+async function openFiles(): Promise<void> {
   for (const result of await folio.openDialog()) await add(result)
-})
+}
 
 // Links: a document of the folder opens in a tab, the web and mail leave folio; anchors stay.
 viewEl.addEventListener('click', (event) => {
@@ -698,11 +832,7 @@ window.addEventListener(
       h: () => {
         if (event.shiftKey) toggleHistory()
       },
-      b: () => {
-        const hidden = !document.body.classList.contains('no-sidebar')
-        document.body.classList.toggle('no-sidebar', hidden)
-        prefs.set('sidebarHidden', hidden)
-      },
+      b: () => sidebar.toggleCollapsed(),
     }
     const fn = act[key]
     if (!fn || (key !== 's' && key !== 'h' && key !== 'p' && event.shiftKey) || (key === 'h' && !event.shiftKey)) return
@@ -732,7 +862,7 @@ async function printActive(): Promise<void> {
     window.print()
   } finally {
     restore()
-    window.DskEmbed?.configure({ theme: 'system' })
+    window.DskEmbed?.configure({ theme })
   }
 }
 folio.onPrint(() => void printActive())
@@ -754,14 +884,9 @@ window.addEventListener('beforeunload', () => {
   for (const tab of tabs) if (tab.timer) flush(tab)
 })
 
-// The sidebar: hidden with Cmd/Ctrl+B, its width dragged and remembered.
-document.body.classList.toggle('no-sidebar', prefs.get('sidebarHidden', false))
+// The sidebar: collapsed to its rail with Cmd/Ctrl+B, its width dragged and remembered.
 document.documentElement.style.setProperty('--sidebar-width', `${prefs.get('sidebarWidth', 260)}px`)
-folio.onToggleSidebar(() => {
-  const hidden = !document.body.classList.contains('no-sidebar')
-  document.body.classList.toggle('no-sidebar', hidden)
-  prefs.set('sidebarHidden', hidden)
-})
+folio.onToggleSidebar(() => sidebar.toggleCollapsed())
 const resizer = document.querySelector<HTMLElement>('.resizer')!
 resizer.addEventListener('pointerdown', (event) => {
   resizer.setPointerCapture(event.pointerId)
@@ -791,7 +916,9 @@ void folio.startup().then(async ({ tabs: restored, active: activeIndex, locale, 
   history.setVisible(prefs.get('historyOpen', false))
   document.documentElement.lang = lang
   applyText()
-  window.DskEmbed?.configure({ theme: 'system', locale: lang })
+  window.DskEmbed?.configure({ locale: lang })
+  applyTheme(theme)
+  buildRail()
   void sidebar.load()
   for (const r of restored) {
     const doc = isOpened(r.doc) ? r.doc : null
