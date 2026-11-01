@@ -24,6 +24,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   5 MB, a long line cut at 2 000 characters there. Logs filter by level —
   errors, warnings, info, debug, other — with a stack trace kept with its
   entry, and a log read at its end follows what is written to it.
+- Code blocks in documents and in the editor are highlighted by the same
+  `@dskripchenko/syntax` as source files (embed 1.12.0): some 35 languages
+  instead of 17.
 
 ### Changed
 - The view modes are one button on the rail: a click goes round Read → Edit
