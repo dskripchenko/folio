@@ -2,7 +2,7 @@
   "name": "folio",
   "version": "0.0.0",
   "private": true,
-  "description": "A desktop app to read, edit and print Markdown with live diagrams, API references and editors — portable on macOS, Windows and Linux.",
+  "description": "A desktop app to read, edit and print Markdown with live diagrams, API references and editors \u2014 portable on macOS, Windows and Linux.",
   "license": "MIT",
   "author": "Denis Skripchenko",
   "homepage": "https://github.com/dskripchenko/folio",
@@ -21,6 +21,7 @@
     "lint": "eslint src tests scripts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "pretest:e2e": "node -e \"require('electron')\"",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
