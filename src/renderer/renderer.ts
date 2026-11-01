@@ -1,27 +1,45 @@
 /**
- * The window: tabs of open documents, each a `<dsk-markdown>` of embed with
- * its relative paths on `folio://`, and the network consent banner.
+ * The window: tabs of documents and quick notes. A tab is read (embed's
+ * `<dsk-markdown>`) or edited (`<dsk-markdown-editor>`); what is typed and not
+ * saved goes to a buffer in folio-data as it is typed — closing folio, a crash
+ * or a restart loses nothing, and the file changes only on Save (ADR-001).
  */
-import { folio as bridge, prefs, type Changes, type OpenResult, type Opened } from './bridge'
+import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { Sidebar, type SidebarText } from './sidebar'
 
 const TEXT = {
   en: {
     open: 'Open…',
-    welcome: 'Open a Markdown file — or drop it here.',
+    welcome: 'Open a Markdown file — or drop it here. ⌘N / Ctrl+N starts a quick note.',
     blocked: 'This document wants to load from the web: {hosts}. Nothing was sent.',
     allowFile: 'Allow for this file',
     allowFolder: 'Allow for its folder',
     close: 'Close',
+    edit: 'Edit',
+    read: 'Read',
+    untitled: 'Quick note',
+    conflict: 'The file changed on disk while you were editing it. Your text is kept; nothing was overwritten.',
+    takeDisk: 'Take the file from disk',
+    keepMine: 'Keep my version',
+    missing: 'The file is gone; your text is kept — save it somewhere.',
+    saveFailed: 'Not saved: {error}',
     sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project folder', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', noProjects: 'Add a folder as a project with +.', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group' } as SidebarText,
   },
   ru: {
     open: 'Открыть…',
-    welcome: 'Откройте Markdown-файл — или перетащите его сюда.',
+    welcome: 'Откройте Markdown-файл — или перетащите его сюда. ⌘N / Ctrl+N — быстрая заметка.',
     blocked: 'Документ хочет загрузить из сети: {hosts}. Ничего не отправлено.',
     allowFile: 'Разрешить для файла',
     allowFolder: 'Разрешить для его папки',
     close: 'Закрыть',
+    edit: 'Править',
+    read: 'Читать',
+    untitled: 'Быстрая заметка',
+    conflict: 'Пока вы правили, файл изменился на диске. Ваш текст сохранён, ничего не перезаписано.',
+    takeDisk: 'Взять файл с диска',
+    keepMine: 'Оставить мою версию',
+    missing: 'Файла больше нет; ваш текст сохранён — сохраните его куда-нибудь.',
+    saveFailed: 'Не сохранено: {error}',
     sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить папку проекта', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', noProjects: 'Добавьте папку проектом кнопкой +.', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы' } as SidebarText,
   },
 }
@@ -30,17 +48,37 @@ const folio = bridge()
 document.documentElement.dataset.platform = folio.platform
 
 let t = TEXT.en
+let sharedDir: string | null = null
 const tabsEl = document.querySelector<HTMLElement>('.tabs')!
 const viewEl = document.querySelector<HTMLElement>('.view')!
 const welcomeEl = document.querySelector<HTMLElement>('.welcome')!
 const bannerEl = document.querySelector<HTMLElement>('.banner')!
+const noticeEl = document.querySelector<HTMLElement>('.notice')!
+const editButton = document.querySelector<HTMLButtonElement>('.toggle-edit')!
+
+/** How long typing settles before the buffer is written. */
+const BUFFER_DELAY = 700
 
 interface Tab {
-  path: string
-  result: OpenResult
+  /** The file, or null for a quick note. */
+  path: string | null
+  doc: Opened | null
+  error: string | null
+  view: 'read' | 'edit'
+  mode: EditorMode
+  /** The text as it is now, and as it is in the file (null: a note never saved). */
+  text: string
+  saved: string | null
+  /** The hash of `saved`, for telling the file changed meanwhile. */
+  baseline: string | null
+  buffer: string | null
+  conflict: boolean
+  blocked: string[]
+  scroll: number
+  timer: ReturnType<typeof setTimeout> | null
   pane: HTMLElement
   button: HTMLButtonElement
-  blocked: string[]
+  label: HTMLElement
 }
 
 const tabs: Tab[] = []
@@ -53,40 +91,325 @@ function applyText(): void {
   }
 }
 
-function isOpened(r: OpenResult): r is Opened {
-  return !('error' in r)
+function isOpened(r: OpenResult | null): r is Opened {
+  return r !== null && !('error' in r)
 }
 
-/** The document's view: embed's markdown, its relative paths against its folder. */
-function render(pane: HTMLElement, doc: Opened): void {
-  pane.replaceChildren()
-  const md = document.createElement('dsk-markdown')
-  md.setAttribute('image-base', doc.base)
-  md.setAttribute('link-base', doc.base)
-  md.setAttribute('toc', '')
-  const source = document.createElement('script')
-  source.type = 'text/markdown'
-  // textContent, not markup: a `</script>` in the text stays text.
-  source.textContent = doc.text
-  md.append(source)
-  pane.append(md)
+async function sha256(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function isDirty(tab: Tab): boolean {
+  return tab.saved === null ? tab.text.trim() !== '' : tab.text !== tab.saved
+}
+
+/** A note's name: its first line, without the heading marks. */
+function titleOf(tab: Tab): string {
+  if (tab.doc) return tab.doc.name
+  if (tab.path) return tab.path.split(/[\\/]/).pop() || tab.path
+  const first = tab.text.split('\n').map((l) => l.replace(/^#+\s*/, '').trim()).find((l) => l !== '')
+  return first ? first.slice(0, 40) : t.untitled
+}
+
+function syncLabel(tab: Tab): void {
+  tab.label.textContent = titleOf(tab)
+  tab.button.classList.toggle('dirty', isDirty(tab))
+  tab.button.classList.toggle('note', tab.path === null)
+  tab.button.title = tab.path ?? titleOf(tab)
+}
+
+// Drawing -----------------------------------------------------------------------
+
+function render(tab: Tab): void {
+  tab.pane.replaceChildren()
+  if (tab.error && tab.saved !== null && !tab.buffer) {
+    const err = document.createElement('p')
+    err.className = 'doc-error'
+    err.textContent = tab.error
+    tab.pane.append(err)
+    return
+  }
+  const base = tab.doc?.base
+  if (tab.view === 'read') {
+    const md = document.createElement('dsk-markdown')
+    if (base) {
+      md.setAttribute('image-base', base)
+      md.setAttribute('link-base', base)
+    }
+    md.setAttribute('toc', '')
+    const source = document.createElement('script')
+    source.type = 'text/markdown'
+    // textContent, not markup: a `</script>` in the text stays text.
+    source.textContent = tab.text
+    md.append(source)
+    tab.pane.append(md)
+  } else {
+    const ed = document.createElement('dsk-markdown-editor') as HTMLElement & { value: string; mode: string }
+    if (base) {
+      ed.setAttribute('image-base', base)
+      ed.setAttribute('link-base', base)
+    }
+    ed.setAttribute('mode', tab.mode)
+    ed.setAttribute('min-height', 'calc(100vh - 160px)')
+    const source = document.createElement('script')
+    source.type = 'text/plain'
+    source.textContent = tab.text
+    ed.append(source)
+    ed.addEventListener('input', () => {
+      tab.text = ed.value
+      edited(tab)
+    })
+    ed.addEventListener('dsk:modechange', (e) => {
+      tab.mode = ((e as CustomEvent).detail?.mode ?? tab.mode) as EditorMode
+      edited(tab)
+    })
+    tab.pane.append(ed)
+  }
+}
+
+function showBanners(): void {
+  // The network consent.
+  if (active && active.blocked.length > 0) {
+    bannerEl.querySelector('.banner-text')!.textContent = t.blocked.replace('{hosts}', active.blocked.join(', '))
+    bannerEl.hidden = false
+  } else bannerEl.hidden = true
+  // The file and the edit disagree.
+  noticeEl.hidden = !(active && (active.conflict || (active.error && active.buffer)))
+  if (active && !noticeEl.hidden) {
+    noticeEl.querySelector('.notice-text')!.textContent = active.conflict ? t.conflict : t.missing
+    noticeEl.querySelector<HTMLElement>('[data-action="disk"]')!.hidden = !active.conflict
+    noticeEl.querySelector<HTMLElement>('[data-action="mine"]')!.hidden = !active.conflict
+  }
+  editButton.hidden = active === null
+  editButton.textContent = active?.view === 'edit' ? t.read : t.edit
+  editButton.setAttribute('aria-pressed', String(active?.view === 'edit'))
+}
+
+// Buffers -------------------------------------------------------------------------
+
+/** The text changed: mark it, and write the buffer once typing settles. */
+function edited(tab: Tab): void {
+  syncLabel(tab)
+  if (tab.timer) clearTimeout(tab.timer)
+  tab.timer = setTimeout(() => flush(tab), BUFFER_DELAY)
+}
+
+function flush(tab: Tab): void {
+  if (tab.timer) clearTimeout(tab.timer)
+  tab.timer = null
+  if (isDirty(tab)) {
+    tab.buffer ??= crypto.randomUUID()
+    const buffer: BufferData = { id: tab.buffer, path: tab.path, text: tab.text, baseline: tab.baseline, mode: tab.mode, scroll: tab === active ? viewEl.scrollTop : tab.scroll }
+    folio.writeBuffer(buffer)
+  } else if (tab.buffer) {
+    folio.dropBuffer(tab.buffer)
+    tab.buffer = null
+  }
+  report()
 }
 
 function report(): void {
+  const index = active ? tabs.indexOf(active) : -1
   folio.state(
-    tabs.filter((tab) => isOpened(tab.result)).map((tab) => tab.path),
-    active && isOpened(active.result) ? active.path : null,
+    tabs.map((tab) => ({ path: tab.path, buffer: tab.buffer })),
+    index >= 0 ? index : null,
+    active?.path ?? null,
   )
 }
 
-function showBanner(): void {
-  if (!active || active.blocked.length === 0) {
-    bannerEl.hidden = true
+// Tabs ----------------------------------------------------------------------------
+
+function activate(tab: Tab | null): void {
+  if (active && active !== tab) active.scroll = viewEl.scrollTop
+  active = tab
+  for (const other of tabs) {
+    other.pane.hidden = other !== tab
+    other.button.setAttribute('aria-selected', String(other === tab))
+  }
+  welcomeEl.hidden = tab !== null
+  sidebar.setActive(tab?.path ?? null)
+  showBanners()
+  if (tab) requestAnimationFrame(() => (viewEl.scrollTop = tab.scroll))
+  report()
+}
+
+function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved: string | null }): Tab {
+  const pane = document.createElement('article')
+  pane.className = 'doc'
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'tab'
+  button.setAttribute('role', 'tab')
+  const label = document.createElement('span')
+  label.className = 'label'
+  const closer = document.createElement('span')
+  closer.className = 'close'
+  closer.textContent = '×'
+  closer.setAttribute('role', 'button')
+  closer.setAttribute('aria-label', t.close)
+  button.append(label, closer)
+  const tab: Tab = {
+    doc: null,
+    error: null,
+    view: 'read',
+    mode: 'visual',
+    baseline: null,
+    buffer: null,
+    conflict: false,
+    blocked: [],
+    scroll: 0,
+    timer: null,
+    ...init,
+    pane,
+    button,
+    label,
+  }
+  pane.dataset.path = tab.path ?? ''
+  button.addEventListener('click', (event) => {
+    if ((event.target as HTMLElement).classList.contains('close')) void close(tab)
+    else activate(tab)
+  })
+  button.addEventListener('auxclick', (event) => {
+    if (event.button === 1) void close(tab)
+  })
+  tabs.push(tab)
+  tabsEl.append(button)
+  viewEl.append(pane)
+  syncLabel(tab)
+  render(tab)
+  pane.hidden = true
+  return tab
+}
+
+/** A file to show: a tab of its own, or the one it already has. */
+async function add(result: OpenResult, focus = true): Promise<void> {
+  const existing = tabs.find((tab) => tab.path === result.path)
+  if (existing) {
+    if (focus) activate(existing)
     return
   }
-  bannerEl.querySelector('.banner-text')!.textContent = t.blocked.replace('{hosts}', active.blocked.join(', '))
-  bannerEl.hidden = false
+  const tab = isOpened(result)
+    ? makeTab({ path: result.path, doc: result, text: result.text, saved: result.text, baseline: await sha256(result.text) })
+    : makeTab({ path: result.path, error: result.error, text: '', saved: '' })
+  if (focus) activate(tab)
+  else report()
 }
+
+function newNote(): void {
+  const tab = makeTab({ path: null, text: '', saved: null, view: 'edit' })
+  activate(tab)
+  requestAnimationFrame(() => (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { focus(): void }) | null)?.focus())
+}
+
+function remove(tab: Tab): void {
+  const i = tabs.indexOf(tab)
+  if (i < 0) return
+  if (tab.timer) clearTimeout(tab.timer)
+  tabs.splice(i, 1)
+  tab.pane.remove()
+  tab.button.remove()
+  if (active === tab) activate(tabs[Math.min(i, tabs.length - 1)] ?? null)
+  else report()
+}
+
+async function close(tab: Tab): Promise<void> {
+  if (isDirty(tab)) {
+    activate(tab)
+    const choice = await folio.confirmClose(titleOf(tab))
+    if (choice === 'cancel') return
+    if (choice === 'save' && !(await save(tab, false))) return
+  }
+  if (tab.buffer) folio.dropBuffer(tab.buffer)
+  tab.buffer = null
+  remove(tab)
+}
+
+function toggleEdit(tab: Tab | null): void {
+  if (!tab || (tab.error && !tab.buffer && tab.saved !== null)) return
+  const ratio = viewEl.scrollHeight > 0 ? viewEl.scrollTop / viewEl.scrollHeight : 0
+  tab.view = tab.view === 'edit' ? 'read' : 'edit'
+  render(tab)
+  showBanners()
+  requestAnimationFrame(() => (viewEl.scrollTop = ratio * viewEl.scrollHeight))
+}
+
+// Saving ---------------------------------------------------------------------------
+
+function notify(message: string): void {
+  const text = noticeEl.querySelector('.notice-text')!
+  text.textContent = message
+  noticeEl.hidden = false
+  for (const b of noticeEl.querySelectorAll<HTMLElement>('button')) b.hidden = true
+}
+
+/** Saved: the tab is the file now, the buffer goes. */
+function savedAs(tab: Tab, result: Extract<SaveResult, { saved: OpenResult }>): void {
+  if (!isOpened(result.saved)) return
+  tab.path = result.saved.path
+  tab.doc = result.saved
+  tab.error = null
+  tab.saved = tab.text
+  tab.baseline = result.baseline
+  tab.conflict = false
+  tab.pane.dataset.path = tab.path
+  if (tab.buffer) folio.dropBuffer(tab.buffer)
+  tab.buffer = null
+  syncLabel(tab)
+  // The base may be new (a note saved into a folder): its pictures resolve there now.
+  if (tab.view === 'read') render(tab)
+  sidebar.setActive(active?.path ?? null)
+  showBanners()
+  report()
+}
+
+async function save(tab: Tab, as: boolean): Promise<boolean> {
+  if (tab.timer) flush(tab)
+  const dir = tab.doc?.folder ?? sharedDir
+  const result: SaveResult =
+    tab.path === null || as || (tab.error !== null && tab.buffer !== null)
+      ? await folio.saveAs(tab.text, titleOf(tab), dir)
+      : await folio.save(tab.path, tab.text, tab.baseline, false)
+  if ('saved' in result) {
+    savedAs(tab, result)
+    return true
+  }
+  if ('conflict' in result) {
+    tab.conflict = true
+    showBanners()
+    return false
+  }
+  if ('error' in result) notify(t.saveFailed.replace('{error}', result.error))
+  return false
+}
+
+// The file and the edit disagree: take the file, or keep the edit (the next save overwrites).
+noticeEl.querySelector('[data-action="disk"]')!.addEventListener('click', async () => {
+  const tab = active
+  if (!tab?.path) return
+  const disk = await folio.disk(tab.path)
+  if (!disk) return
+  tab.text = tab.saved = disk.text
+  tab.baseline = disk.hash
+  tab.conflict = false
+  render(tab)
+  flush(tab)
+  syncLabel(tab)
+  showBanners()
+})
+noticeEl.querySelector('[data-action="mine"]')!.addEventListener('click', async () => {
+  const tab = active
+  if (!tab?.path) return
+  const disk = await folio.disk(tab.path)
+  tab.saved = disk?.text ?? null
+  tab.baseline = disk?.hash ?? null
+  tab.conflict = false
+  flush(tab)
+  syncLabel(tab)
+  showBanners()
+})
+
+// The sidebar ---------------------------------------------------------------------
 
 const sidebarEl = document.querySelector<HTMLElement>('.sidebar')!
 const sidebar = new Sidebar({
@@ -95,85 +418,15 @@ const sidebar = new Sidebar({
   open: (root, rel) => void folio.openEntry(root, rel).then((result) => add(result)),
 })
 
-function activate(tab: Tab | null): void {
-  active = tab
-  for (const other of tabs) {
-    other.pane.hidden = other !== tab
-    other.button.setAttribute('aria-selected', String(other === tab))
-  }
-  welcomeEl.hidden = tab !== null
-  sidebar.setActive(tab && isOpened(tab.result) ? tab.path : null)
-  showBanner()
-  report()
-}
-
-function close(tab: Tab): void {
-  const i = tabs.indexOf(tab)
-  if (i < 0) return
-  tabs.splice(i, 1)
-  tab.pane.remove()
-  tab.button.remove()
-  if (active === tab) activate(tabs[Math.min(i, tabs.length - 1)] ?? null)
-  else report()
-}
-
-function add(result: OpenResult, focus = true): void {
-  const existing = tabs.find((tab) => tab.path === result.path)
-  if (existing) {
-    if (focus) activate(existing)
-    return
-  }
-  const pane = document.createElement('article')
-  pane.className = 'doc'
-  pane.dataset.path = result.path
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.className = 'tab'
-  button.setAttribute('role', 'tab')
-  button.title = result.path
-  const label = document.createElement('span')
-  const closer = document.createElement('span')
-  closer.className = 'close'
-  closer.textContent = '×'
-  closer.setAttribute('role', 'button')
-  closer.setAttribute('aria-label', t.close)
-  button.append(label, closer)
-
-  const tab: Tab = { path: result.path, result, pane, button, blocked: [] }
-  if (isOpened(result)) {
-    label.textContent = result.name
-    render(pane, result)
-  } else {
-    label.textContent = result.path.split(/[\\/]/).pop() || result.path
-    button.classList.add('error')
-    const err = document.createElement('p')
-    err.className = 'doc-error'
-    err.textContent = result.error
-    pane.append(err)
-  }
-  button.addEventListener('click', (event) => {
-    if ((event.target as HTMLElement).classList.contains('close')) close(tab)
-    else activate(tab)
-  })
-  tabs.push(tab)
-  tabsEl.append(button)
-  viewEl.append(pane)
-  if (focus) activate(tab)
-  else {
-    pane.hidden = true
-    report()
-  }
-}
-
-// The consent banner: allow, then draw the document again so what was blocked loads.
+// The network consent banner: allow, then draw the document again so what was blocked loads.
 for (const button of bannerEl.querySelectorAll<HTMLButtonElement>('button[data-scope]')) {
   button.addEventListener('click', async () => {
-    if (!active || !isOpened(active.result)) return
+    if (!active?.doc || !active.path) return
     const scope = button.dataset.scope === 'folder' ? 'folder' : 'file'
-    await folio.allowNetwork(scope, scope === 'folder' ? active.result.folder : active.result.path)
+    await folio.allowNetwork(scope, scope === 'folder' ? active.doc.folder : active.path)
     active.blocked = []
-    showBanner()
-    render(active.pane, active.result)
+    showBanners()
+    render(active)
   })
 }
 
@@ -182,23 +435,120 @@ folio.onBlocked((value) => {
   const tab = tabs.find((x) => x.path === path)
   if (!tab) return
   tab.blocked = hosts
-  if (tab === active) showBanner()
+  if (tab === active) showBanners()
 })
-folio.onOpened((value) => add(value as OpenResult))
+folio.onOpened((value) => void add(value as OpenResult))
+folio.onCloseTab(() => {
+  if (active) void close(active)
+})
 folio.onAddProject(() => void sidebar.addProject())
+folio.onNewNote(() => newNote())
+folio.onSave(() => {
+  if (active) void save(active, false)
+})
+folio.onSaveAs(() => {
+  if (active) void save(active, true)
+})
+folio.onToggleEdit(() => toggleEdit(active))
+editButton.addEventListener('click', () => toggleEdit(active))
 
-// A document changed on disk: read it again, keep the place.
+// A file changed on disk: a clean tab takes it, an edited one is told (nothing is overwritten).
 folio.onFsChanged(async (value) => {
   const files = new Set((value as Changes[]).flatMap((c) => c.files))
   for (const tab of tabs) {
-    if (!files.has(tab.path)) continue
-    const result = await folio.open(tab.path)
-    if (!isOpened(result)) continue
+    if (!tab.path || !files.has(tab.path)) continue
+    const disk = await folio.disk(tab.path)
+    if (!disk || disk.text === tab.saved) continue
+    if (isDirty(tab)) {
+      if (disk.hash !== tab.baseline && disk.text !== tab.text) {
+        tab.conflict = true
+        if (tab === active) showBanners()
+      }
+      continue
+    }
     const top = viewEl.scrollTop
-    tab.result = result
-    render(tab.pane, result)
+    tab.text = tab.saved = disk.text
+    tab.baseline = disk.hash
+    const reopened = await folio.open(tab.path)
+    if (isOpened(reopened)) tab.doc = reopened
+    if (tab.view === 'read') render(tab)
+    else (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { value: string }) | null)?.setAttribute('value', disk.text)
     if (tab === active) requestAnimationFrame(() => (viewEl.scrollTop = top))
   }
+})
+
+document.querySelector<HTMLButtonElement>('.open')!.addEventListener('click', async () => {
+  for (const result of await folio.openDialog()) await add(result)
+})
+
+// Links: a document of the folder opens in a tab, the web and mail leave folio; anchors stay.
+viewEl.addEventListener('click', (event) => {
+  const a = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
+  if (!a || event.defaultPrevented || a.closest('[contenteditable="true"]')) return
+  const href = a.href
+  if (href.startsWith('folio://app/r/')) {
+    event.preventDefault()
+    void folio.openUrl(href).then((result) => add(result))
+  } else if (/^(https?:|mailto:)/.test(href)) {
+    event.preventDefault()
+    folio.external(href)
+  }
+})
+
+// Dropping files on the window opens them.
+viewEl.addEventListener('dragover', (event) => {
+  if (!event.dataTransfer?.types.includes('Files')) return
+  event.preventDefault()
+  viewEl.classList.add('dropping')
+})
+viewEl.addEventListener('dragleave', () => viewEl.classList.remove('dropping'))
+viewEl.addEventListener('drop', async (event) => {
+  if (!event.dataTransfer?.types.includes('Files')) return
+  event.preventDefault()
+  viewEl.classList.remove('dropping')
+  for (const file of Array.from(event.dataTransfer.files)) {
+    const path = folio.pathOf(file)
+    if (path) await add(await folio.open(path))
+  }
+})
+
+// Shortcuts: the window handles them (the menus only show them), the same on every system.
+window.addEventListener(
+  'keydown',
+  (event) => {
+    const mod = folio.platform === 'darwin' ? event.metaKey : event.ctrlKey
+    if (!mod || event.altKey) return
+    const key = event.key.toLowerCase()
+    const act: Record<string, () => void> = {
+      n: () => newNote(),
+      o: () => void folio.openDialog().then(async (docs) => {
+        for (const d of docs) await add(d)
+      }),
+      s: () => {
+        if (active) void save(active, event.shiftKey)
+      },
+      w: () => {
+        if (active) void close(active)
+      },
+      e: () => toggleEdit(active),
+      b: () => {
+        const hidden = !document.body.classList.contains('no-sidebar')
+        document.body.classList.toggle('no-sidebar', hidden)
+        prefs.set('sidebarHidden', hidden)
+      },
+    }
+    const fn = act[key]
+    if (!fn || (key !== 's' && event.shiftKey)) return
+    event.preventDefault()
+    event.stopPropagation()
+    fn()
+  },
+  true,
+)
+
+// Going away: what is still settling is written now.
+window.addEventListener('beforeunload', () => {
+  for (const tab of tabs) if (tab.timer) flush(tab)
 })
 
 // The sidebar: hidden with Cmd/Ctrl+B, its width dragged and remembered.
@@ -220,51 +570,36 @@ resizer.addEventListener('pointerdown', (event) => {
   resizer.addEventListener('pointermove', move)
   resizer.addEventListener('pointerup', () => resizer.removeEventListener('pointermove', move), { once: true })
 })
-folio.onCloseTab(() => {
-  if (active) close(active)
-})
 
-document.querySelector<HTMLButtonElement>('.open')!.addEventListener('click', async () => {
-  for (const result of await folio.openDialog()) add(result)
-})
-
-// Links: a document of the folder opens in a tab, the web and mail leave folio; anchors stay.
-viewEl.addEventListener('click', (event) => {
-  const a = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
-  if (!a || event.defaultPrevented) return
-  const href = a.href
-  if (href.startsWith('folio://app/r/')) {
-    event.preventDefault()
-    void folio.openUrl(href).then((result) => add(result))
-  } else if (/^(https?:|mailto:)/.test(href)) {
-    event.preventDefault()
-    folio.external(href)
-  }
-})
-
-// Dropping files on the window opens them.
-viewEl.addEventListener('dragover', (event) => {
-  event.preventDefault()
-  viewEl.classList.add('dropping')
-})
-viewEl.addEventListener('dragleave', () => viewEl.classList.remove('dropping'))
-viewEl.addEventListener('drop', async (event) => {
-  event.preventDefault()
-  viewEl.classList.remove('dropping')
-  for (const file of Array.from(event.dataTransfer?.files ?? [])) {
-    const path = folio.pathOf(file)
-    if (path) add(await folio.open(path))
-  }
-})
-
-void folio.startup().then(({ documents, active: activePath, locale }) => {
+// Start: what was open comes back — files, unsaved edits, quick notes.
+void folio.startup().then(async ({ tabs: restored, active: activeIndex, locale, shared }) => {
   const lang = locale.toLowerCase().startsWith('ru') ? 'ru' : 'en'
   t = TEXT[lang]
+  sharedDir = shared
   document.documentElement.lang = lang
   applyText()
   window.DskEmbed?.configure({ theme: 'system', locale: lang })
   void sidebar.load()
-  for (const result of documents) add(result, false)
-  activate(tabs.find((tab) => tab.path === activePath) ?? tabs[tabs.length - 1] ?? null)
+  for (const r of restored) {
+    const doc = isOpened(r.doc) ? r.doc : null
+    const b = r.buffer
+    if (b) {
+      makeTab({
+        path: b.path,
+        doc,
+        error: r.doc && !isOpened(r.doc) ? r.doc.error : null,
+        text: b.text,
+        // The file as it is now, or what the edit started from when the file is gone.
+        saved: b.path === null ? null : doc ? doc.text : '',
+        baseline: r.conflict ? b.baseline : doc ? await sha256(doc.text) : b.baseline,
+        buffer: b.id,
+        view: 'edit',
+        mode: b.mode,
+        scroll: b.scroll,
+        conflict: r.conflict,
+      })
+    } else if (r.doc) await add(r.doc, false)
+  }
+  for (const tab of tabs) syncLabel(tab)
+  activate(tabs[activeIndex ?? -1] ?? tabs[tabs.length - 1] ?? null)
 })
-

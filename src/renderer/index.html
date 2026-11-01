@@ -15,12 +15,18 @@
   <div class="main">
   <header class="bar">
     <nav class="tabs" role="tablist" data-testid="tabs"></nav>
+    <button type="button" class="toggle-edit" data-testid="toggle-edit" hidden></button>
     <button type="button" class="open" data-testid="open" data-i18n="open"></button>
   </header>
   <div class="banner" role="alert" data-testid="net-banner" hidden>
     <span class="banner-text"></span>
     <button type="button" data-scope="file" data-i18n="allowFile"></button>
     <button type="button" data-scope="folder" data-i18n="allowFolder"></button>
+  </div>
+  <div class="notice" role="alert" data-testid="notice" hidden>
+    <span class="notice-text"></span>
+    <button type="button" data-action="disk" data-i18n="takeDisk"></button>
+    <button type="button" data-action="mine" data-i18n="keepMine"></button>
   </div>
   <main class="view" data-testid="view">
     <section class="welcome" data-testid="welcome">

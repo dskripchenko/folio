@@ -10,6 +10,26 @@ export interface Opened {
 }
 export type OpenResult = Opened | { error: string; path: string }
 
+export type EditorMode = 'visual' | 'source' | 'split'
+
+/** An unsaved edit or a quick note, as kept in folio-data/session/buffers. */
+export interface BufferData {
+  id: string
+  path: string | null
+  text: string
+  baseline: string | null
+  mode: EditorMode
+  scroll: number
+}
+
+export interface RestoredTab {
+  doc: OpenResult | null
+  buffer: BufferData | null
+  conflict: boolean
+}
+
+export type SaveResult = { saved: OpenResult; baseline: string } | { conflict: true } | { canceled: true } | { error: string }
+
 export interface Entry {
   name: string
   path: string
@@ -43,13 +63,23 @@ type Listener = (cb: (value: unknown) => void) => () => void
 
 export interface FolioBridge {
   platform: string
-  startup(): Promise<{ documents: OpenResult[]; active: string | null; locale: string }>
+  startup(): Promise<{ tabs: RestoredTab[]; active: number | null; locale: string; shared: string }>
   openDialog(): Promise<OpenResult[]>
   open(path: string): Promise<OpenResult>
   openUrl(url: string): Promise<OpenResult>
   external(url: string): void
   pathOf(file: File): string
-  state(documents: string[], active: string | null): void
+  state(tabs: { path: string | null; buffer: string | null }[], active: number | null, activePath: string | null): void
+  writeBuffer(buffer: BufferData): void
+  dropBuffer(id: string): void
+  disk(path: string): Promise<{ text: string; hash: string } | null>
+  save(path: string, text: string, baseline: string | null, force: boolean): Promise<SaveResult>
+  saveAs(text: string, name: string, dir: string | null): Promise<SaveResult>
+  confirmClose(name: string): Promise<'save' | 'discard' | 'cancel'>
+  onNewNote: Listener
+  onSave: Listener
+  onSaveAs: Listener
+  onToggleEdit: Listener
   allowNetwork(scope: 'file' | 'folder', path: string): Promise<boolean>
   workspace(): Promise<WorkspaceView>
   addProject(): Promise<WorkspaceView>

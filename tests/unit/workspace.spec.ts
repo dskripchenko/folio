@@ -7,6 +7,7 @@ import { documentOfUrl, fileOfUrl, filesFromArgv, openDocument } from '../../src
 import { isInside, resolveInside } from '../../src/main/paths'
 import { Roots } from '../../src/main/roots'
 import { Session } from '../../src/main/session'
+import { Buffers, hashText, newBufferId } from '../../src/main/buffers'
 import { Workspace } from '../../src/main/workspace'
 
 let dir: string
@@ -106,11 +107,41 @@ describe('consent and session', () => {
     expect(new Consent(dir).allows('/proj/deep/c.md')).toBe(false)
   })
 
-  it('keeps the open documents and the active one', () => {
-    new Session(dir).set(['/a.md', '/b.md'], '/b.md')
-    // Kept as given: they are what the window reported.
+  it('keeps the tabs — files, buffers — and the active one', () => {
+    new Session(dir).set([{ path: '/a.md', buffer: null }, { path: null, buffer: 'b1' }], 1)
     const s = new Session(dir)
-    expect(s.documents()).toEqual(['/a.md', '/b.md'])
-    expect(s.active()).toBe('/b.md')
+    expect(s.tabs()).toEqual([{ path: '/a.md', buffer: null }, { path: null, buffer: 'b1' }])
+    expect(s.active()).toBe(1)
+  })
+
+  it('reads the session of the first version: files and the active path', () => {
+    mkdirSync(join(dir, 'session'), { recursive: true })
+    writeFileSync(join(dir, 'session', 'session.json'), JSON.stringify({ version: 1, documents: [{ path: '/a.md' }, { path: '/b.md' }], active: '/b.md' }))
+    const s = new Session(dir)
+    expect(s.tabs()).toEqual([{ path: '/a.md', buffer: null }, { path: '/b.md', buffer: null }])
+    expect(s.active()).toBe(1)
+  })
+})
+
+describe('buffers: what is typed and not saved', () => {
+  it('keeps a note and an edit, newest first, and forgets them when told', async () => {
+    const b = new Buffers(dir)
+    const note = newBufferId()
+    const edit = newBufferId()
+    b.write({ id: note, path: null, text: '# Idea', baseline: null, mode: 'visual', scroll: 0, updatedAt: '' })
+    await new Promise((r) => setTimeout(r, 5))
+    b.write({ id: edit, path: '/a.md', text: 'changed', baseline: hashText('original'), mode: 'source', scroll: 120, updatedAt: '' })
+    const again = new Buffers(dir)
+    expect(again.all().map((x) => x.id)).toEqual([edit, note])
+    expect(again.get(note)).toMatchObject({ path: null, text: '# Idea' })
+    expect(again.get(edit)).toMatchObject({ path: '/a.md', baseline: hashText('original'), mode: 'source', scroll: 120 })
+    again.remove(note)
+    expect(new Buffers(dir).get(note)).toBeNull()
+  })
+
+  it('refuses ids that are not its own (no path out of the folder)', () => {
+    const b = new Buffers(dir)
+    expect(() => b.write({ id: '../../x', path: null, text: '', baseline: null, mode: 'visual', scroll: 0, updatedAt: '' })).toThrow()
+    expect(b.get('../../x')).toBeNull()
   })
 })

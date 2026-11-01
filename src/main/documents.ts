@@ -19,6 +19,8 @@ export interface OpenedDocument {
   folder: string
   owner: 'shared' | 'project' | 'file'
   project: string | null
+  /** The root it reads from (its id): watched while it is open. */
+  root: string
 }
 
 export class DocumentError extends Error {}
@@ -61,6 +63,7 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
     folder: dirname(path),
     owner: owner?.kind ?? 'file',
     project: owner?.kind === 'project' ? owner.project.name : null,
+    root: id,
   }
 }
 
