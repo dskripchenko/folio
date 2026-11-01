@@ -236,6 +236,22 @@ Pfade.
 | `Cmd/Strg+E` | bearbeiten / lesen |
 | `Cmd/Strg+W` | Tab schließen |
 | `Cmd/Strg+B` | Seitenleiste |
+| `Cmd/Strg+F` | im Dokument suchen |
+| `Cmd/Strg+G`, `Cmd/Strg+Umschalt+G` | der nächste Treffer, der vorige |
+
+## Suchen
+
+`Cmd/Strg+F` (**Bearbeiten → Suchen**) öffnet eine Leiste über der Seite: jeder
+Treffer ist markiert, der aktuelle wird in den Blick gebracht; Enter und
+Umschalt+Enter gehen sie durch, der Zähler zeigt, wo man ist. **Aa** beachtet
+die Groß-/Kleinschreibung, **ab** sucht ganze Wörter (jeder Schrift), **.\***
+nimmt einen regulären Ausdruck. Lesen und der visuelle Editor durchsuchen die
+Seite, wie sie gezeichnet ist — ein Treffer läuft nie von einem Absatz in den
+nächsten, und die Seite selbst bleibt unberührt; die Markdown-Quelle und als
+Text bearbeitete Dateien durchsuchen das Feld, und Escape lässt den aktuellen
+Treffer dort ausgewählt; eine große Datei wird ganz durchsucht, nicht nur die
+sichtbaren Zeilen. Ändert sich die Seite unter der Leiste — eine Bearbeitung,
+die Datei auf der Festplatte —, wird erneut gesucht.
 
 ## Wo die Daten liegen
 

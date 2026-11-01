@@ -8,6 +8,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Find in the document (`Cmd/Ctrl+F`, **Edit → Find**; `Cmd/Ctrl+G` and
+  `Cmd/Ctrl+Shift+G` step): every match marked without touching the page,
+  the current one brought into view, a count; case, whole word (any script),
+  regular expression. The page as drawn in reading and the visual editor, the
+  field in the Markdown source and text editing (the match selected there on
+  Escape), the whole text of a big file; searched again when the page changes.
+  In a code view the line numbers stay put when a line scrolls sideways.
 - Code, data, logs and configuration files: listed in the tree and shown
   with numbered lines in the colours of their language, through the new
   package `@dskripchenko/syntax` (17 programming languages and 17 formats;

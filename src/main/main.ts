@@ -193,7 +193,22 @@ function buildMenu(): void {
         mac ? { role: 'close' } : { role: 'quit' },
       ],
     },
-    { role: 'editMenu' },
+    {
+      label: L().edit,
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+        { type: 'separator' },
+        { label: L().find, accelerator: 'CmdOrCtrl+F', registerAccelerator: false, click: () => send('menu:find', 'open') },
+        { label: L().findNext, accelerator: 'CmdOrCtrl+G', registerAccelerator: false, click: () => send('menu:find', 'next') },
+        { label: L().findPrevious, accelerator: 'CmdOrCtrl+Shift+G', registerAccelerator: false, click: () => send('menu:find', 'previous') },
+      ],
+    },
     {
       label: L().view,
       submenu: [
