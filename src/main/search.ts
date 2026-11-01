@@ -1,4 +1,4 @@
-import { open } from 'node:fs/promises'
+import { open, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { matchesIn } from '../common/pattern'
 
@@ -15,6 +15,8 @@ export interface FileHits {
   root: string
   label: string | null
   path: string
+  /** The file itself: for telling an open tab with unsaved changes. */
+  file: string
   hits: Hit[]
   /** More matches in the file than listed. */
   more: boolean
@@ -74,11 +76,11 @@ export function hitsIn(text: string, pattern: RegExp, limit = PER_FILE): { hits:
     if (lineEnd < 0) lineEnd = text.length
     if (text[lineEnd - 1] === '\r') lineEnd--
     const end = Math.min(e, lineEnd)
-    // A long line: a window around the match, marked as cut.
     let from = lineStart
     let to = lineEnd
-    if (to - from > PREVIEW) {
-      from = Math.max(lineStart, s - 60)
+    // A long line, or a match far along one: a window that starts just before the match.
+    if (to - from > PREVIEW || s - lineStart > 40) {
+      from = Math.max(lineStart, s - 24)
       to = Math.min(lineEnd, Math.max(end, from + PREVIEW))
     }
     const head = from > lineStart ? '…' : ''
@@ -122,7 +124,7 @@ export async function searchFiles(
       if (hits.length === 0) continue
       matches += hits.length
       withHits++
-      batch.push({ root: f.root, label: f.label, path: f.path, hits, more })
+      batch.push({ root: f.root, label: f.label, path: f.path, file: join(f.dir, ...f.path.split('/')), hits, more })
       if (Date.now() - last > 60 || batch.length >= 25) flush()
       if (matches >= TOTAL) {
         flush()
@@ -132,4 +134,26 @@ export async function searchFiles(
   }
   flush()
   return { files: withHits, matches, truncated: false, canceled: false }
+}
+
+/**
+ * Replace every match in the files: what each became, and how many
+ * replacements. A file that is not text, too big or gone is left alone.
+ */
+export async function replaceInFiles(files: string[], pattern: RegExp, replacement: string): Promise<{ changed: string[]; replacements: number }> {
+  const changed: string[] = []
+  let replacements = 0
+  for (const file of files) {
+    const text = await read(file)
+    if (text === null) continue
+    const count = matchesIn(text, pattern, Number.MAX_SAFE_INTEGER).length
+    if (count === 0) continue
+    pattern.lastIndex = 0
+    const next = text.replace(pattern, replacement)
+    if (next === text) continue
+    await writeFile(file, next)
+    changed.push(file)
+    replacements += count
+  }
+  return { changed, replacements }
 }

@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('folio', {
   searchScopes: () => ipcRenderer.invoke('search:scopes'),
   search: (id: number, query: string, options: Record<string, boolean>, scope: string) => ipcRenderer.invoke('search:run', id, query, options, scope),
   cancelSearch: () => ipcRenderer.send('search:cancel'),
+  replace: (query: string, options: Record<string, boolean>, replacement: string, files: string[]) => ipcRenderer.invoke('search:replace', query, options, replacement, files),
   onSearchHits: (callback: (id: number, batch: unknown) => void) => {
     const handler = (_e: unknown, id: number, batch: unknown) => callback(id, batch)
     ipcRenderer.on('search:hits', handler)

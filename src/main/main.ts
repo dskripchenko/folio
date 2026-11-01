@@ -10,6 +10,7 @@ import {
   branchesOf,
   branchOf,
   commitFile,
+  commitFiles,
   conflictsOf,
   createBranch,
   finishMerge,
@@ -40,7 +41,7 @@ import { Session } from './session'
 import { labels } from './i18n'
 import { listDir } from './tree'
 import { FileIndex } from './fileIndex'
-import { searchFiles, type SearchFile } from './search'
+import { replaceInFiles, searchFiles, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
 import { Workspace, type Project } from './workspace'
@@ -325,6 +326,35 @@ ipcMain.handle('search:run', async (e, id: unknown, query: unknown, options: unk
     for (const f of await fileIndex.files(s.root, s.dir)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
   }
   return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id)
+})
+/** Replace the matches in the files chosen; a folder that keeps a history gets one commit for it. */
+ipcMain.handle('search:replace', async (_e, query: unknown, options: unknown, replacement: unknown, files: unknown) => {
+  if (typeof query !== 'string' || typeof replacement !== 'string' || typeof options !== 'object' || options === null || !Array.isArray(files)) return { error: 'invalid' }
+  const o = options as Record<string, unknown>
+  const pattern = patternOf(query, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+  if (!pattern) return { error: 'invalid' }
+  // Only files of the roots folio knows: the window names them, the main process checks.
+  const known = new Set(sources().map((s) => s.dir))
+  const allowed = files.filter((f): f is string => typeof f === 'string' && [...known].some((dir) => f.startsWith(dir + sep)))
+  const { changed, replacements } = await replaceInFiles(allowed, pattern, o.regex === true ? replacement : replacement.replace(/\$/g, '$$$$'))
+  // One commit per history: the replacement as one change, not a commit per file later.
+  const byRepo = new Map<string, string[]>()
+  for (const file of changed) {
+    if (!workspace.autoCommits(file)) continue
+    const repo = await repoOf(file)
+    if (!repo || mergeHead(repo)) continue
+    autoCommit.cancel(file)
+    byRepo.set(repo, [...(byRepo.get(repo) ?? []), file])
+  }
+  let commits = 0
+  for (const [repo, list] of byRepo) {
+    const oid = await commitFiles(repo, list, `Replace "${query}" with "${replacement}"`, authorOf(repo, fallbackAuthor()))
+    if (oid) {
+      commits++
+      for (const path of list) send('git:committed', { path })
+    }
+  }
+  return { files: changed.length, replacements, commits }
 })
 ipcMain.on('search:cancel', () => {
   searchId++

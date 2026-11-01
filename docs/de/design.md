@@ -252,6 +252,15 @@ Treffer. Binärdateien, Dateien über 8 MB und die vom Gehe-zu-Datei
 ausgelassenen Ordner werden nicht durchsucht; höchstens 200 Treffer je Datei
 und 5 000 insgesamt werden gelistet.
 
+Der Pfeil vor der Suchanfrage öffnet **Ersetzen**: jeder Treffer zeigt, was aus
+ihm wird, Häkchen bestimmen die beteiligten Dateien, und **Alle ersetzen**
+fragt mit der Anzahl noch einmal nach, bevor es schreibt. Mit einem regulären
+Ausdruck bezeichnen `$1`, `$&` und ähnliche seine Gruppen; ohne ihn wird der
+Text genommen, wie er ist. Eine mit ungespeicherten Änderungen geöffnete Datei
+wird ausgelassen (das wird gesagt), damit keine Seite verloren geht; eine
+geöffnete ohne Änderungen zeigt den neuen Text. Ein Ordner mit Verlauf erhält
+einen Commit für die Ersetzung — `Replace "a" with "b"` —, nicht einen je Datei.
+
 `Cmd/Strg+T` (**Datei → Gehe zu Datei**) öffnet eine Palette aller Dateien,
 die folio öffnet, in „Gemeinsam“ und den sichtbaren Projekten, geordnet, während
 der Name getippt wird: die Zeichen in Reihenfolge, nicht unbedingt beieinander —

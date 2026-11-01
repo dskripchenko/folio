@@ -8,6 +8,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Replace in files (the arrow before the query in the search panel): each
+  match previewed, files ticked, **Replace all** asks once more with the count;
+  `$1` groups with a regular expression, literal text without; files open with
+  unsaved changes left out; one commit per folder that keeps a history.
 - Search the files' text (`Cmd/Ctrl+Shift+F`, **Edit → Find in Files**, the
   magnifier on the rail): everything, Shared or one project, case / whole word
   / regular expression; matches stream in by file and line, a click opens the
