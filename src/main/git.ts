@@ -208,8 +208,8 @@ export async function historyOf(root: string, path: string, depth = 200): Promis
     }
     return blobs.get(oid)!
   }
-  // isomorphic-git may list a commit twice when a merge leads to it on two paths.
-  walk = [...new Map(walk.map((e) => [e.oid, e])).values()]
+  // isomorphic-git may list a commit twice when a merge leads to it on two paths, and orders by date alone.
+  walk = topological([...new Map(walk.map((e) => [e.oid, e])).values()])
   const versions: LogEntry[] = []
   for (const e of walk) {
     const mine = await blobAt(e.oid)
@@ -221,6 +221,36 @@ export async function historyOf(root: string, path: string, depth = 200): Promis
   const keep = new Set(versions.map((e) => e.oid))
   const parentsOf = new Map(walk.map((e) => [e.oid, e.commit.parent]))
   return versions.map((e) => versionOf(e, rewriteParents(e.oid, keep, (oid) => parentsOf.get(oid))))
+}
+
+/**
+ * Commits in the order a history is read: a child always above its parents;
+ * among the commits free to go next, the newest, and on a tie (commits of one
+ * second) the one met first. Dates alone do not do it: a branch's commit and
+ * the commit it started from may share a second.
+ */
+function topological(entries: LogEntry[], limit = Infinity): LogEntry[] {
+  const byOid = new Map(entries.map((e) => [e.oid, e]))
+  const seen = new Map(entries.map((e, i) => [e.oid, i]))
+  const children = new Map<string, number>()
+  for (const e of byOid.values()) for (const p of e.commit.parent) if (byOid.has(p)) children.set(p, (children.get(p) ?? 0) + 1)
+  const ready = [...byOid.values()].filter((e) => !children.get(e.oid))
+  const out: LogEntry[] = []
+  const when = (e: LogEntry) => e.commit.committer.timestamp
+  const before = (a: LogEntry, b: LogEntry) => when(a) > when(b) || (when(a) === when(b) && seen.get(a.oid)! < seen.get(b.oid)!)
+  while (ready.length > 0 && out.length < limit) {
+    let best = 0
+    for (let i = 1; i < ready.length; i++) if (before(ready[i]!, ready[best]!)) best = i
+    const e = ready.splice(best, 1)[0]!
+    out.push(e)
+    for (const p of e.commit.parent) {
+      const left = (children.get(p) ?? 0) - 1
+      children.set(p, left)
+      const parent = byOid.get(p)
+      if (left === 0 && parent) ready.push(parent)
+    }
+  }
+  return out
 }
 
 /**
@@ -277,25 +307,7 @@ export async function repositoryHistory(root: string, limit = 300): Promise<Vers
       // A ref to a commit that is not here (a shallow clone).
     }
   }
-  // Children before parents; among the commits free to go next, the newest.
-  const children = new Map<string, number>()
-  for (const e of commits.values()) for (const p of e.commit.parent) if (commits.has(p)) children.set(p, (children.get(p) ?? 0) + 1)
-  const ready = [...commits.values()].filter((e) => !children.get(e.oid))
-  const out: Version[] = []
-  const when = (e: LogEntry) => e.commit.committer.timestamp
-  while (ready.length > 0 && out.length < limit) {
-    let best = 0
-    for (let i = 1; i < ready.length; i++) if (when(ready[i]!) > when(ready[best]!)) best = i
-    const e = ready.splice(best, 1)[0]!
-    out.push(versionOf(e, e.commit.parent, tips.get(e.oid)))
-    for (const p of e.commit.parent) {
-      const left = (children.get(p) ?? 0) - 1
-      children.set(p, left)
-      const parent = commits.get(p)
-      if (left === 0 && parent) ready.push(parent)
-    }
-  }
-  return out
+  return topological([...commits.values()], limit).map((e) => versionOf(e, e.commit.parent, tips.get(e.oid)))
 }
 
 /** A file's text as a commit has it; null when it was not there. */
