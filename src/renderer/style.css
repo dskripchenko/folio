@@ -252,3 +252,22 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 @media (max-width: 520px) { dialog.pdf-dialog .grid { grid-template-columns: minmax(0, 1fr); } }
 /* The edited page reads as the page read: the same type. */
 .doc .dsk-wysiwyg__content { font-size: 16px; line-height: 1.65; }
+
+/* Markdown alone, or beside the page, and a drawing's source beside its picture: the whole
+   workspace, edge to edge; side by side, the two halves meet at a line, each scrolling on its own. */
+.doc[data-edit] { max-width: none; height: 100%; margin: 0; padding: 0; }
+.doc[data-edit] dsk-markdown-editor, .doc[data-edit] dsk-markdown-editor > .dsk-root { display: block; height: 100%; }
+.doc[data-edit] .dsk-md { height: 100%; gap: 0; }
+.doc[data-edit] .dsk-md__panes { height: 100%; min-height: 0; gap: 0; }
+.doc[data-edit] .dsk-md__source,
+.doc[data-edit] .dsk-md__preview,
+.doc[data-edit] .source-editor .source,
+.doc[data-edit] .source-editor .preview { box-sizing: border-box; height: 100%; min-height: 0; max-height: none; margin: 0; border: 0; border-radius: 0; background: var(--bg); color: var(--fg); resize: none; }
+.doc[data-edit] .dsk-md__source, .doc[data-edit] .source-editor .source { padding: 24px 40px 64px; font: 13.5px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.doc[data-edit] .dsk-md__source:focus-visible, .doc[data-edit] .source-editor .source:focus { outline: none; }
+.doc[data-edit] .dsk-md__preview, .doc[data-edit] .source-editor .preview { overflow: auto; padding: 24px 40px 64px; }
+.doc[data-edit="split"] .dsk-md__preview, .doc[data-edit] .source-editor .preview { border-left: 1px solid var(--line); }
+.doc[data-edit] .source-editor { height: 100%; gap: 0; }
+@media (max-width: 820px) {
+  .doc[data-edit="split"] .dsk-md__preview, .doc[data-edit] .source-editor .preview { border-left: 0; border-top: 1px solid var(--line); }
+}
