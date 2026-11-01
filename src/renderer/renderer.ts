@@ -1,11 +1,13 @@
 /**
  * The window: tabs of documents and quick notes. A tab is read (embed's
- * `<dsk-markdown>`) or edited (`<dsk-markdown-editor>`); what is typed and not
+ * `<dsk-markdown>`, or the element of its format — formats.ts) or edited
+ * (`<dsk-markdown-editor>`, or the format's editor); what is typed and not
  * saved goes to a buffer in folio-data as it is typed — closing folio, a crash
  * or a restart loses nothing, and the file changes only on Save (ADR-001).
  */
-import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type OpenResult, type Opened, type SaveResult } from './bridge'
+import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
+import { canEdit, editorOf, viewOf, type ViewOptions } from './formats'
 import { openCloneDialog, type CloneText } from './clone'
 import { describeRefusal, HistoryPanel, type HistoryText } from './history'
 import { Sidebar, type SidebarText } from './sidebar'
@@ -151,18 +153,13 @@ function syncLabel(tab: Tab): void {
 
 // Drawing -----------------------------------------------------------------------
 
-/** A document drawn read-only: embed's markdown with the document's folder as its base. */
-function markdownView(text: string, base: string | undefined): HTMLElement {
-  const md = document.createElement('dsk-markdown')
-  if (base) {
-    md.setAttribute('image-base', base)
-    md.setAttribute('link-base', base)
-  }
-  const source = document.createElement('script')
-  source.type = 'text/markdown'
-  source.textContent = text
-  md.append(source)
-  return md
+/** The tab's format: a note is Markdown. */
+function formatOf(tab: Tab): Format {
+  return tab.doc?.format ?? 'markdown'
+}
+
+function viewOptions(tab: Tab, main = false): ViewOptions {
+  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main }
 }
 
 /** A version from the history: as it was, its changes against now, or the two side by side. */
@@ -215,8 +212,7 @@ function renderVersion(tab: Tab): void {
   })
   bar.append(restore, back)
   tab.pane.append(bar)
-  const base = tab.doc?.base
-  if (v.mode === 'version') tab.pane.append(markdownView(v.text, base))
+  if (v.mode === 'version') tab.pane.append(viewOf(formatOf(tab), v.text, viewOptions(tab)))
   else if (v.mode === 'diff') {
     const pre = document.createElement('div')
     pre.className = 'diff'
@@ -235,7 +231,7 @@ function renderVersion(tab: Tab): void {
       const col = document.createElement('section')
       const h = document.createElement('h4')
       h.textContent = label
-      col.append(h, markdownView(text, base))
+      col.append(h, viewOf(formatOf(tab), text, viewOptions(tab)))
       grid.append(col)
     }
     tab.pane.append(grid)
@@ -255,21 +251,19 @@ function render(tab: Tab): void {
     tab.pane.append(err)
     return
   }
-  const base = tab.doc?.base
-  if (tab.view === 'read') {
-    const md = document.createElement('dsk-markdown')
-    if (base) {
-      md.setAttribute('image-base', base)
-      md.setAttribute('link-base', base)
-    }
-    md.setAttribute('toc', '')
-    const source = document.createElement('script')
-    source.type = 'text/markdown'
-    // textContent, not markup: a `</script>` in the text stays text.
-    source.textContent = tab.text
-    md.append(source)
-    tab.pane.append(md)
+  const format = formatOf(tab)
+  tab.pane.dataset.format = format
+  if (tab.view === 'read' || !canEdit(format)) {
+    tab.pane.append(viewOf(format, tab.text, viewOptions(tab, true)))
+  } else if (format !== 'markdown') {
+    tab.pane.append(
+      editorOf(format, tab.text, viewOptions(tab, true), (text) => {
+        tab.text = text
+        edited(tab)
+      }),
+    )
   } else {
+    const base = tab.doc?.base
     const ed = document.createElement('dsk-markdown-editor') as HTMLElement & { value: string; mode: string }
     if (base) {
       ed.setAttribute('image-base', base)
@@ -279,6 +273,7 @@ function render(tab: Tab): void {
     ed.setAttribute('min-height', 'calc(100vh - 160px)')
     const source = document.createElement('script')
     source.type = 'text/plain'
+    // textContent, not markup: a `</script>` in the text stays text.
     source.textContent = tab.text
     ed.append(source)
     ed.addEventListener('input', () => {
@@ -308,7 +303,7 @@ function showBanners(): void {
   }
   historyButton.hidden = !active?.path
   historyButton.setAttribute('aria-pressed', String(history.visible))
-  editButton.hidden = active === null
+  editButton.hidden = active === null || !canEdit(formatOf(active))
   editButton.textContent = active?.view === 'edit' ? t.read : t.edit
   editButton.setAttribute('aria-pressed', String(active?.view === 'edit'))
 }
@@ -455,7 +450,7 @@ async function close(tab: Tab): Promise<void> {
 }
 
 function toggleEdit(tab: Tab | null): void {
-  if (!tab || (tab.error && !tab.buffer && tab.saved !== null)) return
+  if (!tab || (tab.error && !tab.buffer && tab.saved !== null) || !canEdit(formatOf(tab))) return
   const ratio = viewEl.scrollHeight > 0 ? viewEl.scrollTop / viewEl.scrollHeight : 0
   tab.version = null
   tab.view = tab.view === 'edit' ? 'read' : 'edit'
@@ -636,7 +631,7 @@ folio.onFsChanged(async (value) => {
     tab.baseline = disk.hash
     const reopened = await folio.open(tab.path)
     if (isOpened(reopened)) tab.doc = reopened
-    if (tab.view === 'read') render(tab)
+    if (tab.view === 'read' || formatOf(tab) !== 'markdown') render(tab)
     else (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { value: string }) | null)?.setAttribute('value', disk.text)
     if (tab === active) requestAnimationFrame(() => (viewEl.scrollTop = top))
   }

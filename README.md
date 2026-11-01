@@ -13,8 +13,9 @@ installing anything.
 > only with consent; Shared and the projects are in the sidebar, their trees
 > follow the disk; it edits — visually or as Markdown, every block live — and
 > quick notes and unsaved edits survive closing and restarts; a folder can keep
-> a git history — versions, their differences, commits on save. Branches, sync
-> and PDF come in the stages listed under [Plan](#plan).
+> a git history — versions, their differences, commits on save, branches, sync,
+> a commit graph; diagram and API files open on their own, in their editors.
+> Print and PDF come in the stages listed under [Plan](#plan).
 
 Documentation: [English](docs/en/) · [Русский](docs/ru/) · [Deutsch](docs/de/) ·
 [中文](docs/zh/)
@@ -71,7 +72,7 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 2 | The workspace: Shared and projects in the sidebar, groups, pinning, file trees that follow the disk — **done** |
 | 3 | Editing: visual and source, live blocks, saving; unsaved changes and quick notes survive closing and restarts, as in Sublime Text — **done** |
 | 4 | History with git, per folder, if you want it: versions and their differences, restoring one, status in the tree, commits on save — **done (4a)**; branches, sync, cloning, conflicts in the text — **done (4b)**; a graph of the commits — **done (4c)** |
-| 5 | Diagram and API files on their own, in their editors |
+| 5 | Diagram and API files on their own, in their editors — **done** |
 | 6 | A printed form for every widget (in embed) |
 | 7 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF |
 | 8 | Portable builds and updating itself |

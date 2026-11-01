@@ -1,10 +1,10 @@
 import { readFileSync, statSync } from 'node:fs'
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path'
+import { formatOf, MARKDOWN_EXT, opensInFolio, type Format } from './formats'
 import { real } from './paths'
 import type { Roots } from './roots'
 import type { Workspace } from './workspace'
 
-export const MARKDOWN = ['.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt']
 
 /** The largest document folio opens; a bigger one is not a document. */
 export const MAX_BYTES = 20 * 1024 * 1024
@@ -13,6 +13,8 @@ export interface OpenedDocument {
   path: string
   name: string
   text: string
+  /** How it is drawn and edited. */
+  format: Format
   /** Where the document's relative paths resolve: `folio://app/r/<root>/<its folder>/`. */
   base: string
   /** Its folder for the network consent and links. */
@@ -26,7 +28,7 @@ export interface OpenedDocument {
 export class DocumentError extends Error {}
 
 export function isMarkdown(path: string): boolean {
-  return MARKDOWN.includes(extname(path).toLowerCase())
+  return MARKDOWN_EXT.includes(extname(path).toLowerCase())
 }
 
 /** `a/b c/` → `a/b%20c/`: a folder path as URL segments. */
@@ -55,10 +57,12 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
   const id = roots.register(rootDir)
   const relDir = relative(rootDir, dirname(path))
 
+  const text = readFileSync(path, 'utf8')
   return {
     path,
     name: basename(path),
-    text: readFileSync(path, 'utf8'),
+    text,
+    format: formatOf(path, text),
     base: `folio://app/r/${id}/${urlPath(relDir)}`,
     folder: dirname(path),
     owner: owner?.kind ?? 'file',
@@ -100,13 +104,14 @@ function fileExists(path: string): boolean {
 }
 
 /**
- * The document a link names: the file itself, or — since the kit drops `.md`
+ * The document a link names: the file itself when folio opens its kind
+ * (Markdown, a diagram, an API description), or — since the kit drops `.md`
  * from relative links, as a documentation site wants — that name with a
  * Markdown extension. Null when neither is a file of the root.
  */
 export function documentOfUrl(url: string, roots: Roots): string | null {
   const file = fileOfUrl(url, roots)
-  if (file !== null && isMarkdown(file)) return file
+  if (file !== null && opensInFolio(file)) return file
   const bare = url.split(/[?#]/)[0] ?? url
   for (const ext of ['.md', '.markdown']) {
     const found = fileOfUrl(bare.replace(/\/$/, '') + ext, roots)

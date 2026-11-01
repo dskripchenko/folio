@@ -33,6 +33,29 @@ durch einen erneuten Start mit einer Datei: das laufende folio öffnet sie. Ein
 Link auf ein anderes Dokument desselben Ordners öffnet es in einem Tab. Die
 offenen Dokumente und das aktive kommen nach einem Neustart zurück.
 
+### Diagramm- und API-Dateien
+
+Nicht nur Markdown: Ein Diagramm oder eine API-Beschreibung öffnet sich in
+einem eigenen Tab, gezeichnet von seinem embed-Element; Links auf solche
+Dateien in einem Dokument öffnen sie ebenfalls.
+
+| Datei | Gezeichnet von | Bearbeitet in |
+|---|---|---|
+| `.bpmn`, `.dmn` | `<dsk-bpmn>`, `<dsk-dmn>` | ihren Editoren: Palette, Kontextmenü, Eigenschaften, Rückgängig |
+| `.drawio`, `.dio`, `.drawio.svg` | `<dsk-drawio>`, Seiten-Tabs | — (nur angezeigt) |
+| OpenAPI / Swagger (`.yaml`, `.yml`, `.json`) | `<dsk-openapi>`, die Referenz | seinem visuellen Editor mit Quelle und Vorschau |
+| AsyncAPI (`.yaml`, `.yml`, `.json`) | `<dsk-asyncapi>` | Quelle neben einer Live-Vorschau |
+| `.mmd`, `.puml`, `.dot`, `.gv`, `.d2`, `.dbml`, `.dsl`, `.wardley` | `<dsk-diagram>`, die Syntax nach der Endung | Quelle neben einer Live-Vorschau |
+| anderer Text | als Text | die Quelle |
+
+YAML und JSON werden an einem Schlüssel `openapi`, `swagger` oder `asyncapi`
+auf oberster Ebene erkannt; der Baum listet YAML-Dateien und JSON-Dateien mit
+dem Namen einer API-Beschreibung (`openapi.json`), nicht jede
+`package.json`. Eine API ohne Server im Netz bekommt kein Try-it, ihre
+Anfragebeispiele nennen `http://localhost`. Speichern, ungespeicherte
+Änderungen, die einen Neustart überstehen, der Verlauf und seine Vergleiche
+funktionieren für diese Dateien wie für Markdown.
+
 ## Gemeinsam und Projekte
 
 Der Arbeitsbereich hat zwei Teile: **Gemeinsam**, ein Ordner für Dokumente, die
