@@ -14,8 +14,6 @@ folio ist eine Electron-App, und Electron teilt sie in zwei Teile:
 
 ## Was ein Dokument darf
 
-> Die Isolierung des Fensters steht; das Ordner-Schema und die Zustimmung zum
-> Netz kommen mit dem Lesen von Markdown (Stufe 1), Tabs mit Ordnern (Stufe 2).
 
 Eine Markdown-Datei kann von überall kommen, deshalb vertraut das Fenster ihr
 nicht:
@@ -26,6 +24,32 @@ nicht:
   geht es erst, nachdem Sie es für diese Datei oder diesen Ordner erlaubt haben;
 - es kann das Fenster nicht auf eine andere Seite führen und keine neuen Fenster
   öffnen; ein Link geht an den Systembrowser.
+
+## Dokumente öffnen
+
+Eine Markdown-Datei öffnet sich über **Datei → Öffnen**, durch Ablegen auf dem
+Fenster, von der Kommandozeile (`folio notes.md`) oder — läuft folio schon —
+durch einen erneuten Start mit einer Datei: das laufende folio öffnet sie. Ein
+Link auf ein anderes Dokument desselben Ordners öffnet es in einem Tab. Die
+offenen Dokumente und das aktive kommen nach einem Neustart zurück.
+
+## Gemeinsam und Projekte
+
+Der Arbeitsbereich hat zwei Teile: **Gemeinsam**, ein Ordner für Dokumente, die
+für alles gelten (standardmäßig `folio-data/library` oder ein Ordner Ihrer
+Wahl), und **Projekte** — beliebige Ordner auf der Festplatte, die zu folio
+hinzugefügt wurden. Die Liste liegt in `folio-data/workspace.json`; die Ordner
+bleiben, wo sie sind. Ein Dokument eines Projekts oder von „Gemeinsam“ darf die
+Dateien dieses ganzen Ordners lesen; eine einzeln geöffnete Datei ihren eigenen
+Ordner. (Die Seitenleiste zur Verwaltung kommt mit Stufe 2.)
+
+## Ungespeichertes und schnelle Notizen
+
+Wie in Sublime Text: ein unbenannter Tab ist eine schnelle Notiz, und eine nicht
+gespeicherte Änderung erreicht die Datei nicht. Beides wird beim Tippen nach
+`folio-data/session/` geschrieben, übersteht also das Schließen von folio, einen
+Absturz und einen Neustart des Rechners und kommt genau so zurück. (Mit dem
+Bearbeiten, Stufe 3.)
 
 ## Wo die Daten liegen
 

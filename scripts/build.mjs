@@ -12,3 +12,6 @@ await build({ ...common, entryPoints: ['src/preload/preload.ts'], outfile: 'dist
 await build({ ...common, entryPoints: ['src/renderer/renderer.ts'], outfile: 'dist/renderer/renderer.js', platform: 'browser', format: 'iife' })
 cpSync('src/renderer/index.html', 'dist/renderer/index.html')
 cpSync('src/renderer/style.css', 'dist/renderer/style.css')
+// embed's fat bundle, inside the app: every widget, nothing fetched at run time.
+mkdirSync('dist/renderer/vendor', { recursive: true })
+cpSync('node_modules/@dskripchenko/embed/dist/embed.bundle.js', 'dist/renderer/vendor/embed.bundle.js')

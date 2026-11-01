@@ -3,12 +3,41 @@
   --bg: #ffffff;
   --fg: #1f2328;
   --muted: #59636e;
+  --line: #d1d9e0;
+  --tab: #f6f8fa;
+  --accent: #0969da;
+  --warn-bg: #fff8c5;
+  --warn-line: #d4a72c;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; }
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #30363d; --tab: #161b22; --accent: #4493f8; --warn-bg: #272115; --warn-line: #9e6a03; }
 }
+* { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+body { display: flex; flex-direction: column; }
+
+.bar { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); background: var(--tab); min-height: 36px; }
+.tabs { display: flex; flex: 1; overflow-x: auto; }
+.tab { display: flex; align-items: center; gap: 6px; padding: 0 10px 0 14px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--bg); color: var(--fg); }
+.tab .close { border: 0; background: transparent; color: inherit; font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
+.tab .close:hover { background: var(--line); }
+.tab.error { color: #cf222e; }
+.open { margin: 4px 8px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; }
+
+.banner { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--warn-bg); border-bottom: 1px solid var(--warn-line); font-size: 13px; }
+.banner[hidden] { display: none; }
+.banner .banner-text { flex: 1; }
+.banner button { padding: 3px 10px; border: 1px solid var(--warn-line); border-radius: 6px; background: transparent; color: var(--fg); font: inherit; cursor: pointer; }
+
+.view { flex: 1; overflow: auto; }
 .welcome { display: grid; place-content: center; height: 100%; text-align: center; }
+.welcome[hidden] { display: none; }
 .welcome h1 { margin: 0 0 8px; font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
 .welcome p { margin: 0; color: var(--muted); }
+.view.dropping { outline: 2px dashed var(--accent); outline-offset: -8px; }
+
+.doc { max-width: 980px; margin: 0 auto; padding: 24px 32px 64px; }
+.doc[hidden] { display: none; }
+.doc-error { padding: 32px; color: #cf222e; }

@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@dskripchenko/embed':
+        specifier: 1.8.0
+        version: 1.8.0
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.14.0)
@@ -43,6 +46,10 @@ packages:
 
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
+
+  '@dskripchenko/embed@1.8.0':
+    resolution: {integrity: sha512-J8OFhNVYsCeaCrkVb8UMRv84c4E61ri870g+olNUNOzGsUkS3INBg4w935L18BGb5maf4Eiy0hsHALu4AkTCrg==}
+    engines: {node: '>=20'}
 
   '@electron-internal/extract-zip@1.0.8':
     resolution: {integrity: sha512-8iajeLFbzNwM0m3AsQZSZgYREWglAImyGvvFSWU34FgMW8sHlzdwj9QKvv9dgN7jMP591EFUF/sLOC3Jl9YIjQ==}
@@ -1036,6 +1043,8 @@ snapshots:
     dependencies:
       hashery: 1.5.1
       keyv: 5.6.0
+
+  '@dskripchenko/embed@1.8.0': {}
 
   '@electron-internal/extract-zip@1.0.8': {}
 
