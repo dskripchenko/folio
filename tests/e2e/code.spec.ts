@@ -12,7 +12,7 @@ test('code, data and logs: listed in the tree, shown numbered in the colours of 
   writeFileSync(join(proj, 'app.log'), '2026-11-01T10:00:00Z ERROR <b>not markup</b> & more\n2026-11-01T10:00:01Z INFO ok\n')
   writeFileSync(join(proj, 'deploy'), '#!/usr/bin/env bash\necho "$HOME"\n')
   writeFileSync(join(proj, 'image.bin'), Buffer.from([0, 1, 2, 3]))
-  writeFileSync(join(proj, 'README.md'), '# Service\n\nSee [main](src/main.rs).\n')
+  writeFileSync(join(proj, 'README.md'), '# Service\n\nSee [main](src/main.rs).\n\n```rust\nfn main() { let s = "hi"; }\n```\n')
   const app = await electron.launch({ args: ['.'], env: { ...process.env, FOLIO_DATA: f.data } })
   try {
     const win = await app.firstWindow()
@@ -32,6 +32,9 @@ test('code, data and logs: listed in the tree, shown numbered in the colours of 
     // A link from a document opens the source in folio.
     await tree.locator('.row', { hasText: 'README.md' }).click()
     const doc = win.locator('article.doc:not([hidden])')
+    // A code block in the document is highlighted the same way (Rust: a language the kit learnt from syntax).
+    await expect(doc.locator('.uid-code__tok--keyword').first()).toHaveText('fn')
+    await expect(doc.locator('.uid-code__tok--string').first()).toHaveText('"hi"')
     await doc.getByRole('link', { name: 'main' }).click()
     await expect(win.getByRole('tab', { name: /main\.rs/ })).toHaveAttribute('aria-selected', 'true')
     const view = doc.getByTestId('code-view')
