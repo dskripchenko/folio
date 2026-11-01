@@ -28,7 +28,10 @@ describe('document formats', () => {
     expect(kindOf('a.bpmn')).toBe('diagram')
     expect(kindOf('api.yaml')).toBe('diagram')
     expect(kindOf('openapi.json')).toBe('diagram')
-    expect(kindOf('package.json')).toBe('other')
+    // Code, data and logs are listed too: shown highlighted.
+    expect(kindOf('package.json')).toBe('code')
+    expect(kindOf('main.rs')).toBe('code')
+    expect(kindOf('app.log')).toBe('code')
     expect(kindOf('photo.png')).toBe('other')
     expect(opensInFolio('a.bpmn')).toBe(true)
     expect(opensInFolio('a.txt')).toBe(true)

@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+- Code, data, logs and configuration files: listed in the tree and shown
+  with numbered lines in the colours of their language, through the new
+  package `@dskripchenko/syntax` (17 programming languages and 17 formats;
+  the language by name, extension or `#!` line). Links to them open in folio;
+  over 2 MB or 50 000 lines a file is shown plain for now.
+
 ### Changed
 - The view modes are one button on the rail: a click goes round Read → Edit
   visually → Markdown → beside the page, the icon shows the mode now, a

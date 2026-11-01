@@ -1,4 +1,5 @@
 import { basename, extname } from 'node:path'
+import { languageOf } from '@dskripchenko/syntax'
 
 /**
  * What a document is, so the window draws and edits it with the right element
@@ -64,5 +65,5 @@ export function formatOf(name: string, text: string): Format {
 /** Files a link in a document opens in folio (others go to the system). */
 export function opensInFolio(name: string): boolean {
   const byName = formatByName(name)
-  return byName !== 'text' || MARKDOWN_EXT.includes(extname(name).toLowerCase())
+  return byName !== 'text' || MARKDOWN_EXT.includes(extname(name).toLowerCase()) || languageOf(name) !== null
 }

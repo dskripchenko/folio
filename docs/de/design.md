@@ -70,6 +70,7 @@ Dateien in einem Dokument öffnen sie ebenfalls.
 | OpenAPI / Swagger (`.yaml`, `.yml`, `.json`) | `<dsk-openapi>`, die Referenz | seinem visuellen Editor mit Quelle und Vorschau |
 | AsyncAPI (`.yaml`, `.yml`, `.json`) | `<dsk-asyncapi>` | Quelle neben einer Live-Vorschau |
 | `.mmd`, `.puml`, `.dot`, `.gv`, `.d2`, `.dbml`, `.dsl`, `.wardley` | `<dsk-diagram>`, die Syntax nach der Endung | Quelle neben einer Live-Vorschau |
+| Code, Daten, Logs, Konfiguration — jede Textdatei einer bekannten Sprache (17 Programmiersprachen, JSON, XML, Logs, TOML, INI, `.env`, CSV, diff, Dockerfile, Makefile, …) | nummerierte Zeilen in den Farben ihrer Sprache (`@dskripchenko/syntax`; die Sprache nach Name, Endung oder `#!`-Zeile) | die Quelle |
 | anderer Text | als Text | die Quelle |
 
 YAML und JSON werden an einem Schlüssel `openapi`, `swagger` oder `asyncapi`

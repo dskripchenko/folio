@@ -16,7 +16,7 @@ test('projects in the sidebar: add, browse, open, follow the disk, group and pin
   mkdirSync(join(second, 'guides'), { recursive: true })
   writeFileSync(join(second, 'guides', 'setup.md'), '# Setup\n')
   writeFileSync(join(second, 'README.md'), '# Second\n')
-  writeFileSync(join(second, 'build.log'), 'not a document')
+  writeFileSync(join(second, 'build.bin'), 'not a document')
   const launch = () => electron.launch({ args: ['.'], env: { ...process.env, FOLIO_DATA: f.data } })
 
   let app = await launch()
@@ -31,7 +31,7 @@ test('projects in the sidebar: add, browse, open, follow the disk, group and pin
     const projects = sidebar.getByTestId('projects')
     await expect(projects.locator('.project-row')).toHaveText([/notes/, /second/])
 
-    // A project's tree: folders first, only documents (build.log is left out).
+    // A project's tree: folders first, only what folio shows (build.bin is left out).
     await projects.locator('.project-row', { hasText: 'second' }).click()
     const tree = projects.locator('.project', { hasText: 'second' })
     await expect(tree.locator('.tree > li > .row .name')).toHaveText(['guides', 'README.md'])

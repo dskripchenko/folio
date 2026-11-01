@@ -4,7 +4,62 @@
  * (never parsed as markup). The view is used for the document, a version
  * from the history and the two sides of a comparison alike.
  */
+import { highlightLines, languageOf, languages, THEME_CSS } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
+
+/** Highlighting this much is still instant; a bigger file is shown as plain lines (large files: a later stage). */
+const HIGHLIGHT_LIMIT = { bytes: 2 * 1024 * 1024, lines: 50_000 }
+
+let themed = false
+/** The token colours, once per window: light and dark follow folio's theme (`data-theme`, or the system's). */
+function syntaxTheme(): void {
+  if (themed) return
+  themed = true
+  const style = document.createElement('style')
+  style.dataset.syntax = ''
+  style.textContent = THEME_CSS
+  document.head.prepend(style)
+}
+
+const LANGUAGE_NAMES = new Map(languages().map((l) => [l.id, l.name]))
+
+/**
+ * Any other text file: its lines numbered (numbers stay out of a copy), in
+ * the colours of its language — by name, extension or the `#!` line — or
+ * plain when no language is known or the file is too big to highlight at once.
+ */
+export function codeView(text: string, name: string): HTMLElement {
+  syntaxTheme()
+  const language = languageOf(name, text.slice(0, 200).split('\n')[0])
+  // A final line break ends the last line; it does not start another.
+  const lines = text.replace(/\r?\n$/, '').split(/\r?\n/)
+  const tooBig = text.length > HIGHLIGHT_LIMIT.bytes || lines.length > HIGHLIGHT_LIMIT.lines
+  const box = document.createElement('div')
+  box.className = 'code-view'
+  box.dataset.testid = 'code-view'
+  if (language) box.dataset.language = language
+  const head = document.createElement('div')
+  head.className = 'code-head'
+  const ru = document.documentElement.lang === 'ru'
+  const count = ru ? `строк: ${lines.length.toLocaleString('ru')}` : `${lines.length.toLocaleString('en')} ${lines.length === 1 ? 'line' : 'lines'}`
+  const plain = ru ? 'без подсветки: файл большой' : 'not highlighted: the file is big'
+  head.textContent = [language ? LANGUAGE_NAMES.get(language) : null, count, tooBig ? plain : null].filter(Boolean).join(' · ')
+  const pre = document.createElement('pre')
+  pre.className = 'code-lines'
+  pre.style.setProperty('--gutter', `${String(lines.length).length + 1}ch`)
+  const html = language && !tooBig ? highlightLines(text.replace(/\r?\n$/, ''), language) : null
+  const parts: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    // Each line its own element: the gutter numbers it with a CSS counter, never part of the text.
+    const body = html ? html[i] ?? '' : escapeText(lines[i]!)
+    parts.push(`<span class="code-line">${body}</span>`)
+  }
+  pre.innerHTML = parts.join('\n')
+  box.append(head, pre)
+  return box
+}
+
+const escapeText = (s: string): string => s.replace(/[&<>]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'))
 
 /** `<dsk-diagram>`'s syntax by extension, so a notation is never guessed wrong. */
 const SYNTAX: Record<string, string> = {
@@ -96,12 +151,8 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
       el.setAttribute('label', o.name)
       return el
     }
-    default: {
-      const pre = document.createElement('pre')
-      pre.className = 'plain-text'
-      pre.textContent = text
-      return pre
-    }
+    default:
+      return codeView(text, o.name)
   }
 }
 

@@ -74,7 +74,7 @@ export interface Entry {
   name: string
   path: string
   type: 'dir' | 'file'
-  kind?: 'markdown' | 'diagram' | 'other'
+  kind?: 'markdown' | 'diagram' | 'code' | 'other'
 }
 
 export interface ProjectView {

@@ -44,7 +44,7 @@ interface Options {
   newNote: () => void
 }
 
-const FILE_ICON: Record<string, IconName> = { markdown: 'file', diagram: 'diagram' }
+const FILE_ICON: Record<string, IconName> = { markdown: 'file', diagram: 'diagram', code: 'source' }
 
 export class Sidebar {
   private ws: WorkspaceView | null = null

@@ -34,7 +34,8 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     await project.locator('.project-row').click()
     const tree = project.locator('.tree')
     for (const name of ['order.bpmn', 'loan.dmn', 'architecture.drawio', 'flow.mmd', 'api.yaml', 'events.yaml', 'index.md']) await expect(tree.locator('.row', { hasText: name })).toBeVisible()
-    await expect(tree.locator('.row', { hasText: 'package.json' })).toHaveCount(0)
+    // Other JSON is listed as code (shown highlighted), not as an API description.
+    await expect(tree.locator('.row.kind-code', { hasText: 'package.json' })).toBeVisible()
     const doc = win.locator('article.doc:not([hidden])')
     const open = (name: string) => tree.locator('.row', { hasText: name }).click()
 
