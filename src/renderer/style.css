@@ -207,7 +207,9 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
 
 /* Editing: the page is the editor — no frame of its own; its toolbar floats above the text,
    staying at hand however far down the page goes. */
-.doc-toolbar { position: sticky; top: 10px; z-index: 5; display: flex; justify-content: center; margin: -8px 0 16px; pointer-events: none; }
+/* Where it rests and where it sticks are the same place: the top of the page, its inset its own
+   padding — so it does not move when the page starts to scroll. */
+.doc-toolbar { position: sticky; top: 0; z-index: 5; display: flex; justify-content: center; margin: -24px 0 16px; padding-top: 12px; pointer-events: none; }
 .doc-toolbar:empty { display: none; }
 .doc-toolbar > .dsk-wysiwyg-toolbar { pointer-events: auto; max-width: 100%; border-radius: 10px; --dsk-wysiwyg-toolbar-bg: var(--raised); --dsk-wysiwyg-border: var(--line); background: var(--raised); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14); }
 .doc .dsk-wysiwyg { --dsk-wysiwyg-border: transparent; --dsk-wysiwyg-border-focus: transparent; --dsk-wysiwyg-bg: transparent; --dsk-wysiwyg-padding: 0; resize: none; box-shadow: none; }
