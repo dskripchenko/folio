@@ -138,6 +138,7 @@ export interface FolioBridge {
   onSave: Listener
   onSaveAs: Listener
   onToggleEdit: Listener
+  onFind: Listener
   onPrint: Listener
   exportPdf(target: object, options: Record<string, unknown>): Promise<{ saved: string } | { canceled: true } | { error: string }>
   onExportPdf: Listener

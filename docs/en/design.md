@@ -217,6 +217,20 @@ relative paths.
 | `Cmd/Ctrl+E` | edit / read |
 | `Cmd/Ctrl+W` | close the tab |
 | `Cmd/Ctrl+B` | the sidebar |
+| `Cmd/Ctrl+F` | find in the document |
+| `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |
+
+## Finding
+
+`Cmd/Ctrl+F` (**Edit → Find**) opens a bar over the page: every match is
+marked, the current one brought into view; Enter and Shift+Enter step through
+them, the count shows where you are. **Aa** matches case, **ab** whole words
+(of any script), **.\*** takes a regular expression. Reading and the visual
+editor search the page as drawn — a match never runs from one paragraph into
+the next, and the page itself is not touched; the Markdown source and files
+edited as text search the field, and Escape leaves the current match selected
+there; a big file is searched whole, not only the lines in view. A page that
+changes under the bar — an edit, the file changed on disk — is searched again.
 
 ## Where the data lives
 

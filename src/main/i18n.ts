@@ -32,6 +32,10 @@ const LABELS = {
     diagramFiles: 'Diagrams',
     allFiles: 'All files',
     cloneInto: 'Where to clone the repository',
+    edit: 'Edit',
+    find: 'Find…',
+    findNext: 'Find Next',
+    findPrevious: 'Find Previous',
   },
   ru: {
     file: 'Файл',
@@ -65,6 +69,10 @@ const LABELS = {
     diagramFiles: 'Схемы',
     allFiles: 'Все файлы',
     cloneInto: 'Куда клонировать репозиторий',
+    edit: 'Правка',
+    find: 'Найти…',
+    findNext: 'Найти далее',
+    findPrevious: 'Найти назад',
   },
 }
 

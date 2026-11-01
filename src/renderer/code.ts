@@ -19,6 +19,7 @@ import {
   type Diagnostic,
   type LogLevel,
 } from '@dskripchenko/syntax'
+import { mark, matchesIn, unmark, type WithFindTarget } from './find'
 
 /** Drawn whole — every line in the page, folding, checking — up to here; past it, only the lines in view. */
 const WHOLE = { bytes: 2 * 1024 * 1024, lines: 20_000 }
@@ -213,6 +214,93 @@ export function codeView(text: string, name: string, state: CodeState = {}): HTM
       drawn = [from, to]
       win.style.top = `${PAD + from * ROW}px`
       win.innerHTML = rowsHtml(from, to)
+      markDrawn()
+    }
+
+    // Finding: the whole text is searched; the matches in the drawn rows are marked.
+    let found: { line: number; start: number; end: number }[] = []
+    let currentMatch = -1
+    const rangeIn = (row: HTMLElement, start: number, end: number): Range | null => {
+      const r = document.createRange()
+      let offset = 0
+      let begun = false
+      const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT)
+      for (let n = walker.nextNode() as Text | null; n; n = walker.nextNode() as Text | null) {
+        const len = n.nodeValue!.length
+        if (!begun && start < offset + len) {
+          r.setStart(n, start - offset)
+          begun = true
+        }
+        if (begun && end <= offset + len) {
+          r.setEnd(n, end - offset)
+          return r
+        }
+        offset += len
+      }
+      return null
+    }
+    function markDrawn(): void {
+      if (found.length === 0) return
+      const rows = new Map([...win.children].map((el) => [Number((el as HTMLElement).dataset.n) - 1, el as HTMLElement]))
+      const ranges: Range[] = []
+      let current: Range | null = null
+      found.forEach((m, k) => {
+        const row = rows.get(m.line)
+        if (!row || m.start >= LONG_LINE) return
+        const r = rangeIn(row, m.start, Math.min(m.end, LONG_LINE))
+        if (!r) return
+        ranges.push(r)
+        if (k === currentMatch) current = r
+      })
+      mark(ranges, current)
+    }
+    const row0 = (): HTMLElement | null => win.querySelector<HTMLElement>('.code-line')
+    ;(box as WithFindTarget).folioFind = {
+      search(pattern) {
+        found = []
+        currentMatch = -1
+        let line = 0
+        let lineStart = 0
+        let scanned = 0
+        for (const [s, e] of matchesIn(source, pattern)) {
+          // The lines passed since the last match.
+          for (let k = source.indexOf('\n', scanned); k >= 0 && k < s; k = source.indexOf('\n', k + 1)) {
+            line++
+            lineStart = k + 1
+          }
+          scanned = s
+          if (isShown(line)) found.push({ line, start: s - lineStart, end: Math.min(e, source.indexOf('\n', s) < 0 ? e : source.indexOf('\n', s)) - lineStart })
+        }
+        markDrawn()
+        if (found.length === 0) unmark()
+        return found.length
+      },
+      show(index, reveal = true) {
+        currentMatch = index
+        const m = found[index]
+        if (m && reveal) {
+          const row = goTo(m.line + 1)
+          const box = row?.getBoundingClientRect()
+          if (row && box && (box.top < 60 || box.bottom > innerHeight - 20)) row.scrollIntoView({ block: 'center' })
+        }
+        markDrawn()
+        // Sideways too: a match far along a line.
+        const cur = CSS.highlights.get('folio-find-current')
+        const range = cur ? ([...cur][0] as Range | undefined) : undefined
+        if (reveal && range) {
+          const r = range.getBoundingClientRect()
+          const p = pre.getBoundingClientRect()
+          // Only as far as needed: the numbers stay where they are (they stick to the left).
+          const gutter = row0()?.querySelector('.code-fold')?.getBoundingClientRect().right ?? p.left
+          if (r.right > p.right - 20) pre.scrollLeft += r.right - p.right + 80
+          else if (r.left < gutter) pre.scrollLeft -= gutter - r.left + 40
+        }
+      },
+      clear() {
+        found = []
+        currentMatch = -1
+        unmark()
+      },
     }
 
     let pending = false

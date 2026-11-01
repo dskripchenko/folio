@@ -109,7 +109,7 @@ body.sidebar-collapsed .rail-left { display: flex; }
 .banner .banner-text { flex: 1; }
 .banner button { padding: 3px 10px; border: 1px solid var(--warn-line); border-radius: 6px; background: transparent; color: var(--fg); font: inherit; cursor: pointer; }
 
-.content { flex: 1; display: flex; min-height: 0; }
+.content { position: relative; flex: 1; display: flex; min-height: 0; }
 .view { flex: 1; overflow: auto; min-width: 0; }
 
 .history { width: 300px; flex: none; overflow: auto; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
@@ -293,8 +293,8 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .code-level[data-level="error"] { border-color: #d1242f; }
 .code-level[data-level="warning"] { border-color: #b26a00; }
 .code-level[data-level="info"] { border-color: #0969da; }
-.code-line::before { content: attr(data-n); display: inline-block; box-sizing: content-box; width: var(--gutter, 4ch); padding: 0 4px 0 10px; color: var(--muted); text-align: right; user-select: none; }
-.code-fold { display: inline-block; width: 14px; margin-right: 6px; border-right: 1px solid var(--line); color: var(--muted); text-align: center; user-select: none; }
+.code-line::before { content: attr(data-n); position: sticky; left: 0; z-index: 1; background: var(--tab); display: inline-block; box-sizing: content-box; width: var(--gutter, 4ch); padding: 0 4px 0 10px; color: var(--muted); text-align: right; user-select: none; }
+.code-fold { position: sticky; left: calc(var(--gutter, 4ch) + 14px); z-index: 1; background: var(--tab); display: inline-block; width: 14px; margin-right: 6px; border-right: 1px solid var(--line); color: var(--muted); text-align: center; user-select: none; }
 .code-fold[role="button"] { cursor: pointer; }
 .code-fold[role="button"]::before { content: "⌄"; display: inline-block; opacity: 0.45; }
 .code-line:hover > .code-fold[role="button"]::before { opacity: 1; }
@@ -307,3 +307,18 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .code-flash { animation: code-flash 1.2s ease-out; }
 @keyframes code-flash { from { background: rgba(255, 196, 0, 0.45); } }
 @media print { .code-lines { overflow: visible; border: 0; background: none; } .code-line { white-space: pre-wrap; } .code-line[data-hidden] { display: block; } .code-problems, .code-fold::before { display: none; } }
+
+/* Finding: the bar over the page; matches marked without touching the page. */
+.find-bar { position: absolute; top: 8px; right: 20px; z-index: 30; display: flex; align-items: center; gap: 4px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); }
+.find-bar[hidden] { display: none; }
+.find-bar input { width: 220px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; outline: none; }
+.find-bar input:focus { border-color: var(--accent); }
+.find-bar.invalid input { border-color: #d1242f; }
+.find-flag { min-width: 26px; height: 26px; padding: 0 4px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--muted); font: 600 12px ui-monospace, Menlo, Consolas, monospace; cursor: pointer; }
+.find-flag[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.find-count { min-width: 64px; color: var(--muted); font-size: 12px; text-align: center; white-space: nowrap; }
+.find-bar .icon-button { width: 26px; height: 26px; }
+::highlight(folio-find) { background-color: rgba(255, 213, 0, 0.45); color: inherit; }
+::highlight(folio-find-current) { background-color: rgba(255, 140, 0, 0.85); color: #000; }
+.find-frame { position: fixed; z-index: 25; pointer-events: none; border-radius: 2px; background: rgba(255, 140, 0, 0.35); outline: 1px solid rgba(255, 140, 0, 0.9); }
+@media print { .find-bar, .find-frame { display: none !important; } }
