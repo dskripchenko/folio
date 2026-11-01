@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+- The window: the page in the middle, the controls at its edges. The
+  editor's toolbar floats over the page (embed 1.11, `toolbar-target`); the
+  right rail switches Read / Edit visually / Markdown / Markdown beside the
+  page and holds the history, print, PDF and settings (the theme); the
+  sidebar has a header (open, new note, collapse), menus per section (**+**
+  adds a folder or clones, **⋯**), file and folder icons, a branch chip, and
+  collapses to a rail of initials whose trees slide out over the page.
+
 ### Added
 - PDF (stage 7): **Export as PDF** (`Cmd/Ctrl+Shift+P`) — the active document
   as shown — and **Export Folder as PDF** (project and folder menus) — a

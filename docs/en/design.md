@@ -24,6 +24,25 @@ A Markdown file may come from anywhere, so the window treats it as untrusted:
 - it cannot navigate the window to another page or open new windows; a link goes
   to the system browser.
 
+## The window
+
+The page takes the middle; the controls stay at its edges.
+
+- **Left — the workspace.** Shared and the projects, each a tree of its
+  documents. At the top: open a file, a new quick note, collapse. Each
+  section has its own menu: Shared — its folder; Projects — **+** adds a
+  folder or clones a repository, **⋯** shows the hidden projects. A
+  repository's branch is a chip beside its name. **Collapsed** (`Cmd/Ctrl+B`)
+  the sidebar is a narrow rail — Shared and each project as its initials — and
+  a click slides that tree out over the page until a document is opened.
+- **Top — the tabs**, nothing else.
+- **The editor's toolbar floats over the page**, at hand however far down
+  the text goes; the page itself has no frame.
+- **Right — the rail.** How the document is shown: **Read**, **Edit
+  visually**, **Markdown**, **Markdown beside the page** (a drawing offers
+  read and edit; draw.io, read). Then the history, print and PDF; settings at
+  the bottom (the theme: as the system, light, dark).
+
 ## Opening documents
 
 A Markdown file opens from **File → Open**, by dropping it on the window, from

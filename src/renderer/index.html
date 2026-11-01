@@ -11,13 +11,12 @@
 </head>
 <body>
   <aside class="sidebar" data-testid="sidebar" aria-label="Workspace"></aside>
+  <nav class="rail rail-left" data-testid="rail-left" aria-label="Workspace"></nav>
+  <aside class="flyout" data-testid="flyout" hidden></aside>
   <div class="resizer" aria-hidden="true"></div>
   <div class="main">
   <header class="bar">
     <nav class="tabs" role="tablist" data-testid="tabs"></nav>
-    <button type="button" class="toggle-history" data-testid="toggle-history" data-i18n="history" hidden></button>
-    <button type="button" class="toggle-edit" data-testid="toggle-edit" hidden></button>
-    <button type="button" class="open" data-testid="open" data-i18n="open"></button>
   </header>
   <div class="banner" role="alert" data-testid="net-banner" hidden>
     <span class="banner-text"></span>
@@ -39,6 +38,7 @@
   <aside class="history" data-testid="history" aria-label="History" hidden></aside>
   </div>
   </div>
+  <nav class="rail rail-right" data-testid="rail-right" aria-label="View"></nav>
   <script src="vendor/embed.bundle.js"></script>
   <script src="renderer.js"></script>
 </body>

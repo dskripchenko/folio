@@ -35,7 +35,8 @@ test('a repository cloned as a project: sync both ways, branches, a conflict res
     await app.evaluate(({ dialog }, parent) => {
       dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [parent] })) as typeof dialog.showOpenDialog
     }, f.root)
-    await win.getByTestId('sidebar').getByRole('button', { name: /Clone a repository|Клонировать репозиторий/ }).click()
+    await win.getByTestId('add-project').click()
+    await win.getByTestId('clone-repo').click()
     await win.getByTestId('clone-url').fill(bare)
     await win.getByTestId('clone').getByRole('button', { name: /^(Clone…|Клонировать…)$/ }).click()
     await expect(win.getByTestId('clone')).toHaveCount(0)
@@ -69,7 +70,7 @@ test('a repository cloned as a project: sync both ways, branches, a conflict res
     await expect(panel.getByTestId('branch')).toHaveText('main')
 
     // Both change the title: the merge stops with the conflict in the text.
-    await win.getByTestId('toggle-edit').click()
+    await win.getByTestId('mode-visual').click()
     const h1 = win.locator('article.doc:not([hidden]) dsk-markdown-editor [contenteditable="true"] h1').first()
     await h1.click()
     await win.keyboard.press('End')

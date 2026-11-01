@@ -33,7 +33,7 @@ test('printing: the document alone, every widget in its print form, the widgets 
     expect(chrome).toEqual(['none', 'none', 'none', 'none'])
     await win.emulateMedia({ media: 'screen' })
 
-    await win.getByTestId('toggle-edit').click()
+    await win.getByTestId('mode-visual').click()
     await win.keyboard.press(`${mod}+p`)
     await expect.poll(() => win.evaluate(() => (window as unknown as { printed: unknown[] }).printed)).toEqual([{ forms: 1, flowWhole: true, theme: 'light' }])
     // Printed read, not edited; afterwards the widgets again.
