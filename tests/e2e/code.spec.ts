@@ -68,3 +68,62 @@ test('code, data and logs: listed in the tree, shown numbered in the colours of 
     rmSync(f.root, { recursive: true, force: true })
   }
 })
+
+test('a data file: errors marked at their lines and stepped through; blocks fold', async () => {
+  const f = fixture()
+  const proj = join(f.root, 'conf')
+  mkdirSync(proj, { recursive: true })
+  writeFileSync(join(proj, 'broken.json'), '{\n  "a": {\n    "b": 1,\n    "c": 2\n  },\n  "d": [1, 2,]\n}\n')
+  writeFileSync(join(proj, 'ok.yaml'), 'server:\n  host: example.com\n  port: 8080\nlog: info\n')
+  const app = await electron.launch({ args: ['.'], env: { ...process.env, FOLIO_DATA: f.data } })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('shared')).toBeVisible()
+    await app.evaluate(({ dialog }, paths) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: paths })) as typeof dialog.showOpenDialog
+    }, [proj])
+    await win.getByTestId('add-project').click()
+    await win.getByTestId('add-folder').click()
+    const project = win.getByTestId('projects').locator('.project', { hasText: 'conf' })
+    await project.locator('.project-row').click()
+    const tree = project.locator('.tree')
+    await tree.locator('.row', { hasText: 'broken.json' }).click()
+    const doc = win.locator('article.doc:not([hidden])')
+    const view = doc.getByTestId('code-view')
+    // The error at its line, the message on hover, a count in the head.
+    const bad = view.locator('.code-line[data-diagnostic="error"]')
+    await expect(bad).toHaveCount(1)
+    await expect(bad).toHaveAttribute('data-n', '6')
+    await expect(bad).toHaveAttribute('title', /^6:\d+ /)
+    await expect(view.getByTestId('code-problems')).toHaveText(/1 (error|ошибка)/)
+
+    // Folding "a": its inner lines hide, the closing one stays; the copy is unchanged.
+    const text = await view.locator('pre').evaluate((pre) => pre.textContent)
+    expect(text).toBe('{\n  "a": {\n    "b": 1,\n    "c": 2\n  },\n  "d": [1, 2,]\n}')
+    await view.getByTestId('fold-2').click()
+    await expect(view.locator('.code-line[data-n="3"]')).toBeHidden()
+    await expect(view.locator('.code-line[data-n="4"]')).toBeHidden()
+    await expect(view.locator('.code-line[data-n="5"]')).toBeVisible()
+    // The outer block folds over it; unfolding the outer one leaves the inner folded.
+    await view.getByTestId('fold-1').click()
+    await expect(view.locator('.code-line[data-n="6"]')).toBeHidden()
+    // Stepping to the error unfolds what hides it.
+    await view.getByTestId('code-problems').click()
+    await expect(view.locator('.code-line[data-n="6"]')).toBeVisible()
+    await expect(view.locator('.code-line[data-n="3"]')).toBeHidden()
+    await view.getByTestId('fold-2').click()
+    await expect(view.locator('.code-line[data-n="3"]')).toBeVisible()
+
+    // A valid file: nothing marked, no count; indentation folds.
+    await tree.locator('.row', { hasText: 'ok.yaml' }).click()
+    const yaml = doc.getByTestId('code-view')
+    await expect(yaml).toHaveAttribute('data-language', 'yaml')
+    await expect(yaml.locator('[data-diagnostic]')).toHaveCount(0)
+    await expect(yaml.getByTestId('code-problems')).toHaveCount(0)
+    await yaml.getByTestId('fold-1').click()
+    await expect(yaml.locator('.code-line[data-n="2"]')).toBeHidden()
+    await expect(yaml.locator('.code-line[data-n="4"]')).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})

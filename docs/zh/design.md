@@ -47,7 +47,7 @@ Markdown 文件可能来自任何地方，因此窗口不信任它：
 | OpenAPI / Swagger（`.yaml`、`.yml`、`.json`） | `<dsk-openapi>`，参考文档 | 其可视化编辑器，含源码与预览 |
 | AsyncAPI（`.yaml`、`.yml`、`.json`） | `<dsk-asyncapi>` | 源码与实时预览并排 |
 | `.mmd`、`.puml`、`.dot`、`.gv`、`.d2`、`.dbml`、`.dsl`、`.wardley` | `<dsk-diagram>`，按扩展名确定语法 | 源码与实时预览并排 |
-| 代码、数据、日志、配置——任何已知语言的文本文件（17 种编程语言、JSON、XML、日志、TOML、INI、`.env`、CSV、diff、Dockerfile、Makefile……） | 带行号、按其语言着色（`@dskripchenko/syntax`；语言按文件名、扩展名或 `#!` 行判断） | 源码 |
+| 代码、数据、日志、配置——任何已知语言的文本文件（17 种编程语言、JSON、XML、日志、TOML、INI、`.env`、CSV、diff、Dockerfile、Makefile……） | 带行号、按其语言着色（`@dskripchenko/syntax`；语言按文件名、扩展名或 `#!` 行判断）；数据文件（JSON、YAML、XML、TOML、CSV、INI、`.env`）会被校验——错误标在对应行号处，顶部计数可逐个跳转；代码块可通过行号旁的箭头折叠 | 源码 |
 | 其他文本 | 作为文本 | 源码 |
 
 YAML 和 JSON 通过顶层的 `openapi`、`swagger` 或 `asyncapi` 键识别；文件树列出 YAML 文件以及名称类似 API 描述的
