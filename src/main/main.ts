@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, session as electronSession, shell } from 'electron'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
 import { documentOfUrl, DocumentError, filesFromArgv, MARKDOWN, openDocument, type OpenedDocument } from './documents'
@@ -30,6 +31,7 @@ const workspace = new Workspace(data)
 const roots = new Roots()
 const consent = new Consent(data)
 const session = new Session(data)
+const buffers = new Buffers(data)
 let gate: NetworkGate | null = null
 /** Native menus speak the system's language; known once the app is ready. */
 const L = () => labels(app.isReady() ? app.getLocale() : 'en')
@@ -43,7 +45,10 @@ type Opened = OpenedDocument | { error: string; path: string }
 
 function open(path: string): Opened {
   try {
-    return openDocument(path, workspace, roots)
+    const doc = openDocument(path, workspace, roots)
+    // Its folder is watched: a change on disk reaches the open document, wherever it lives.
+    watcher.add(doc.root, roots.dir(doc.root) ?? doc.folder)
+    return doc
   } catch (e) {
     return { error: e instanceof DocumentError ? e.message : String(e), path }
   }
@@ -116,9 +121,12 @@ function buildMenu(): void {
     {
       label: L().file,
       submenu: [
-        { label: L().open, accelerator: 'CmdOrCtrl+O', click: () => void openDialog().then((docs) => docs.forEach((d) => send('doc:opened', d))) },
+        { label: L().newNote, accelerator: 'CmdOrCtrl+N', registerAccelerator: false, click: () => send('menu:new-note') },
+        { label: L().open, accelerator: 'CmdOrCtrl+O', registerAccelerator: false, click: () => void openDialog().then((docs) => docs.forEach((d) => send('doc:opened', d))) },
         { label: L().addProject, click: () => send('menu:add-project') },
-        { label: L().closeTab, accelerator: 'CmdOrCtrl+W', click: () => send('menu:close-tab') },
+        { label: L().save, accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => send('menu:save') },
+        { label: L().saveAs, accelerator: 'CmdOrCtrl+Shift+S', registerAccelerator: false, click: () => send('menu:save-as') },
+        { label: L().closeTab, accelerator: 'CmdOrCtrl+W', registerAccelerator: false, click: () => send('menu:close-tab') },
         { type: 'separator' },
         mac ? { role: 'close' } : { role: 'quit' },
       ],
@@ -127,7 +135,8 @@ function buildMenu(): void {
     {
       label: L().view,
       submenu: [
-        { label: L().toggleSidebar, accelerator: 'CmdOrCtrl+B', click: () => send('menu:toggle-sidebar') },
+        { label: L().toggleEdit, accelerator: 'CmdOrCtrl+E', registerAccelerator: false, click: () => send('menu:toggle-edit') },
+        { label: L().toggleSidebar, accelerator: 'CmdOrCtrl+B', registerAccelerator: false, click: () => send('menu:toggle-sidebar') },
         { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
@@ -231,11 +240,36 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
 })
 
 ipcMain.handle('app:startup', () => {
-  const fromArgv = filesFromArgv(process.argv, app.isPackaged, process.cwd())
-  const paths = fromArgv.length > 0 ? fromArgv : session.documents().filter((p) => existsSync(p))
-  const documents = paths.map(open)
-  const active = fromArgv.length > 0 ? (fromArgv[fromArgv.length - 1] ?? null) : session.active()
-  return { documents, active, locale: app.getLocale() }
+  const fromArgv = filesFromArgv(process.argv, process.cwd())
+  type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean }
+  const restore = (path: string | null, bufferId: string | null): Restored | null => {
+    const buffer = bufferId ? buffers.get(bufferId) : null
+    if (path === null && buffer === null) return null
+    const filePath = path ?? buffer?.path ?? null
+    if (filePath !== null && buffer === null && !existsSync(filePath)) return null
+    const doc = filePath !== null ? open(filePath) : null
+    // The file changed while the edit waited: both versions stay, nothing is overwritten.
+    const conflict = !!buffer && !!doc && !('error' in doc) && buffer.baseline !== null && hashText(doc.text) !== buffer.baseline
+    return { doc, buffer, conflict }
+  }
+  const tabs: Restored[] = []
+  for (const t of session.tabs()) {
+    const r = restore(t.path, t.buffer)
+    if (r) tabs.push(r)
+  }
+  // A buffer the session does not name (the session write was lost) still comes back: notes are never dropped.
+  const named = new Set(tabs.map((t) => t.buffer?.id).filter(Boolean))
+  for (const b of buffers.all()) if (!named.has(b.id)) tabs.push(restore(b.path, b.id)!)
+  let active = session.active()
+  for (const path of fromArgv) {
+    const at = tabs.findIndex((t) => t.doc && !('error' in t.doc) && t.doc.path === path)
+    if (at >= 0) active = at
+    else {
+      tabs.push({ doc: open(path), buffer: null, conflict: false })
+      active = tabs.length - 1
+    }
+  }
+  return { tabs, active, locale: app.getLocale(), shared: workspace.shared() }
 })
 ipcMain.handle('doc:open-dialog', () => openDialog())
 ipcMain.handle('doc:open', (_e, path: unknown) => (typeof path === 'string' ? open(path) : { error: 'Not a path', path: '' }))
@@ -246,11 +280,97 @@ ipcMain.handle('doc:open-url', (_e, url: unknown) => {
 ipcMain.on('link:external', (_e, url: unknown) => {
   if (typeof url === 'string' && (/^https?:\/\//.test(url) || url.startsWith('mailto:'))) void shell.openExternal(url)
 })
-ipcMain.on('doc:state', (_e, documents: unknown, active: unknown) => {
-  const list = Array.isArray(documents) ? documents.filter((d): d is string => typeof d === 'string') : []
-  const current = typeof active === 'string' ? active : null
-  gate?.setActive(current)
-  session.set(list, current)
+ipcMain.on('doc:state', (_e, tabs: unknown, active: unknown, activePath: unknown) => {
+  const list = Array.isArray(tabs)
+    ? tabs
+        .filter((t): t is { path: unknown; buffer: unknown } => typeof t === 'object' && t !== null)
+        .map((t) => ({ path: typeof t.path === 'string' ? t.path : null, buffer: typeof t.buffer === 'string' ? t.buffer : null }))
+    : []
+  gate?.setActive(typeof activePath === 'string' ? activePath : null)
+  session.set(list, typeof active === 'number' ? active : null)
+})
+
+// Editing ---------------------------------------------------------------------
+
+ipcMain.handle('buf:new-id', () => newBufferId())
+ipcMain.on('buf:write', (_e, value: unknown) => {
+  const b = value as Partial<Buffer>
+  if (typeof b?.id !== 'string' || typeof b.text !== 'string') return
+  const mode = b.mode === 'source' || b.mode === 'split' ? b.mode : 'visual'
+  buffers.write({
+    id: b.id,
+    path: typeof b.path === 'string' ? b.path : null,
+    text: b.text,
+    baseline: typeof b.baseline === 'string' ? b.baseline : null,
+    mode,
+    scroll: typeof b.scroll === 'number' ? b.scroll : 0,
+    updatedAt: '',
+  })
+})
+ipcMain.on('buf:drop', (_e, id: unknown) => {
+  if (typeof id === 'string') buffers.remove(id)
+})
+/** The file's text on disk and its hash; null when it is gone. */
+ipcMain.handle('doc:disk', (_e, path: unknown) => {
+  if (typeof path !== 'string') return null
+  try {
+    const text = readFileSync(path, 'utf8')
+    return { text, hash: hashText(text) }
+  } catch {
+    return null
+  }
+})
+ipcMain.handle('doc:hash', (_e, text: unknown) => (typeof text === 'string' ? hashText(text) : null))
+
+function writeDocument(path: string, text: string): Opened {
+  writeFileSync(path, text)
+  return open(path)
+}
+
+/**
+ * Save to the file: refused (conflict) when the file changed on disk since the
+ * edit began and is not already what is being saved — unless forced.
+ */
+ipcMain.handle('doc:save', (_e, path: unknown, text: unknown, baseline: unknown, force: unknown) => {
+  if (typeof path !== 'string' || typeof text !== 'string') return { error: 'Nothing to save' }
+  if (force !== true && existsSync(path)) {
+    const disk = readFileSync(path, 'utf8')
+    if (disk !== text && typeof baseline === 'string' && hashText(disk) !== baseline) return { conflict: true }
+  }
+  try {
+    return { saved: writeDocument(path, text), baseline: hashText(text) }
+  } catch (e) {
+    return { error: String(e) }
+  }
+})
+ipcMain.handle('doc:save-as', async (_e, text: unknown, name: unknown, dir: unknown) => {
+  if (!win || typeof text !== 'string') return { canceled: true }
+  const folder = typeof dir === 'string' && existsSync(dir) ? dir : workspace.shared()
+  const suggested = (typeof name === 'string' && name.trim() !== '' ? name.trim() : 'note').replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 80)
+  const result = await dialog.showSaveDialog(win, {
+    defaultPath: join(folder, suggested.endsWith('.md') ? suggested : `${suggested}.md`),
+    filters: [{ name: 'Markdown', extensions: ['md'] }],
+  })
+  if (result.canceled || !result.filePath) return { canceled: true }
+  try {
+    return { saved: writeDocument(result.filePath, text), baseline: hashText(text) }
+  } catch (e) {
+    return { error: String(e) }
+  }
+})
+/** Closing a tab with unsaved changes: save, drop them, or keep the tab. */
+ipcMain.handle('doc:confirm-close', async (_e, name: unknown) => {
+  if (!win) return 'cancel'
+  const t = L()
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'question',
+    buttons: [t.save, t.dontSave, t.cancel],
+    defaultId: 0,
+    cancelId: 2,
+    message: t.unsavedQuestion.replace('{name}', typeof name === 'string' ? name : ''),
+    detail: t.unsavedDetail,
+  })
+  return (['save', 'discard', 'cancel'] as const)[response] ?? 'cancel'
 })
 ipcMain.handle('net:allow', (_e, scope: unknown, path: unknown) => {
   if ((scope !== 'file' && scope !== 'folder') || typeof path !== 'string') return false
@@ -259,7 +379,7 @@ ipcMain.handle('net:allow', (_e, scope: unknown, path: unknown) => {
 })
 
 app.on('second-instance', (_event, argv, cwd) => {
-  openInWindow(filesFromArgv(argv, app.isPackaged, cwd))
+  openInWindow(filesFromArgv(argv, cwd))
 })
 
 // macOS: a file dropped on the Dock icon or opened with folio.

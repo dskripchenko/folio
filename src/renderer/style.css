@@ -49,6 +49,16 @@ body.no-sidebar .sidebar, body.no-sidebar .resizer { display: none; }
 .tab .close { border: 0; background: transparent; color: inherit; font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
 .tab .close:hover { background: var(--line); }
 .tab.error { color: #cf222e; }
+.tab.dirty .label::after { content: ' •'; color: var(--accent); }
+.tab.note .label { font-style: italic; }
+.toggle-edit { margin: 4px 0 4px 8px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; }
+.toggle-edit[hidden] { display: none; }
+.toggle-edit[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.notice { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: color-mix(in srgb, #cf222e 12%, var(--bg)); border-bottom: 1px solid color-mix(in srgb, #cf222e 45%, var(--bg)); font-size: 13px; }
+.notice[hidden] { display: none; }
+.notice .notice-text { flex: 1; }
+.notice button { padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; cursor: pointer; }
+.notice button[hidden] { display: none; }
 .open { margin: 4px 8px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; }
 
 .banner { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--warn-bg); border-bottom: 1px solid var(--warn-line); font-size: 13px; }

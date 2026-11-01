@@ -8,6 +8,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Editing: `Cmd/Ctrl+E` turns a document into embed's `<dsk-markdown-editor>`
+  (visual with every block live, Markdown, side by side) and back; Save, Save
+  As, and quick notes (`Cmd/Ctrl+N`) named by their first line, saved into
+  Shared by default.
+- Unsaved work survives, as in Sublime Text: edits and notes are written to
+  `folio-data/session/buffers` as you type — closing folio, a crash or a restart
+  loses nothing, and the file changes only on Save. Closing an edited tab asks;
+  closing folio does not. A file changed on disk during an edit is not
+  overwritten: take it from disk, or keep your version and save over it.
+- Shortcuts handled by the window on every system (the menus show them).
+- The folder of every open document is watched, not only the workspace's.
 - The workspace in a sidebar: Shared and the projects (any folders added to
   folio) — pinned first, then by group; a project's native menu pins, renames,
   groups, hides, reveals or removes it. Lazily listed file trees, folders first,

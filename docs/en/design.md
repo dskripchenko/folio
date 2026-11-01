@@ -63,7 +63,30 @@ syncing goes through it and its SSH keys and credentials.
 As in Sublime Text: an untitled tab is a quick note, and an edit you have not
 saved does not reach the file. Both are written to `folio-data/session/` as you
 type, so they survive closing folio, a crash and a restart of the computer, and
-come back exactly as they were. (With editing, stage 3.)
+come back exactly as they were. A tab with unsaved changes is marked with a dot.
+Closing such a tab asks whether to save; closing folio asks nothing — it is all
+on disk already. If the file changes on disk while you edit it, folio says so
+and keeps both: take the file from disk, or keep your version and save over it.
+A quick note is saved with **Save** into Shared (or anywhere), named by its
+first line.
+
+## Editing
+
+`Cmd/Ctrl+E` (or **Edit** on the bar) turns a document into the editor and back.
+The editor has three modes: visual (a word-processor editing with the toolbar,
+the `/` menu and every block live), Markdown itself, and the two side by side.
+The file stays Markdown: what the visual mode cannot hold — headings below h3,
+task lists, callouts, HTML — is kept as written, and pictures keep their
+relative paths.
+
+| Keys | |
+|---|---|
+| `Cmd/Ctrl+N` | a quick note |
+| `Cmd/Ctrl+O` | open a file |
+| `Cmd/Ctrl+S`, `Cmd/Ctrl+Shift+S` | save, save as |
+| `Cmd/Ctrl+E` | edit / read |
+| `Cmd/Ctrl+W` | close the tab |
+| `Cmd/Ctrl+B` | the sidebar |
 
 ## Where the data lives
 

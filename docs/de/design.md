@@ -67,8 +67,33 @@ seinen SSH-Schlüsseln und Zugangsdaten.
 Wie in Sublime Text: ein unbenannter Tab ist eine schnelle Notiz, und eine nicht
 gespeicherte Änderung erreicht die Datei nicht. Beides wird beim Tippen nach
 `folio-data/session/` geschrieben, übersteht also das Schließen von folio, einen
-Absturz und einen Neustart des Rechners und kommt genau so zurück. (Mit dem
-Bearbeiten, Stufe 3.)
+Absturz und einen Neustart des Rechners und kommt genau so zurück. Ein Tab mit ungespeicherten Änderungen
+trägt einen Punkt. Das Schließen eines solchen Tabs fragt, ob gespeichert werden
+soll; das Schließen von folio fragt nichts — es liegt schon alles auf der
+Festplatte. Ändert sich die Datei auf der Festplatte, während Sie sie
+bearbeiten, sagt folio es und behält beides: die Datei von der Festplatte
+nehmen oder die eigene Version behalten und darüber speichern. Eine schnelle
+Notiz speichert **Speichern** in „Gemeinsam“ (oder anderswo), benannt nach
+ihrer ersten Zeile.
+
+## Bearbeiten
+
+`Cmd/Strg+E` (oder **Bearbeiten** in der Leiste) macht aus einem Dokument den
+Editor und zurück. Der Editor hat drei Modi: visuell (Bearbeiten wie in einer
+Textverarbeitung mit Werkzeugleiste, `/`-Menü und allen lebenden Blöcken), das
+Markdown selbst und beides nebeneinander. Die Datei bleibt Markdown: was der
+visuelle Modus nicht halten kann (Überschriften unter h3, Aufgabenlisten,
+Hinweisboxen, HTML), bleibt wie geschrieben, und Bilder behalten ihre relativen
+Pfade.
+
+| Tasten | |
+|---|---|
+| `Cmd/Strg+N` | schnelle Notiz |
+| `Cmd/Strg+O` | Datei öffnen |
+| `Cmd/Strg+S`, `Cmd/Strg+Umschalt+S` | speichern, speichern unter |
+| `Cmd/Strg+E` | bearbeiten / lesen |
+| `Cmd/Strg+W` | Tab schließen |
+| `Cmd/Strg+B` | Seitenleiste |
 
 ## Wo die Daten liegen
 
