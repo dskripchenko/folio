@@ -8,6 +8,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Changed
+- The view modes are one button on the rail: a click goes round Read → Edit
+  visually → Markdown → beside the page, the icon shows the mode now, a
+  right click lists them.
 - Markdown, and Markdown beside the page, take the whole workspace edge to
   edge; side by side the halves meet at a line and scroll on their own (a
   drawing's source beside its picture too).

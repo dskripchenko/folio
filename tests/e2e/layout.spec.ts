@@ -1,7 +1,7 @@
 import { _electron as electron, expect, test } from '@playwright/test'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fixture } from './fixture'
+import { fixture, viewMode } from './fixture'
 
 test("the window's controls: modes on the rail, the editor's toolbar floating over the page, settings, the collapsed sidebar", async () => {
   const f = fixture()
@@ -15,15 +15,27 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
     const doc = win.locator('article.doc:not([hidden])')
     await expect(doc.locator('dsk-markdown h1')).toHaveText('Handbook')
     const rail = win.getByTestId('rail-right')
-    await expect(rail.getByTestId('mode-read')).toHaveAttribute('aria-checked', 'true')
+    await expect(rail.getByTestId('mode')).toHaveAttribute('data-mode', 'read')
+    // One button goes round the modes; a right click picks one.
+    const seen: (string | null)[] = []
+    for (let i = 0; i < 4; i++) {
+      await rail.getByTestId('mode').click()
+      await expect(rail.getByTestId('mode')).not.toHaveAttribute('data-mode', seen.at(-1) ?? 'read')
+      seen.push(await rail.getByTestId('mode').getAttribute('data-mode'))
+    }
+    expect(seen).toEqual(['visual', 'source', 'split', 'read'])
+    await rail.getByTestId('mode').click({ button: 'right' })
+    await win.getByTestId('mode-pick-split').click()
+    await expect(rail.getByTestId('mode')).toHaveAttribute('data-mode', 'split')
+    await viewMode(win, 'read')
 
     // Visual: the editor's toolbar in the floating bar, no mode buttons of the editor's own.
-    await rail.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     const bar = doc.getByTestId('doc-toolbar')
     await expect(bar.locator('.dsk-wysiwyg-toolbar')).toBeVisible()
     await expect(doc.locator('dsk-markdown-editor .dsk-wysiwyg-toolbar')).toHaveCount(0)
     await expect(doc.locator('.dsk-md__modes')).toHaveCount(0)
-    await expect(rail.getByTestId('mode-visual')).toHaveAttribute('aria-checked', 'true')
+    await expect(rail.getByTestId('mode')).toHaveAttribute('data-mode', 'visual')
     // The toolbar stays where it is as the page scrolls: at rest, a little down, far down.
     const toolbarY = async (scroll: number) => {
       await win.getByTestId('view').evaluate((v, y) => (v.scrollTop = y === -1 ? v.scrollHeight : y), scroll)
@@ -40,7 +52,7 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
     expect(await toolbarY(-1)).toBe(rest)
 
     // Markdown and side by side, from the rail; reading again.
-    await rail.getByTestId('mode-source').click()
+    await viewMode(win, 'source')
     await expect(doc.locator('dsk-markdown-editor textarea')).toBeVisible()
     await expect(bar).toBeHidden()
     // Edge to edge: the whole workspace, no frame, the page itself not scrolling (the text does).
@@ -63,11 +75,11 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
         }
       })
     expect(await fill()).toEqual({ left: 0, right: 0, top: 0, bottom: 0, border: '0px', viewScrolls: false, seam: null })
-    await rail.getByTestId('mode-split').click()
+    await viewMode(win, 'split')
     await expect(doc.locator('.dsk-md--split')).toBeVisible()
     // Side by side: two halves meeting at a line.
     expect(await fill()).toEqual({ left: 0, right: 0, top: 0, bottom: 0, border: '0px', viewScrolls: false, seam: { gap: 0, line: '1px' } })
-    await rail.getByTestId('mode-read').click()
+    await viewMode(win, 'read')
     await expect(doc.locator('dsk-markdown-editor')).toHaveCount(0)
 
     // Settings: the theme, remembered.

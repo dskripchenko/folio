@@ -2,7 +2,7 @@ import { _electron as electron, expect, test, type ElectronApplication, type Pag
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fixture } from './fixture'
+import { fixture, viewMode } from './fixture'
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
 const samples = join(import.meta.dirname, '..', 'fixtures', 'diagrams')
@@ -52,7 +52,7 @@ test('a document and a folder exported as PDF: page size, header and footer, con
     await expect(win.locator('article.doc:not([hidden]) dsk-markdown h1')).toHaveText('Handbook')
 
     // One document, with an edit not saved yet: exported as shown.
-    if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await win.getByTestId('mode-visual').click()
+    if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await viewMode(win, 'visual')
     const h1 = win.locator('article.doc:not([hidden]) dsk-markdown-editor [contenteditable="true"] h1').first()
     await h1.click()
     await win.keyboard.press('End')

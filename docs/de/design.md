@@ -42,9 +42,10 @@ Die Mitte gehört der Seite; die Bedienung liegt an ihren Rändern.
   weit der Text auch nach unten geht; die Seite selbst hat keinen Rahmen. Im Modus **Markdown** nimmt der Text
   den ganzen Arbeitsbereich ein, von Rand zu Rand; **neben der Seite** treffen
   sich die zwei Hälften an einer Linie und scrollen jede für sich.
-- **Rechts — die Leiste.** Wie das Dokument gezeigt wird: **Lesen**,
-  **Visuell bearbeiten**, **Markdown**, **Markdown neben der Seite** (eine
-  Zeichnung bietet Lesen und Bearbeiten, draw.io nur Lesen). Dann der Verlauf,
+- **Rechts — die Leiste.** Ein Knopf zeigt, wie das Dokument gezeigt wird,
+  und schaltet per Klick reihum die Modi — **Lesen**, **Visuell bearbeiten**,
+  **Markdown**, **Markdown neben der Seite** (eine Zeichnung bietet Lesen und
+  Bearbeiten, draw.io nur Lesen); ein Rechtsklick listet sie zur Auswahl. Dann der Verlauf,
   Drucken und PDF; unten die Einstellungen (das Theme: wie das System, hell,
   dunkel).
 

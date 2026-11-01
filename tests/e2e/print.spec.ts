@@ -1,7 +1,7 @@
 import { _electron as electron, expect, test } from '@playwright/test'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fixture } from './fixture'
+import { fixture, viewMode } from './fixture'
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
 
@@ -33,7 +33,7 @@ test('printing: the document alone, every widget in its print form, the widgets 
     expect(chrome).toEqual(['none', 'none', 'none', 'none'])
     await win.emulateMedia({ media: 'screen' })
 
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     await win.keyboard.press(`${mod}+p`)
     await expect.poll(() => win.evaluate(() => (window as unknown as { printed: unknown[] }).printed)).toEqual([{ forms: 1, flowWhole: true, theme: 'light' }])
     // Printed read, not edited; afterwards the widgets again.
