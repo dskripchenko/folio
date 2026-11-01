@@ -24,12 +24,20 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
     await expect(doc.locator('dsk-markdown-editor .dsk-wysiwyg-toolbar')).toHaveCount(0)
     await expect(doc.locator('.dsk-md__modes')).toHaveCount(0)
     await expect(rail.getByTestId('mode-visual')).toHaveAttribute('aria-checked', 'true')
-    // Far down the page, the toolbar is still in view.
-    await win.getByTestId('view').evaluate((v) => (v.scrollTop = v.scrollHeight))
-    const box = await bar.locator('.dsk-wysiwyg-toolbar').boundingBox()
-    const view = await win.getByTestId('view').boundingBox()
-    expect(box!.y).toBeGreaterThanOrEqual(view!.y)
-    expect(box!.y).toBeLessThan(view!.y + 80)
+    // The toolbar stays where it is as the page scrolls: at rest, a little down, far down.
+    const toolbarY = async (scroll: number) => {
+      await win.getByTestId('view').evaluate((v, y) => (v.scrollTop = y === -1 ? v.scrollHeight : y), scroll)
+      await win.waitForTimeout(50)
+      const box = await bar.locator('.dsk-wysiwyg-toolbar').boundingBox()
+      const view = await win.getByTestId('view').boundingBox()
+      return Math.round(box!.y - view!.y)
+    }
+    const rest = await toolbarY(0)
+    expect(rest).toBeGreaterThan(0)
+    expect(rest).toBeLessThan(40)
+    expect(await toolbarY(5)).toBe(rest)
+    expect(await toolbarY(300)).toBe(rest)
+    expect(await toolbarY(-1)).toBe(rest)
 
     // Markdown and side by side, from the rail; reading again.
     await rail.getByTestId('mode-source').click()
