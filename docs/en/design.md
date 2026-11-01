@@ -14,8 +14,6 @@ folio is an Electron app, and Electron splits it in two:
 
 ## What a document may do
 
-> The isolation of the window is in place; the folder scheme and the network
-> consent come with reading Markdown (stage 1), tabs with folders (stage 2).
 
 A Markdown file may come from anywhere, so the window treats it as untrusted:
 
@@ -25,6 +23,30 @@ A Markdown file may come from anywhere, so the window treats it as untrusted:
   URL — only after you allow it for that file or folder;
 - it cannot navigate the window to another page or open new windows; a link goes
   to the system browser.
+
+## Opening documents
+
+A Markdown file opens from **File → Open**, by dropping it on the window, from
+the command line (`folio notes.md`), or — when folio is already running — by
+starting it again with a file: the running one opens it. A link to another
+document of the same folder opens that document in a tab. The open documents and
+the active one come back after a restart.
+
+## Shared and projects
+
+The workspace has two parts: **Shared**, one folder for the documents common to
+everything (by default `folio-data/library`, or a folder of your choice), and
+**projects** — any folders on disk added to folio. The list lives in
+`folio-data/workspace.json`; the folders stay where they are. A document of a
+project or of Shared may read the files of that whole folder; a file opened on
+its own may read its own folder. (The sidebar to manage them comes with stage 2.)
+
+## Unsaved changes and quick notes
+
+As in Sublime Text: an untitled tab is a quick note, and an edit you have not
+saved does not reach the file. Both are written to `folio-data/session/` as you
+type, so they survive closing folio, a crash and a restart of the computer, and
+come back exactly as they were. (With editing, stage 3.)
 
 ## Where the data lives
 

@@ -8,9 +8,10 @@ notation, OpenAPI and AsyncAPI references, BPMN and DMN, draw.io, process
 flows, kanban boards and calendars — on macOS, Windows and Linux, without
 installing anything.
 
-> Status: **in development, nothing to download yet.** The window opens on all
-> three systems and keeps its data beside itself; reading, editing and PDF come
-> in the stages listed under [Plan](#plan).
+> Status: **in development, nothing to download yet.** It reads: a Markdown file
+> opens with every block live, offline, its pictures by relative path, the web
+> only with consent, and the open documents come back after a restart. Folders,
+> editing and PDF come in the stages listed under [Plan](#plan).
 
 Documentation: [English](docs/en/) · [Русский](docs/ru/) · [Deutsch](docs/de/) ·
 [中文](docs/zh/)
@@ -28,7 +29,12 @@ place, and printed as one. It opens:
   `.mmd`, `.puml`, `.dot`, an OpenAPI or AsyncAPI `.yaml` — in its editor;
 - **a folder as a project** — a tree of files, links between documents,
   pictures and attachments by relative path, the whole folder printed as one
-  PDF.
+  PDF. "Shared" holds the documents common to everything; any folder on disk
+  can be added as a project.
+
+Unsaved changes never get lost and never reach the file on their own: a quick
+note in an untitled tab, or an edit you have not saved, survives closing folio
+and restarting the computer, exactly as it was.
 
 The widgets are those of [@dskripchenko/embed](https://github.com/dskripchenko/embed),
 shipped inside the app: nothing is fetched from a CDN, and a document opens
@@ -54,9 +60,9 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | Stage | What |
 |---|---|
 | 0 | The repository, CI on three systems, an empty window — **done** |
-| 1 | Reading: a Markdown file with every block live, offline |
+| 1 | Reading: a Markdown file with every block live, offline — **done** |
 | 2 | A folder as a project: the tree, links, watching for changes |
-| 3 | Editing: visual and source, live blocks, saving |
+| 3 | Editing: visual and source, live blocks, saving; unsaved changes and quick notes survive closing and restarts, as in Sublime Text |
 | 4 | Diagram and API files on their own, in their editors |
 | 5 | A printed form for every widget (in embed) |
 | 6 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF |

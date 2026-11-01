@@ -1,0 +1,165 @@
+asyncapi: 3.0.0
+info:
+  title: Order events
+  version: 1.2.0
+  description: |
+    Events the **order service** publishes and the commands it listens to.
+  tags:
+    - name: orders
+      description: Order lifecycle
+    - name: payments
+defaultContentType: application/json
+servers:
+  production:
+    host: broker.example.com:9092
+    protocol: kafka
+    protocolVersion: '3.6'
+    description: Production Kafka cluster
+    security:
+      - $ref: '#/components/securitySchemes/sasl'
+  development:
+    host: localhost:{port}
+    protocol: kafka
+    variables:
+      port:
+        default: '9092'
+        enum: ['9092', '29092']
+channels:
+  orderPlaced:
+    address: orders.{region}.placed
+    title: Order placed
+    messages:
+      orderPlaced:
+        $ref: '#/components/messages/OrderPlaced'
+    parameters:
+      region:
+        description: Region code of the shop
+        enum: [eu, us]
+        default: eu
+        location: $message.payload#/region
+  paymentRequests:
+    address: payments.requests
+    messages:
+      paymentRequested:
+        $ref: '#/components/messages/PaymentRequested'
+  paymentReplies:
+    address: payments.replies
+    messages:
+      paymentResult:
+        $ref: '#/components/messages/PaymentResult'
+operations:
+  publishOrderPlaced:
+    action: send
+    channel:
+      $ref: '#/channels/orderPlaced'
+    summary: An order was placed
+    tags:
+      - name: orders
+    traits:
+      - $ref: '#/components/operationTraits/kafka'
+  requestPayment:
+    action: send
+    channel:
+      $ref: '#/channels/paymentRequests'
+    summary: Ask the payment service to charge an order
+    tags:
+      - name: payments
+    reply:
+      channel:
+        $ref: '#/channels/paymentReplies'
+  onPaymentResult:
+    action: receive
+    channel:
+      $ref: '#/channels/paymentReplies'
+    summary: Payment finished
+    tags:
+      - name: payments
+components:
+  messages:
+    OrderPlaced:
+      name: OrderPlaced
+      title: Order placed
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/Order'
+      correlationId:
+        location: $message.header#/correlationId
+      examples:
+        - name: Small order
+          headers:
+            correlationId: 6f1e
+          payload:
+            id: 1001
+            region: eu
+            total: 42.5
+            items:
+              - sku: BOOK-1
+                quantity: 2
+    PaymentRequested:
+      name: PaymentRequested
+      payload:
+        type: object
+        required: [orderId, amount]
+        properties:
+          orderId:
+            type: integer
+          amount:
+            type: number
+            minimum: 0
+    PaymentResult:
+      name: PaymentResult
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          type: record
+          name: PaymentResult
+          fields:
+            - name: orderId
+              type: long
+            - name: ok
+              type: boolean
+  schemas:
+    Order:
+      type: object
+      required: [id, region, total]
+      properties:
+        id:
+          type: integer
+          description: Order number
+        region:
+          type: string
+          enum: [eu, us]
+        total:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+    Item:
+      type: object
+      properties:
+        sku:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+  messageTraits:
+    commonHeaders:
+      headers:
+        type: object
+        properties:
+          correlationId:
+            type: string
+            description: Ties a reply to its request
+  operationTraits:
+    kafka:
+      bindings:
+        kafka:
+          clientId:
+            type: string
+            enum: [order-service]
+  securitySchemes:
+    sasl:
+      type: scramSha256
