@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import { homedir } from 'node:os'
-import { join, relative, sep } from 'node:path'
+import { isAbsolute, join, relative, sep } from 'node:path'
 import git from 'isomorphic-git'
 
 /**
@@ -29,7 +29,9 @@ const toGit = (root: string, path: string) => relative(root, path).split(sep).jo
 /** The repository holding a path (looked for upwards), or null. */
 export async function repoOf(path: string): Promise<string | null> {
   try {
-    return await git.findRoot({ fs, filepath: path })
+    const root = await git.findRoot({ fs, filepath: path })
+    // On Windows a folder outside any repository may come back as `.`: only a real one counts.
+    return isAbsolute(root) && fs.existsSync(join(root, '.git')) ? root : null
   } catch {
     return null
   }
@@ -114,6 +116,10 @@ export async function commitFile(root: string, path: string, message: string, au
 export async function historyOf(root: string, path: string, depth = 200): Promise<Version[]> {
   try {
     const log = await git.log({ fs, dir: root, filepath: toGit(root, path), depth, force: true })
+    // In the order of the history itself, newest first: two commits in one second keep their order.
+    const walk = await git.log({ fs, dir: root, depth: Math.max(depth * 5, 1000) })
+    const at = new Map(walk.map((e, i) => [e.oid, i]))
+    log.sort((a, b) => (at.get(a.oid) ?? Infinity) - (at.get(b.oid) ?? Infinity))
     return log.map((e) => ({
       oid: e.oid,
       message: e.commit.message.trim(),

@@ -114,3 +114,16 @@ describe('auto-commit with a pause', () => {
     expect(committed).toEqual([a, b])
   })
 })
+
+describe('history order', () => {
+  it('keeps two commits of one second newest first', async () => {
+    const a = join(dir, 'a.md')
+    writeFileSync(a, '1\n')
+    await startHistory(dir, me, 'Start')
+    for (const n of [2, 3, 4]) {
+      writeFileSync(a, `${n}\n`)
+      await commitFile(dir, a, `v${n}`, me)
+    }
+    expect((await historyOf(dir, a)).map((v) => v.message)).toEqual(['v4', 'v3', 'v2', 'Start'])
+  })
+})
