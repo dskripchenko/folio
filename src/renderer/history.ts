@@ -16,6 +16,7 @@ export interface HistoryText {
   commitPlaceholder: string
   commit: string
   noVersions: string
+  nothingToCommit: string
   close: string
 }
 
@@ -31,6 +32,13 @@ interface Options {
 export class HistoryPanel {
   private path: string | null = null
   private generation = 0
+  /** The commit message being typed: kept when the panel is drawn again (a save, a commit elsewhere). */
+  /**
+   * The commit form lives across redraws (a save, a commit elsewhere): the
+   * same element keeps what is being typed, and a redraw never swaps it out
+   * from under the hand typing into it.
+   */
+  private form: HTMLFormElement | null = null
 
   constructor(private readonly o: Options) {}
 
@@ -87,7 +95,9 @@ export class HistoryPanel {
     }
     const versions = await folio().gitHistory(path)
     if (gen !== this.generation) return
+    const focused = this.form?.contains(document.activeElement) ? document.activeElement : null
     el.replaceChildren(head, ...this.settings(path, info), this.list(path, versions))
+    if (focused instanceof HTMLElement) focused.focus()
   }
 
   private hint(text: string): HTMLElement {
@@ -130,11 +140,24 @@ export class HistoryPanel {
       actions.append(label)
     }
     // Commit now, with a message of one's own.
+    actions.append(this.commitForm())
+    out.push(actions)
+    return out
+  }
+
+  private commitForm(): HTMLFormElement {
+    const t = this.o.text()
+    if (this.form) {
+      this.form.querySelector('input')!.placeholder = t.commitPlaceholder
+      this.form.querySelector('button')!.textContent = t.commit
+      return this.form
+    }
     const form = document.createElement('form')
     form.className = 'commit-form'
     const input = document.createElement('input')
     input.placeholder = t.commitPlaceholder
     input.dataset.testid = 'commit-message'
+    input.addEventListener('input', () => input.setCustomValidity(''))
     const go = document.createElement('button')
     go.type = 'submit'
     go.className = 'action'
@@ -142,14 +165,21 @@ export class HistoryPanel {
     form.append(input, go)
     form.addEventListener('submit', async (event) => {
       event.preventDefault()
-      if (input.value.trim() === '') return
-      await folio().gitCommit(path, input.value)
+      const path = this.path
+      const message = input.value
+      if (path === null || message.trim() === '') return
+      const oid = await folio().gitCommit(path, message)
+      if (oid === null) {
+        // Nothing new since the last commit: say so, keep the message.
+        input.setCustomValidity(this.o.text().nothingToCommit)
+        input.reportValidity()
+        return
+      }
       input.value = ''
       void this.refresh()
     })
-    actions.append(form)
-    out.push(actions)
-    return out
+    this.form = form
+    return form
   }
 
   private list(path: string, versions: Version[]): HTMLElement {
