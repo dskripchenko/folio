@@ -273,3 +273,11 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 @media (max-width: 820px) {
   .doc[data-edit="split"] .dsk-md__preview, .doc[data-edit] .source-editor .preview { border-left: 0; border-top: 1px solid var(--line); }
 }
+
+/* Code, data, logs and any other text: numbered lines in the colours of the language. */
+.doc[data-format="text"] { max-width: none; }
+.code-head { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
+.code-lines { margin: 0; padding: 10px 0; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--tab); color: var(--fg); font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 4; counter-reset: line; }
+.code-line { white-space: pre; }
+.code-line::before { counter-increment: line; content: counter(line); display: inline-block; box-sizing: content-box; width: var(--gutter, 4ch); padding: 0 14px 0 10px; margin-right: 6px; border-right: 1px solid var(--line); color: var(--muted); text-align: right; user-select: none; }
+@media print { .code-lines { overflow: visible; border: 0; background: none; } .code-line { white-space: pre-wrap; } }

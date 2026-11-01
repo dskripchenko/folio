@@ -15,7 +15,7 @@ describe('tree: a folder as the sidebar lists it', () => {
   it('folders first, then documents, by name as people sort; tooling and hidden files left out', () => {
     for (const d of ['b', 'a', 'node_modules', '.git']) mkdirSync(join(dir, d))
     for (const f of ['note 10.md', 'note 2.md', 'flow.bpmn', 'x.log', '.hidden.md']) writeFileSync(join(dir, f), '')
-    expect(listDir(dir, '')?.map((e) => e.name)).toEqual(['a', 'b', 'flow.bpmn', 'note 2.md', 'note 10.md'])
+    expect(listDir(dir, '')?.map((e) => e.name)).toEqual(['a', 'b', 'flow.bpmn', 'note 2.md', 'note 10.md', 'x.log'])
     expect(listDir(dir, '', true)?.map((e) => e.name)).toContain('x.log')
     expect(listDir(dir, '')?.find((e) => e.name === 'flow.bpmn')).toEqual({ name: 'flow.bpmn', path: 'flow.bpmn', type: 'file', kind: 'diagram' })
   })

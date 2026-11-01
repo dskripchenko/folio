@@ -1,9 +1,10 @@
 import { readdirSync, type Dirent } from 'node:fs'
+import { languageOf } from '@dskripchenko/syntax'
 import { formatByName } from './formats'
 import { resolveInside } from './paths'
 
-/** What folio does with a file: reads it, draws it (stage 5), or only lists it. */
-export type Kind = 'markdown' | 'diagram' | 'other'
+/** What folio does with a file: reads it, draws it (stage 5), shows it highlighted (code, data, logs), or only lists it. */
+export type Kind = 'markdown' | 'diagram' | 'code' | 'other'
 
 export interface Entry {
   name: string
@@ -25,8 +26,9 @@ export function kindOf(name: string): Kind {
   const lower = name.toLowerCase()
   const format = formatByName(lower)
   if (format === 'markdown') return lower.endsWith('.txt') ? 'other' : 'markdown'
-  if (format === 'text') return 'other'
-  if (format === 'data' && lower.endsWith('.json')) return /openapi|swagger|asyncapi/.test(lower) ? 'diagram' : 'other'
+  // Any other text with a known language — code, data, logs, configuration — is shown highlighted.
+  if (format === 'text') return languageOf(name) ? 'code' : 'other'
+  if (format === 'data' && lower.endsWith('.json')) return /openapi|swagger|asyncapi/.test(lower) ? 'diagram' : 'code'
   return 'diagram'
 }
 
