@@ -16,12 +16,16 @@ export interface Project {
   group?: string
   pinned?: boolean
   hidden?: boolean
+  /** Commit a saved file of this folder to its git history (ADR-001, stage 4). */
+  autoCommit?: boolean
 }
 
 export interface WorkspaceData {
   version: 1
   /** The shared folder; null — folio-data/library. */
   shared: string | null
+  /** Commit saved files of Shared to its history. */
+  sharedAutoCommit?: boolean
   projects: Project[]
 }
 
@@ -30,7 +34,12 @@ export class Workspace {
 
   constructor(private readonly dataDir: string) {
     const loaded = readJson<Partial<WorkspaceData>>(this.file(), {})
-    this.data = { version: 1, shared: loaded.shared ?? null, projects: Array.isArray(loaded.projects) ? loaded.projects : [] }
+    this.data = {
+      version: 1,
+      shared: loaded.shared ?? null,
+      ...(loaded.sharedAutoCommit !== undefined ? { sharedAutoCommit: loaded.sharedAutoCommit } : {}),
+      projects: Array.isArray(loaded.projects) ? loaded.projects : [],
+    }
   }
 
   private file(): string {
@@ -52,6 +61,23 @@ export class Workspace {
   setShared(path: string | null): void {
     this.data.shared = path === null ? null : resolve(path)
     this.save()
+  }
+
+  sharedAutoCommit(): boolean {
+    return this.data.sharedAutoCommit === true
+  }
+
+  setSharedAutoCommit(on: boolean): void {
+    this.data.sharedAutoCommit = on
+    this.save()
+  }
+
+  /** Whether a saved file is committed: its folder (project or Shared) says so. */
+  autoCommits(file: string): boolean {
+    const owner = this.ownerOf(file)
+    if (owner?.kind === 'project') return owner.project.autoCommit === true
+    if (owner?.kind === 'shared') return this.sharedAutoCommit()
+    return false
   }
 
   projects(): Project[] {

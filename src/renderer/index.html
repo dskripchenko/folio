@@ -15,6 +15,7 @@
   <div class="main">
   <header class="bar">
     <nav class="tabs" role="tablist" data-testid="tabs"></nav>
+    <button type="button" class="toggle-history" data-testid="toggle-history" data-i18n="history" hidden></button>
     <button type="button" class="toggle-edit" data-testid="toggle-edit" hidden></button>
     <button type="button" class="open" data-testid="open" data-i18n="open"></button>
   </header>
@@ -28,12 +29,15 @@
     <button type="button" data-action="disk" data-i18n="takeDisk"></button>
     <button type="button" data-action="mine" data-i18n="keepMine"></button>
   </div>
+  <div class="content">
   <main class="view" data-testid="view">
     <section class="welcome" data-testid="welcome">
       <h1>folio</h1>
       <p data-i18n="welcome"></p>
     </section>
   </main>
+  <aside class="history" data-testid="history" aria-label="History" hidden></aside>
+  </div>
   </div>
   <script src="vendor/embed.bundle.js"></script>
   <script src="renderer.js"></script>

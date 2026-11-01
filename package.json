@@ -36,5 +36,8 @@
     "typescript-eslint": "8.72.1",
     "vitest": "5.0.5"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "isomorphic-git": "1.44.3"
+  }
 }

@@ -8,6 +8,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- History with git, per folder (stage 4a), through isomorphic-git (no git needed):
+  **Keep a history** starts one (`git init`, a first commit); **Commit when
+  saved** commits a saved file 3 minutes after its last save (one commit for a
+  series), and at once when leaving folio — on by default for a history folio
+  started, off for an existing repository. The **History** panel
+  (`Cmd/Ctrl+Shift+H`) lists the file's versions; one opens as it was, as its
+  changes against now (line by line), or side by side with now (drawn, with
+  diagrams); **Restore** puts it into the editor as an unsaved edit. Commit now
+  with a message. The tree marks changed files and folders and shows a project's
+  branch. The author comes from git's config, else the system user. Commits
+  compare content, not git's stat cache (a save in the same second still
+  counts).
 - Editing: `Cmd/Ctrl+E` turns a document into embed's `<dsk-markdown-editor>`
   (visual with every block live, Markdown, side by side) and back; Save, Save
   As, and quick notes (`Cmd/Ctrl+N`) named by their first line, saved into

@@ -48,15 +48,31 @@ The trees list folders and the files folio opens, folders first, and follow the
 disk: a file added, changed or removed elsewhere shows at once, and an open
 document is drawn again. `Cmd/Ctrl+B` hides the sidebar.
 
-## History with git (stage 4)
+## History with git
 
-Optional and per folder: a folder that is a git repository keeps its history in
-folio — the versions of a document, the difference between two of them (the
-text and the drawn document, diagrams included), going back to one; the status
-of files in the tree; a commit as you save (saves of one file within a few
-minutes make one commit); branches; pull and push. folio has git inside (pure
-JavaScript), so history works on a machine without git; when git is installed,
-syncing goes through it and its SSH keys and credentials.
+Per folder — Shared and each project — and only if you want it. A folder that
+is a git repository (or lies inside one) shows its history at once; another
+starts one with **Keep a history** in the **History** panel (`Cmd/Ctrl+Shift+H`):
+a repository on branch `main` and a first commit of what is there.
+
+- **Commit when saved** — on for a history folio started, off for a repository
+  that was there already (folio does not commit into a project on its own). A
+  saved file is committed 3 minutes after its last save, so a series of saves
+  makes one commit; leaving folio commits what is waiting at once. Only the
+  saved file is committed, as *Update <path>*; **Commit** with a message of your
+  own does it now.
+- **Versions** of the open file, newest first. One opens read-only, as it was;
+  **Changes** shows its difference from now line by line, **Side by side** the
+  two drawn documents, diagrams included. **Restore this version** puts its text
+  into the editor as an unsaved edit — saving it is your call.
+- **In the tree**: changed files are marked, a folder with changes inside gets
+  a dot, a project shows its branch.
+- The author is `user.name` / `user.email` of the repository's config, then of
+  `~/.gitconfig`, else the system user.
+
+git is inside folio (isomorphic-git, pure JavaScript), so this works on a
+machine without git. Branches, pull and push, cloning a repository as a project
+(stage 4b) and a graph of the commits (4c) come next.
 
 ## Unsaved changes and quick notes
 
