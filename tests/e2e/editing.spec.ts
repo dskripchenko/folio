@@ -24,8 +24,12 @@ async function settle(win: Page): Promise<void> {
 
 async function hardKill(app: ElectronApplication): Promise<void> {
   // As a crash or a power cut: no chance to say goodbye.
-  app.process().kill('SIGKILL')
-  await new Promise((r) => setTimeout(r, 500))
+  const proc = app.process()
+  const gone = new Promise((r) => proc.once('exit', r))
+  proc.kill('SIGKILL')
+  await gone
+  // Its helper processes let go of the single-instance lock a moment later (Windows).
+  await new Promise((r) => setTimeout(r, process.platform === 'win32' ? 3000 : 500))
 }
 
 test('an edit is kept, unsaved, through a crash; the file changes only on Save', async () => {
