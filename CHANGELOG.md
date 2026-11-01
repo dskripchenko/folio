@@ -11,14 +11,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Code, data, logs and configuration files: listed in the tree and shown
   with numbered lines in the colours of their language, through the new
   package `@dskripchenko/syntax` (17 programming languages and 17 formats;
-  the language by name, extension or `#!` line). Links to them open in folio;
-  over 2 MB or 50 000 lines a file is shown plain for now.
+  the language by name, extension or `#!` line). Links to them open in folio.
 - Data files are checked (`@dskripchenko/syntax` 0.2): JSON (with comments
   for tsconfig.json and the like, JSON Lines), YAML, XML, TOML, CSV/TSV, INI
   and `.env` — errors and warnings marked at their line numbers with the
   message on hover, a count in the head that steps through them (unfolding
   what hides one). Blocks fold by an arrow beside the line number: brackets,
   tags, indentation, Markdown sections.
+- Big files (`@dskripchenko/syntax` 0.3): code, data and logs up to 200 MB;
+  past 2 MB or 20 000 lines only the lines in view are drawn, highlighted
+  from checkpoints (a 100 MB log opens in under a second); read-only past
+  5 MB, a long line cut at 2 000 characters there. Logs filter by level —
+  errors, warnings, info, debug, other — with a stack trace kept with its
+  entry, and a log read at its end follows what is written to it.
 
 ### Changed
 - The view modes are one button on the rail: a click goes round Read → Edit

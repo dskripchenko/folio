@@ -12,8 +12,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       '@dskripchenko/syntax':
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: ^0.3.0
+        version: 0.3.0
       isomorphic-git:
         specifier: 1.44.3
         version: 1.44.3
@@ -65,8 +65,8 @@ packages:
     resolution: {integrity: sha512-RpgU1ExA77N3PGZB9NYUfgAl4MBP+xLcLAfy4LWyMsLCK9Jr4eZ443qvF5H6TkQm/rSJXn/0DlQAsu1Bz8UJnw==}
     engines: {node: '>=20'}
 
-  '@dskripchenko/syntax@0.2.0':
-    resolution: {integrity: sha512-gJDHOgStgRODsBTEsOXk9x5G2x6uS+zbuai3BfQBPuWw6BfLNi4WH6FZJ9v7GXTwnhhK/QyLiaLF5YsOOeLkUw==}
+  '@dskripchenko/syntax@0.3.0':
+    resolution: {integrity: sha512-Zhd+DmN2S40wewixKf0sN4daj0UPjH4+dSeryKC64WNIwbV9gIo9dfcSWvO90D8dac4Wl7teejPeeFH+VsF27w==}
     engines: {node: '>=20'}
 
   '@electron-internal/extract-zip@1.0.8':
@@ -1266,7 +1266,7 @@ snapshots:
 
   '@dskripchenko/embed@1.11.0': {}
 
-  '@dskripchenko/syntax@0.2.0': {}
+  '@dskripchenko/syntax@0.3.0': {}
 
   '@electron-internal/extract-zip@1.0.8': {}
 

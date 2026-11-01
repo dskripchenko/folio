@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from 'node:fs'
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path'
-import { formatOf, MARKDOWN_EXT, opensInFolio, type Format } from './formats'
+import { formatByName, formatOf, MARKDOWN_EXT, opensInFolio, type Format } from './formats'
 import { real } from './paths'
 import type { Roots } from './roots'
 import type { Workspace } from './workspace'
@@ -8,6 +8,8 @@ import type { Workspace } from './workspace'
 
 /** The largest document folio opens; a bigger one is not a document. */
 export const MAX_BYTES = 20 * 1024 * 1024
+/** Code, data and logs are read a window at a time: they may be bigger. */
+export const MAX_TEXT_BYTES = 200 * 1024 * 1024
 
 export interface OpenedDocument {
   path: string
@@ -48,7 +50,9 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
     if (e instanceof DocumentError) throw e
     throw new DocumentError(`Cannot open ${path}`)
   }
-  if (size > MAX_BYTES) throw new DocumentError(`${basename(path)} is larger than ${MAX_BYTES / 1024 / 1024} MB`)
+  const byName = formatByName(path)
+  const limit = byName === 'text' || byName === 'data' ? MAX_TEXT_BYTES : MAX_BYTES
+  if (size > limit) throw new DocumentError(`${basename(path)} is larger than ${limit / 1024 / 1024} MB`)
 
   // The root a document may read from: its project, Shared, or its own folder.
   const owner = workspace.ownerOf(path)

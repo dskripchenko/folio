@@ -127,3 +127,66 @@ test('a data file: errors marked at their lines and stepped through; blocks fold
     await app.close()
   }
 })
+
+test('a big log: only the lines in view are in the page; filtered by level; read at its end it follows what is written', async () => {
+  const f = fixture()
+  const proj = join(f.root, 'ops')
+  mkdirSync(proj, { recursive: true })
+  const lines: string[] = []
+  for (let i = 0; i < 60_000; i++) {
+    const t = `2026-11-01 10:${String(Math.floor(i / 60) % 60).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}`
+    if (i % 1000 === 7) lines.push(`${t} ERROR job ${i} failed`, 'java.lang.IllegalStateException: boom', `    at a.B.c(B.java:${i})`)
+    else lines.push(`${t} ${i % 10 === 3 ? 'WARN' : 'INFO'} request ${i} done`)
+  }
+  const file = join(proj, 'app.log')
+  writeFileSync(file, lines.join('\n') + '\n')
+  const app = await electron.launch({ args: ['.'], env: { ...process.env, FOLIO_DATA: f.data } })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('shared')).toBeVisible()
+    await app.evaluate(({ dialog }, paths) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: paths })) as typeof dialog.showOpenDialog
+    }, [proj])
+    await win.getByTestId('add-project').click()
+    await win.getByTestId('add-folder').click()
+    const project = win.getByTestId('projects').locator('.project', { hasText: 'ops' })
+    await project.locator('.project-row').click()
+    await project.locator('.tree .row', { hasText: 'app.log' }).click()
+    const doc = win.locator('article.doc:not([hidden])')
+    const view = doc.getByTestId('code-view')
+    await expect(view).toHaveAttribute('data-language', 'log')
+    await expect(view.locator('pre')).toHaveAttribute('data-virtual', '')
+    // A window of rows, not 60 120 of them; highlighted.
+    await expect(view.locator('.code-line[data-n="1"]')).toBeVisible()
+    expect(await view.locator('.code-line').count()).toBeLessThan(400)
+    await expect(view.locator('.sx-info').first()).toHaveText('INFO')
+
+    // The end: the last line drawn where it is.
+    await win.getByTestId('view').evaluate((el) => (el.scrollTop = el.scrollHeight))
+    await expect(view.locator(`.code-line[data-n="${lines.length}"]`)).toBeVisible()
+
+    // Errors only: the entries with their traces.
+    await expect(view.getByTestId('level-error')).toHaveText(/60/)
+    await view.getByTestId('level-info').click()
+    await view.getByTestId('level-warning').click()
+    await win.getByTestId('view').evaluate((el) => (el.scrollTop = 0))
+    await expect(view.locator('.code-line').first()).toHaveAttribute('data-n', '8')
+    await expect(view.locator('.code-line').nth(1)).toContainText('IllegalStateException')
+    await expect(view.locator('.code-line').nth(2)).toContainText('at a.B.c')
+    await expect(view.locator('.code-line').nth(3)).toContainText('job 1007 failed')
+
+    // Everything again; at the end, a line written to the file comes into view.
+    await view.getByTestId('level-info').click()
+    await view.getByTestId('level-warning').click()
+    await win.getByTestId('view').evaluate((el) => (el.scrollTop = el.scrollHeight))
+    await expect(view.locator(`.code-line[data-n="${lines.length}"]`)).toBeVisible()
+    writeFileSync(file, lines.join('\n') + '\n2026-11-01 11:00:00 ERROR the newest line\n')
+    const fresh = win.locator('article.doc:not([hidden])').getByTestId('code-view').locator(`.code-line[data-n="${lines.length + 1}"]`)
+    await expect(fresh).toContainText('the newest line')
+    await expect(fresh).toBeInViewport()
+    // The filter is kept over the redraw.
+    await expect(win.locator('article.doc:not([hidden])').getByTestId('level-error')).toHaveText(/61/)
+  } finally {
+    await app.close()
+  }
+})
