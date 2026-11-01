@@ -15,8 +15,9 @@ installing anything.
 > quick notes and unsaved edits survive closing and restarts; a folder can keep
 > a git history — versions, their differences, commits on save, branches, sync,
 > a commit graph; diagram and API files open on their own, in their editors.
-> It prints, every widget in its print form; PDF with page settings comes in
-> the stages listed under [Plan](#plan).
+> It prints and exports PDF — page settings, headers and footers, contents
+> and bookmarks, a folder as one PDF. Portable builds come in the stages
+> listed under [Plan](#plan).
 
 Documentation: [English](docs/en/) · [Русский](docs/ru/) · [Deutsch](docs/de/) ·
 [中文](docs/zh/)
@@ -75,7 +76,7 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 4 | History with git, per folder, if you want it: versions and their differences, restoring one, status in the tree, commits on save — **done (4a)**; branches, sync, cloning, conflicts in the text — **done (4b)**; a graph of the commits — **done (4c)** |
 | 5 | Diagram and API files on their own, in their editors — **done** |
 | 6 | A printed form for every widget (in embed) — **done**: File → Print |
-| 7 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF |
+| 7 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF — **done** |
 | 8 | Portable builds and updating itself |
 | 9 | Releases: checksums, provenance, a virus scan report — 1.0 |
 

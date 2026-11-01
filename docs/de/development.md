@@ -18,7 +18,7 @@ pnpm test:e2e       # die gebaute App starten und prüfen (Playwright)
 ```
 
 Aus den Quellen gestartet, legt folio seine Daten in `.folio-data/` im
-Arbeitsverzeichnis ab; `FOLIO_DATA=/some/dir pnpm start` legt sie woanders ab. `FOLIO_COMMIT_PAUSE` (Millisekunden) verkürzt die Pause vor einem Commit beim Speichern, für Tests; `FOLIO_GIT=builtin` synchronisiert ohne das System-git (`FOLIO_GIT=/pfad/zu/git` nennt ein bestimmtes). Die Sync-Tests lassen den eingebauten Transport gegen `git http-backend` laufen und brauchen daher ein installiertes git.
+Arbeitsverzeichnis ab; `FOLIO_DATA=/some/dir pnpm start` legt sie woanders ab. `FOLIO_COMMIT_PAUSE` (Millisekunden) verkürzt die Pause vor einem Commit beim Speichern, für Tests; `FOLIO_GIT=builtin` synchronisiert ohne das System-git (`FOLIO_GIT=/pfad/zu/git` nennt ein bestimmtes). Die Sync-Tests lassen den eingebauten Transport gegen `git http-backend` laufen und brauchen daher ein installiertes git. Die PDF-Tests lesen die exportierten Dateien mit poppler (`pdftotext`, `pdfinfo`), wenn es installiert ist — CI installiert es unter Linux und macOS und verlangt es dort (`FOLIO_REQUIRE_POPPLER=1`).
 
 Unter Linux ohne Bildschirm laufen die End-to-End-Tests unter einem virtuellen:
 `xvfb-run --auto-servernum pnpm test:e2e`.

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- The print page (ADR-001, stage 7): documents laid out for a PDF, in a hidden window. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; media-src 'self' blob: https: http:; font-src 'self' data:; connect-src 'self' https: http:; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>folio</title>
+  <link rel="stylesheet" href="print.css">
+</head>
+<body>
+  <main class="pdf"></main>
+  <script src="vendor/embed.bundle.js"></script>
+  <script src="print.js"></script>
+</body>
+</html>

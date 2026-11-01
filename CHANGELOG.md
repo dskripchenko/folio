@@ -8,6 +8,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- PDF (stage 7): **Export as PDF** (`Cmd/Ctrl+Shift+P`) — the active document
+  as shown — and **Export Folder as PDF** (project and folder menus) — a
+  folder as one PDF in the order of a book (index/README first, documents by
+  name, subfolders), each document from a new page, links between them
+  within the PDF. Page size, orientation, margins, the title at the top and
+  page numbers at the bottom, a table of contents with links, bookmarks from
+  the headings (tagged PDF), colours and backgrounds; remembered. Laid out in
+  a hidden window, every widget in its print form (embed 1.10.2).
 - Printing (stage 6): **File → Print** (`Cmd/Ctrl+P`) prints the active
   document read, without folio's chrome, on light paper, every widget in its
   print form from embed 1.10 (`DskEmbed.print.prepare`): diagrams whole, DMN

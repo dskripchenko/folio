@@ -153,8 +153,29 @@ form from embed (`DskEmbed.print.prepare`): a BPMN or DMN diagram whole (a
 DMN file with its decision tables), every draw.io page, a flow or a board
 whole, an API reference as its static document, a video as its poster and
 chapters, a kanban or a calendar without their controls. The system's print
-dialog follows; saving a PDF with page settings, headers and footers, a table
-of contents and bookmarks comes in stage 7.
+dialog follows; a PDF is saved through Export as PDF (below).
+
+### PDF
+
+**File → Export as PDF** (`Cmd/Ctrl+Shift+P`) saves the active document —
+as shown, unsaved edits included — and **Export Folder as PDF** (the menu of
+a project or of a folder in the tree) saves a whole folder as one PDF. The
+dialog asks once and remembers:
+
+- page size (A4, A3, A5, Letter, Legal, Tabloid), portrait or landscape,
+  margins (none, narrow, normal, wide);
+- the title at the top of each page, page numbers (`3 / 12`) at the bottom;
+- a table of contents with links, before the text; bookmarks from the
+  headings (the PDF's outline, in a tagged PDF);
+- the drawings' colours and backgrounds.
+
+A folder prints in the order of a book: in each folder its `index.md` or
+`README.md` first, then its documents by name, then its subfolders; each
+document from a new page, diagram and API files with their names as
+headings. A link from one document to another becomes a link within the
+PDF. The pages are laid out in a hidden window of the documents' session —
+the network consent holds there too — with every widget in its print form,
+then Chromium prints them to PDF.
 
 ## Editing
 

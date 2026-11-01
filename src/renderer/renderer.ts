@@ -9,6 +9,7 @@ import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode,
 import { diffLines } from './diff'
 import { canEdit, editorOf, viewOf, type ViewOptions } from './formats'
 import { openCloneDialog, type CloneText } from './clone'
+import { openPdfDialog, type PdfTarget, type PdfText } from './pdfDialog'
 import { describeRefusal, HistoryPanel, type HistoryText } from './history'
 import { Sidebar, type SidebarText } from './sidebar'
 import type { GitRefusal, Version } from './bridge'
@@ -39,6 +40,7 @@ const TEXT = {
     then: 'Then',
     now: 'Now',
     historyPanel: { title: 'History', noFile: 'Open a file to see its history.', outside: 'This file is outside the projects and Shared: no history here.', noHistory: 'This folder keeps no history yet.', start: 'Keep a history', autoCommit: 'Commit when saved', commitNow: 'Commit now', commitPlaceholder: 'What changed…', commit: 'Commit', noVersions: 'No versions of this file yet.', nothingToCommit: 'Nothing to commit: the changes are in the history already.', close: 'Close', scopeFile: 'This file', scopeAll: 'All commits', graph: 'Commit graph', branches: 'Branches', newBranch: 'New branch', create: 'Create', switched: 'On branch {branch}.', remotePlaceholder: 'Remote: https://… or git@…', connect: 'Connect', sync: 'Sync', syncing: 'Syncing…', synced: { 'up-to-date': 'Up to date.', pushed: 'Sent.', pulled: 'Received.', merged: 'Merged and sent.', conflict: 'Conflicts: resolve them in the text, then finish the merge.' }, username: 'User', token: 'Token or password', remember: 'Remember on this computer', signIn: 'Sign in and sync', mergeConflicts: 'Merging: conflicts in {n} file(s). Edit the text between the <<<<<<< and >>>>>>> lines, save, then finish.', mergeReady: 'Merging: every conflict is resolved.', finishMerge: 'Finish the merge', abortMerge: 'Cancel the merge', mergeDone: 'Merged. Sync to send it.', errors: { dirty: 'Save or commit the changes first: {files}', merging: 'A merge is in progress: finish or cancel it first.', 'no-remote': 'No remote yet.', detached: 'Not on a branch.', auth: 'The remote asks for a login ({detail}).', authSystem: 'git could not log in ({detail}). Set up its credentials as for a terminal: a credential helper or an SSH key.', network: 'Could not reach the remote: {detail}', invalid: 'Not a valid name or address.', markers: 'Conflict markers are still in: {files}', exists: 'Already exists: {detail}', canceled: '' } } as HistoryText,
+    pdf: { title: 'Export as PDF', folderTitle: 'Export the folder as one PDF', pageSize: 'Page size', orientation: 'Orientation', portrait: 'Portrait', landscape: 'Landscape', margins: 'Margins', marginNames: ['None', 'Narrow', 'Normal', 'Wide'], header: 'Title at the top of each page', footer: 'Page numbers at the bottom', toc: 'Table of contents', outline: 'Bookmarks from the headings', background: 'Colours and backgrounds', export: 'Export…', exporting: 'Exporting…', cancel: 'Cancel', saved: 'Saved: {file}', failed: 'Not exported: {error}' } as PdfText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
     sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project folder', cloneRepo: 'Clone a repository', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', noProjects: 'Add a folder as a project with +.', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group' } as SidebarText,
   },
@@ -67,6 +69,7 @@ const TEXT = {
     then: 'Тогда',
     now: 'Сейчас',
     historyPanel: { title: 'История', noFile: 'Откройте файл, чтобы увидеть его историю.', outside: 'Файл вне проектов и «Общих»: истории здесь нет.', noHistory: 'Эта папка пока не ведёт историю.', start: 'Вести историю', autoCommit: 'Фиксировать при сохранении', commitNow: 'Зафиксировать сейчас', commitPlaceholder: 'Что изменилось…', commit: 'Зафиксировать', noVersions: 'У этого файла пока нет версий.', nothingToCommit: 'Нечего фиксировать: изменения уже в истории.', close: 'Закрыть', scopeFile: 'Этот файл', scopeAll: 'Все коммиты', graph: 'Граф коммитов', branches: 'Ветки', newBranch: 'Новая ветка', create: 'Создать', switched: 'Ветка {branch}.', remotePlaceholder: 'Удалённый репозиторий: https://… или git@…', connect: 'Подключить', sync: 'Синхронизировать', syncing: 'Синхронизация…', synced: { 'up-to-date': 'Всё совпадает.', pushed: 'Отправлено.', pulled: 'Получено.', merged: 'Слито и отправлено.', conflict: 'Конфликты: разрешите их в тексте и завершите слияние.' }, username: 'Пользователь', token: 'Токен или пароль', remember: 'Запомнить на этом компьютере', signIn: 'Войти и синхронизировать', mergeConflicts: 'Слияние: конфликты в файлах — {n}. Поправьте текст между строками <<<<<<< и >>>>>>>, сохраните и завершите.', mergeReady: 'Слияние: все конфликты разрешены.', finishMerge: 'Завершить слияние', abortMerge: 'Отменить слияние', mergeDone: 'Слито. Синхронизируйте, чтобы отправить.', errors: { dirty: 'Сначала сохраните или зафиксируйте изменения: {files}', merging: 'Идёт слияние: сначала завершите или отмените его.', 'no-remote': 'Удалённого репозитория пока нет.', detached: 'Вы не на ветке.', auth: 'Удалённый репозиторий просит войти ({detail}).', authSystem: 'git не смог войти ({detail}). Настройте его вход как для терминала: помощник учётных данных или SSH-ключ.', network: 'Не удалось связаться с удалённым репозиторием: {detail}', invalid: 'Неверное имя или адрес.', markers: 'Маркеры конфликта ещё есть в: {files}', exists: 'Уже существует: {detail}', canceled: '' } } as HistoryText,
+    pdf: { title: 'Экспорт в PDF', folderTitle: 'Экспорт папки одним PDF', pageSize: 'Размер страницы', orientation: 'Ориентация', portrait: 'Книжная', landscape: 'Альбомная', margins: 'Поля', marginNames: ['Без полей', 'Узкие', 'Обычные', 'Широкие'], header: 'Название вверху каждой страницы', footer: 'Номера страниц внизу', toc: 'Оглавление', outline: 'Закладки по заголовкам', background: 'Цвета и фоны', export: 'Экспортировать…', exporting: 'Экспорт…', cancel: 'Отмена', saved: 'Сохранено: {file}', failed: 'Не экспортировано: {error}' } as PdfText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
     sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить папку проекта', cloneRepo: 'Клонировать репозиторий', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', noProjects: 'Добавьте папку проектом кнопкой +.', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы' } as SidebarText,
   },
@@ -691,7 +694,7 @@ window.addEventListener(
         if (active) void close(active)
       },
       e: () => toggleEdit(active),
-      p: () => void printActive(),
+      p: () => (event.shiftKey ? exportActive() : void printActive()),
       h: () => {
         if (event.shiftKey) toggleHistory()
       },
@@ -702,7 +705,7 @@ window.addEventListener(
       },
     }
     const fn = act[key]
-    if (!fn || (key !== 's' && key !== 'h' && event.shiftKey) || (key === 'h' && !event.shiftKey)) return
+    if (!fn || (key !== 's' && key !== 'h' && key !== 'p' && event.shiftKey) || (key === 'h' && !event.shiftKey)) return
     event.preventDefault()
     event.stopPropagation()
     fn()
@@ -733,6 +736,18 @@ async function printActive(): Promise<void> {
   }
 }
 folio.onPrint(() => void printActive())
+
+// Export as PDF: the active document as shown (unsaved edits too), a file or a folder from the tree.
+function exportPdf(target: PdfTarget): void {
+  openPdfDialog(t.pdf, target, notify)
+}
+function exportActive(): void {
+  if (!active) return
+  exportPdf({ kind: 'doc', path: active.path, text: active.text, name: titleOf(active) })
+}
+folio.onExportPdf(() => exportActive())
+folio.onExportFile((value) => exportPdf({ kind: 'doc', path: value as string }))
+folio.onExportFolder((value) => exportPdf({ kind: 'folder', dir: value as string }))
 
 // Going away: what is still settling is written now.
 window.addEventListener('beforeunload', () => {

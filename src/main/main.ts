@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session as electronSession, shell } from 'electron'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { extname, join, relative, sep } from 'node:path'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { basename, dirname, extname, join, relative, sep } from 'node:path'
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
 import {
@@ -26,6 +26,7 @@ import {
   textAt,
 } from './git'
 import { Logins } from './logins'
+import { folderDocuments, pdfName, pdfOptions, printToPdfOptions } from './pdf'
 import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, systemTransport, type Transport } from './sync'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
@@ -186,6 +187,7 @@ function buildMenu(): void {
         { label: L().save, accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => send('menu:save') },
         { label: L().saveAs, accelerator: 'CmdOrCtrl+Shift+S', registerAccelerator: false, click: () => send('menu:save-as') },
         { label: L().print, accelerator: 'CmdOrCtrl+P', registerAccelerator: false, click: () => send('menu:print') },
+        { label: L().exportPdf, accelerator: 'CmdOrCtrl+Shift+P', registerAccelerator: false, click: () => send('menu:export-pdf') },
         { label: L().closeTab, accelerator: 'CmdOrCtrl+W', registerAccelerator: false, click: () => send('menu:close-tab') },
         { type: 'separator' },
         mac ? { role: 'close' } : { role: 'quit' },
@@ -272,7 +274,12 @@ ipcMain.handle('tree:open', (_e, root: unknown, rel: unknown) => {
 ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
   if (file === null || !win) return
-  Menu.buildFromTemplate([{ label: L().reveal, click: () => shell.showItemInFolder(file) }]).popup({ window: win })
+  const folder = existsSync(file) && statSync(file).isDirectory()
+  Menu.buildFromTemplate([
+    { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
+    { type: 'separator' },
+    { label: L().reveal, click: () => shell.showItemInFolder(file) },
+  ]).popup({ window: win })
 })
 /** A project's menu, native: pin, rename, group, hide, reveal, remove. */
 ipcMain.on('ws:project-menu', (_e, id: unknown) => {
@@ -288,6 +295,7 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
     { label: L().group, click: () => send('ws:edit', { id: project.id, field: 'group' }) },
     { label: project.hidden ? L().show : L().hide, click: () => update({ hidden: !project.hidden }) },
     { type: 'separator' },
+    { label: L().exportFolderPdf, click: () => send('menu:export-folder', project.path) },
     { label: L().reveal, click: () => void shell.openPath(project.path) },
     {
       label: L().remove,
@@ -468,6 +476,103 @@ ipcMain.handle('git:status', async (_e, root: unknown, rel: unknown) => {
   if (!repo) return null
   const statuses = await statusUnder(repo, dir)
   return { branch: rel === '' ? await branchOf(repo) : null, files: Object.fromEntries(statuses) }
+})
+
+// PDF -------------------------------------------------------------------------------
+
+/** What the print page lays out: the documents, their title, the options. */
+interface PdfJob {
+  title: string
+  lang: string
+  options: ReturnType<typeof pdfOptions>
+  /** `urls`: the document's address from every root of the job — a link from another document is written against its own root. */
+  docs: { name: string; text: string; base: string | null; format: string; urls: string[] }[]
+}
+
+/** A document's addresses as `folio://app/r/<root>/<path>`, for every root of the job that holds it. */
+function addressesOf(path: string, rootIds: string[]): string[] {
+  const out: string[] = []
+  for (const id of rootIds) {
+    const dir = roots.dir(id)
+    if (!dir) continue
+    const rel = relative(dir, path)
+    if (rel.startsWith('..') || rel === '') continue
+    out.push(`folio://app/r/${id}/${rel.split(sep).map(encodeURIComponent).join('/')}`)
+  }
+  return out
+}
+const pdfJobs = new Map<number, { job: PdfJob; ready: (ok: boolean) => void }>()
+
+ipcMain.handle('pdf:job', (e) => pdfJobs.get(e.sender.id)?.job ?? null)
+ipcMain.on('pdf:ready', (e, ok: unknown) => pdfJobs.get(e.sender.id)?.ready(ok === true))
+
+/**
+ * Lays the documents out in a hidden window of the documents' session (the
+ * network consent holds there too), waits for the print page to say every
+ * widget is in its print form, prints to PDF, writes the file.
+ */
+async function renderPdf(job: PdfJob, file: string): Promise<void> {
+  const w = new BrowserWindow({
+    show: false,
+    width: 1000,
+    height: 1300,
+    webPreferences: { preload: join(__dirname, 'preload.cjs'), partition: PARTITION, contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  })
+  w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  w.webContents.on('will-navigate', (event) => event.preventDefault())
+  try {
+    const ready = new Promise<boolean>((resolve) => {
+      pdfJobs.set(w.webContents.id, { job, ready: resolve })
+      setTimeout(() => resolve(false), 120_000)
+    })
+    await w.loadURL('folio://app/ui/print.html')
+    if (!(await ready)) throw new Error('the documents did not finish drawing')
+    const data = await w.webContents.printToPDF(printToPdfOptions(job.options, job.title))
+    writeFileSync(file, data)
+  } finally {
+    pdfJobs.delete(w.webContents.id)
+    w.destroy()
+  }
+}
+
+/**
+ * Export as PDF: one document (with its unsaved edits, as shown) or a folder
+ * as one PDF. Asks where to save; resolves with the file, or why not.
+ */
+ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) => {
+  if (!win || !target || typeof target !== 'object') return { error: 'invalid' }
+  const t = target as { kind?: string; path?: unknown; text?: unknown; name?: unknown; dir?: unknown }
+  const options = pdfOptions(rawOptions)
+  const opened = (files: string[]) => {
+    const list = files.map(open).filter((o): o is OpenedDocument => !('error' in o))
+    const ids = [...new Set(list.map((o) => o.root))]
+    return list.map((o) => ({ name: o.name, text: o.text, base: o.base, format: o.format, urls: addressesOf(o.path, ids) }))
+  }
+  let docs: PdfJob['docs']
+  let title: string
+  let where: string
+  if (t.kind === 'folder' && typeof t.dir === 'string' && existsSync(t.dir)) {
+    docs = opened(folderDocuments(t.dir))
+    title = basename(t.dir)
+    where = join(dirname(t.dir), pdfName(t.dir))
+  } else if (t.kind === 'doc' && (typeof t.text === 'string' || typeof t.path === 'string')) {
+    const doc = typeof t.path === 'string' ? (opened([t.path])[0] ?? null) : null
+    const name = doc?.name ?? (typeof t.name === 'string' && t.name.trim() ? t.name.trim() : 'note')
+    // The text as shown (unsaved edits too), else the file's.
+    const text = typeof t.text === 'string' ? t.text : (doc?.text ?? '')
+    docs = [doc ? { ...doc, text } : { name, text, base: null, format: 'markdown', urls: [] }]
+    title = name.replace(/\.[^.]+$/, '')
+    where = join(typeof t.path === 'string' ? dirname(t.path) : workspace.shared(), pdfName(name))
+  } else return { error: 'invalid' }
+  if (docs.length === 0) return { error: 'empty' }
+  const result = await dialog.showSaveDialog(win, { defaultPath: where, filters: [{ name: 'PDF', extensions: ['pdf'] }] })
+  if (result.canceled || !result.filePath) return { canceled: true }
+  try {
+    await renderPdf({ title, lang: app.getLocale().startsWith('ru') ? 'ru' : 'en', options, docs }, result.filePath)
+    return { saved: result.filePath }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) }
+  }
 })
 
 ipcMain.handle('app:startup', () => {

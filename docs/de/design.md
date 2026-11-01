@@ -168,9 +168,30 @@ Bildschirm ist. Jedes Widget druckt in seiner Druckform aus embed
 mit ihren Entscheidungstabellen), jede draw.io-Seite, ein Prozess oder ein
 Board ganz, eine API-Referenz als ihr statisches Dokument, ein Video als
 Posterbild und Kapitel, Kanban und Kalender ohne ihre Bedienelemente. Dann
-folgt der Druckdialog des Systems; das Speichern als PDF mit
-Seiteneinstellungen, Kopf- und Fußzeilen, Inhaltsverzeichnis und Lesezeichen
-kommt in Stufe 7.
+folgt der Druckdialog des Systems; ein PDF entsteht über „Als PDF exportieren“ (unten).
+
+### PDF
+
+**Datei → Als PDF exportieren** (`Cmd/Strg+Umschalt+P`) speichert das aktive
+Dokument — wie angezeigt, mit ungespeicherten Änderungen —, und **Ordner als
+PDF exportieren** (das Menü eines Projekts oder eines Ordners im Baum)
+speichert einen ganzen Ordner als ein PDF. Der Dialog fragt einmal und merkt
+es sich:
+
+- Seitenformat (A4, A3, A5, Letter, Legal, Tabloid), Hoch- oder Querformat,
+  Ränder (keine, schmal, normal, breit);
+- der Titel oben auf jeder Seite, Seitenzahlen (`3 / 12`) unten;
+- ein Inhaltsverzeichnis mit Links vor dem Text; Lesezeichen aus den
+  Überschriften (die Gliederung des PDF, in einem getaggten PDF);
+- Farben und Hintergründe der Zeichnungen.
+
+Ein Ordner druckt in der Reihenfolge eines Buchs: in jedem Ordner zuerst
+`index.md` oder `README.md`, dann seine Dokumente nach Namen, dann seine
+Unterordner; jedes Dokument auf einer neuen Seite, Diagramm- und API-Dateien
+mit ihrem Namen als Überschrift. Ein Link von einem Dokument auf ein anderes
+wird ein Link innerhalb des PDF. Die Seiten werden in einem verborgenen
+Fenster der Dokumentsitzung gesetzt — die Netzfreigabe gilt auch dort —, jedes
+Widget in seiner Druckform; dann druckt Chromium sie als PDF.
 
 ## Bearbeiten
 

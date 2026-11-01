@@ -139,6 +139,10 @@ export interface FolioBridge {
   onSaveAs: Listener
   onToggleEdit: Listener
   onPrint: Listener
+  exportPdf(target: object, options: Record<string, unknown>): Promise<{ saved: string } | { canceled: true } | { error: string }>
+  onExportPdf: Listener
+  onExportFile: Listener
+  onExportFolder: Listener
   allowNetwork(scope: 'file' | 'folder', path: string): Promise<boolean>
   workspace(): Promise<WorkspaceView>
   addProject(): Promise<WorkspaceView>

@@ -15,7 +15,7 @@ export interface Entry {
 
 
 /** Folders that are tooling, not documents: never listed. */
-const SKIP = new Set(['.git', 'node_modules', '.folio-data', 'folio-data', '.idea', '.vscode', '.DS_Store', 'Thumbs.db'])
+export const SKIP = new Set(['.git', 'node_modules', '.folio-data', 'folio-data', '.idea', '.vscode', '.DS_Store', 'Thumbs.db'])
 
 /**
  * Markdown, a diagram (a drawn format, YAML — maybe an API — and JSON named

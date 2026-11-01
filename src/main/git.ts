@@ -179,22 +179,48 @@ export function rewriteParents(oid: string, keep: ReadonlySet<string>, parentsOf
   return out
 }
 
-/** The versions of a file, newest first, with their parents among these versions. */
+/**
+ * The versions of a file, newest first, with their parents among these
+ * versions. A commit is a version when the file in it differs from the file
+ * in every one of its parents (git's rule: a merge that took one side's file
+ * as it was is not one). Worked out here from the history itself:
+ * isomorphic-git's file log compares commits in date order, which within one
+ * second can set a commit beside another that is not its parent.
+ */
 export async function historyOf(root: string, path: string, depth = 200): Promise<Version[]> {
+  const filepath = toGit(root, path)
+  const cache = {}
+  let walk: LogEntry[]
   try {
-    // isomorphic-git may list a commit twice when a merge leads to it on two paths.
-    const log = [...new Map((await git.log({ fs, dir: root, filepath: toGit(root, path), depth, force: true })).map((e) => [e.oid, e])).values()]
-    // In the order of the history itself, newest first: two commits in one second keep their order.
-    const walk = await git.log({ fs, dir: root, depth: Math.max(depth * 5, 1000) })
-    const at = new Map(walk.map((e, i) => [e.oid, i]))
-    const parents = new Map(walk.map((e) => [e.oid, e.commit.parent]))
-    log.sort((a, b) => (at.get(a.oid) ?? Infinity) - (at.get(b.oid) ?? Infinity))
-    const keep = new Set(log.map((e) => e.oid))
-    return log.map((e) => versionOf(e, rewriteParents(e.oid, keep, (oid) => parents.get(oid))))
+    walk = await git.log({ fs, dir: root, depth: Math.max(depth * 5, 1000), cache })
   } catch {
-    // No commit yet, or the file was never committed.
+    // No commit yet.
     return []
   }
+  const blobs = new Map<string, string | null>()
+  const blobAt = async (oid: string): Promise<string | null> => {
+    if (!blobs.has(oid)) {
+      try {
+        blobs.set(oid, (await git.readBlob({ fs, dir: root, oid, filepath, cache })).oid)
+      } catch {
+        blobs.set(oid, null)
+      }
+    }
+    return blobs.get(oid)!
+  }
+  // isomorphic-git may list a commit twice when a merge leads to it on two paths.
+  walk = [...new Map(walk.map((e) => [e.oid, e])).values()]
+  const versions: LogEntry[] = []
+  for (const e of walk) {
+    const mine = await blobAt(e.oid)
+    if (mine === null) continue
+    const parents = await Promise.all(e.commit.parent.map(blobAt))
+    if (parents.every((p) => p !== mine)) versions.push(e)
+    if (versions.length >= depth) break
+  }
+  const keep = new Set(versions.map((e) => e.oid))
+  const parentsOf = new Map(walk.map((e) => [e.oid, e.commit.parent]))
+  return versions.map((e) => versionOf(e, rewriteParents(e.oid, keep, (oid) => parentsOf.get(oid))))
 }
 
 /**
