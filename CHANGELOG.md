@@ -13,6 +13,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   package `@dskripchenko/syntax` (17 programming languages and 17 formats;
   the language by name, extension or `#!` line). Links to them open in folio;
   over 2 MB or 50 000 lines a file is shown plain for now.
+- Data files are checked (`@dskripchenko/syntax` 0.2): JSON (with comments
+  for tsconfig.json and the like, JSON Lines), YAML, XML, TOML, CSV/TSV, INI
+  and `.env` — errors and warnings marked at their line numbers with the
+  message on hover, a count in the head that steps through them (unfolding
+  what hides one). Blocks fold by an arrow beside the line number: brackets,
+  tags, indentation, Markdown sections.
 
 ### Changed
 - The view modes are one button on the rail: a click goes round Read → Edit
