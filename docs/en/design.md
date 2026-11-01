@@ -259,6 +259,19 @@ edited as text search the field, and Escape leaves the current match selected
 there; a big file is searched whole, not only the lines in view. A page that
 changes under the bar — an edit, the file changed on disk — is searched again.
 
+## Consoles
+
+`` Ctrl+` `` (**View → Console**, or the console button on the right rail) opens
+a panel under the page with your shell — zsh or bash as your terminal starts
+it, PowerShell on Windows — in Shared; **Open a Console Here** in a project's
+or a folder's menu opens one in that folder. Tabs keep several; **+** opens
+another in the same folder, a tab's × ends its shell. Full-screen programs —
+`vim`, `htop`, `less`, `mc` — work as in a terminal app, with the mouse where
+they ask for it; the panel's height is dragged by its top edge, and it follows
+the window's light or dark theme. Off a Mac, Ctrl with a letter in a console
+is the shell's (^W, ^E, ^P…), not folio's shortcut. The consoles end with the
+window. Drawn by `@dskripchenko/terminal`; the shell runs in `node-pty`.
+
 ## Where the data lives
 
 Electron keeps its data in the user profile by default. folio moves all of it —

@@ -283,6 +283,21 @@ Treffer dort ausgewählt; eine große Datei wird ganz durchsucht, nicht nur die
 sichtbaren Zeilen. Ändert sich die Seite unter der Leiste — eine Bearbeitung,
 die Datei auf der Festplatte —, wird erneut gesucht.
 
+## Konsolen
+
+`` Strg+` `` (**Ansicht → Konsole** oder der Konsolen-Knopf auf der rechten
+Leiste) öffnet unter der Seite ein Feld mit Ihrer Shell — zsh oder bash, wie Ihr
+Terminal sie startet, PowerShell unter Windows — in „Gemeinsam“; **Hier eine
+Konsole öffnen** im Menü eines Projekts oder Ordners öffnet eine in diesem
+Ordner. Tabs halten mehrere; **+** öffnet eine weitere im selben Ordner, das ×
+eines Tabs beendet seine Shell. Vollbildprogramme — `vim`, `htop`, `less`, `mc`
+— funktionieren wie in einer Terminal-App, mit der Maus, wo sie danach fragen;
+die Höhe des Felds zieht man an seiner Oberkante, es folgt dem hellen oder
+dunklen Thema des Fensters. Außerhalb des Mac gehört Strg mit einem Buchstaben
+in einer Konsole der Shell (^W, ^E, ^P …), nicht den Kürzeln von folio. Die
+Konsolen enden mit dem Fenster. Gezeichnet von `@dskripchenko/terminal`, die
+Shell läuft in `node-pty`.
+
 ## Wo die Daten liegen
 
 Electron legt seine Daten standardmäßig im Benutzerprofil ab. folio verlegt sie

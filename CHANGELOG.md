@@ -8,6 +8,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Consoles (`` Ctrl+` ``, **View → Console**, the rail; **Open a Console Here**
+  in a project's or folder's menu): your shell in a panel under the page, in
+  tabs, in Shared or the folder chosen; full-screen programs and the mouse
+  work; the panel's height is dragged, the theme followed. Drawn by the new
+  package `@dskripchenko/terminal`, the shell in `node-pty`.
 - Replace in files (the arrow before the query in the search panel): each
   match previewed, files ticked, **Replace all** asks once more with the count;
   `$1` groups with a regular expression, literal text without; files open with

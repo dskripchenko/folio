@@ -376,3 +376,20 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .search-preview ins { background: rgba(46, 160, 67, 0.25); text-decoration: none; border-radius: 2px; }
 .search-panel.replacing .search-preview b { background: rgba(209, 36, 47, 0.18); text-decoration: line-through; }
 .search-preview ins[hidden] { display: none; }
+
+/* Consoles: a panel of tabs under the page. */
+.console-panel { position: relative; flex: none; display: flex; flex-direction: column; height: 300px; min-height: 100px; border-top: 1px solid var(--line); background: var(--tab); }
+.console-panel[hidden] { display: none; }
+.console-grip { position: absolute; top: -3px; left: 0; right: 0; height: 6px; cursor: row-resize; z-index: 2; }
+.console-panel header { display: flex; align-items: center; gap: 2px; padding: 2px 6px; border-bottom: 1px solid var(--line); }
+.console-panel header .icon-button { width: 26px; height: 26px; }
+.console-tabs { flex: 1; display: flex; gap: 2px; min-width: 0; overflow-x: auto; }
+.console-tab { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 8px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.console-tab[aria-selected="true"] { background: var(--bg); color: var(--fg); }
+.console-tab.ended .console-tab-label { text-decoration: line-through; }
+.console-tab-close { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; opacity: 0.6; }
+.console-tab-close:hover { opacity: 1; background: color-mix(in srgb, var(--line) 80%, transparent); }
+.console-body { position: relative; flex: 1; min-height: 0; }
+.console-term { position: absolute; inset: 0; }
+.console-term[hidden] { display: none; }
+@media print { .console-panel { display: none !important; } }

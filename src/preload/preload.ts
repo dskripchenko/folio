@@ -54,6 +54,22 @@ contextBridge.exposeInMainWorld('folio', {
   onToggleEdit: listen('menu:toggle-edit'),
   onFind: listen('menu:find'),
   onGoToFile: listen('menu:go-to-file'),
+  onToggleConsole: listen('menu:toggle-console'),
+  onConsoleHere: listen('menu:console'),
+  openConsole: (cwd: string | null, cols: number, rows: number) => ipcRenderer.invoke('console:open', cwd, cols, rows),
+  consoleInput: (id: number, data: string) => ipcRenderer.send('console:input', id, data),
+  consoleResize: (id: number, cols: number, rows: number) => ipcRenderer.send('console:resize', id, cols, rows),
+  closeConsole: (id: number) => ipcRenderer.send('console:close', id),
+  onConsoleData: (callback: (id: number, data: string) => void) => {
+    const handler = (_e: unknown, id: number, data: string) => callback(id, data)
+    ipcRenderer.on('console:data', handler)
+    return () => ipcRenderer.removeListener('console:data', handler)
+  },
+  onConsoleExit: (callback: (id: number, code: number) => void) => {
+    const handler = (_e: unknown, id: number, code: number) => callback(id, code)
+    ipcRenderer.on('console:exit', handler)
+    return () => ipcRenderer.removeListener('console:exit', handler)
+  },
   allFiles: () => ipcRenderer.invoke('files:all'),
   searchScopes: () => ipcRenderer.invoke('search:scopes'),
   search: (id: number, query: string, options: Record<string, boolean>, scope: string) => ipcRenderer.invoke('search:run', id, query, options, scope),
