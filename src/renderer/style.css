@@ -75,8 +75,40 @@ body.no-sidebar .sidebar, body.no-sidebar .resizer { display: none; }
 .history { width: 300px; flex: none; overflow: auto; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
 .history[hidden] { display: none; }
 .history header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 6px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-.history .branch { margin: 0 14px 8px; color: var(--fg); font-size: 12px; }
+.history .branches { margin: 0 14px 8px; }
+.history .branch { padding: 2px 6px; margin-left: -6px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--fg); font: inherit; font-size: 12px; cursor: pointer; }
+.history .branch:hover, .history .branch[aria-expanded="true"] { border-color: var(--line); background: var(--bg); }
 .history .branch::before { content: '⎇ '; color: var(--muted); }
+.history .branch::after { content: ' ▾'; color: var(--muted); font-size: 10px; }
+.history .branch-menu { display: flex; flex-direction: column; margin-top: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.history .branch-menu > button { padding: 3px 8px; border: 0; border-radius: 4px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.history .branch-menu > button:hover:not(:disabled) { background: var(--tab); }
+.history .branch-menu > button.current { font-weight: 600; cursor: default; }
+.history .branch-menu > button.current::before { content: '✓ '; }
+.history .branch-menu .inline-form { margin-top: 4px; }
+.history .inline-form, .history .login { display: flex; gap: 6px; }
+.history .login { flex-direction: column; margin: 0 14px 10px; }
+.history .login label { display: flex; gap: 6px; align-items: center; }
+.history .inline-form input, .history .login input:not([type="checkbox"]) { flex: 1; min-width: 0; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.history .remote { display: flex; gap: 8px; align-items: center; margin: 0 14px 8px; }
+.history .remote .inline-form { flex: 1; }
+.history .remote-url { flex: 1; min-width: 0; overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.history button.action:disabled { opacity: 0.55; cursor: default; }
+.git-note { margin: 0 14px 8px; font-size: 12px; color: var(--muted); }
+.git-note.error { color: #b42318; }
+.history .merge { margin: 4px 14px 10px; padding: 8px 10px; border: 1px solid #e0a800; border-radius: 6px; background: rgba(224, 168, 0, 0.08); }
+.history .merge p { margin: 0 0 6px; }
+.history .merge ul { margin: 0 0 8px; padding-left: 18px; }
+.history .merge li button { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
+.history .actions.row { flex-direction: row; flex-wrap: wrap; margin: 0; }
+dialog.clone { width: min(460px, calc(100vw - 32px)); padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+dialog.clone::backdrop { background: rgba(0, 0, 0, 0.3); }
+dialog.clone h2 { margin: 0 0 12px; font-size: 15px; }
+dialog.clone input { box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+dialog.clone .git-note { margin: 8px 0 0; }
+dialog.clone .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+dialog.clone button { padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; cursor: pointer; }
+dialog.clone button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
 .history .hint { margin: 6px 14px; }
 .history .actions { display: flex; flex-direction: column; gap: 6px; margin: 4px 14px 10px; }
 .history .actions label { display: flex; gap: 6px; align-items: center; }

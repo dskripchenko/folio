@@ -24,6 +24,8 @@ const LABELS = {
     unsavedQuestion: 'Save the changes to {name}?',
     unsavedDetail: 'Without saving, the changes are lost.',
     history: 'History',
+    cloneRepo: 'Clone Repository…',
+    cloneInto: 'Where to clone the repository',
   },
   ru: {
     file: 'Файл',
@@ -49,6 +51,8 @@ const LABELS = {
     unsavedQuestion: 'Сохранить изменения в «{name}»?',
     unsavedDetail: 'Без сохранения изменения пропадут.',
     history: 'История',
+    cloneRepo: 'Клонировать репозиторий…',
+    cloneInto: 'Куда клонировать репозиторий',
   },
 }
 
