@@ -40,6 +40,8 @@ import { Session } from './session'
 import { labels } from './i18n'
 import { listDir } from './tree'
 import { FileIndex } from './fileIndex'
+import { searchFiles, type SearchFile } from './search'
+import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
 import { Workspace, type Project } from './workspace'
 
@@ -213,6 +215,8 @@ function buildMenu(): void {
         { label: L().find, accelerator: 'CmdOrCtrl+F', registerAccelerator: false, click: () => send('menu:find', 'open') },
         { label: L().findNext, accelerator: 'CmdOrCtrl+G', registerAccelerator: false, click: () => send('menu:find', 'next') },
         { label: L().findPrevious, accelerator: 'CmdOrCtrl+Shift+G', registerAccelerator: false, click: () => send('menu:find', 'previous') },
+        { type: 'separator' },
+        { label: L().findInFiles, accelerator: 'CmdOrCtrl+Shift+F', registerAccelerator: false, click: () => send('menu:find', 'files') },
       ],
     },
     {
@@ -288,18 +292,42 @@ ipcMain.handle('tree:list', (_e, root: unknown, rel: unknown, all: unknown) => {
   const dir = typeof root === 'string' ? roots.dir(root) : undefined
   return dir === undefined || typeof rel !== 'string' ? null : listDir(dir, rel, all === true)
 })
-/** Every file folio opens in Shared and the visible projects: for going to a file by name. */
-ipcMain.handle('files:all', async () => {
-  const shared = workspace.shared()
-  const sources = [{ label: null as string | null, path: shared }, ...workspace.projects().filter((p) => !p.hidden).map((p) => ({ label: p.name, path: p.path }))]
-  const out: { root: string; label: string | null; path: string; kind: string }[] = []
-  for (const source of sources) {
+/** Shared and the visible projects, each a root: what going to a file and searching cover. */
+function sources(): { root: string; label: string | null; dir: string }[] {
+  const all = [{ label: null as string | null, path: workspace.shared() }, ...workspace.projects().filter((p) => !p.hidden).map((p) => ({ label: p.name, path: p.path }))]
+  return all.map((source) => {
     const root = roots.register(source.path)
     const dir = roots.dir(root) ?? source.path
     watcher.add(root, dir)
-    for (const f of await fileIndex.files(root, dir)) out.push({ root, label: source.label, path: f.path, kind: f.kind })
-  }
+    return { root, label: source.label, dir }
+  })
+}
+
+/** Every file folio opens in Shared and the visible projects: for going to a file by name. */
+ipcMain.handle('files:all', async () => {
+  const out: { root: string; label: string | null; path: string; kind: string }[] = []
+  for (const s of sources()) for (const f of await fileIndex.files(s.root, s.dir)) out.push({ root: s.root, label: s.label, path: f.path, kind: f.kind })
   return out
+})
+
+// Searching the files' text: one search at a time, a newer one stops the older.
+let searchId = 0
+ipcMain.handle('search:scopes', () => sources().map(({ root, label }) => ({ root, label })))
+ipcMain.handle('search:run', async (e, id: unknown, query: unknown, options: unknown, scope: unknown) => {
+  if (typeof id !== 'number' || typeof query !== 'string' || typeof options !== 'object' || options === null) return { error: 'invalid' }
+  searchId = id
+  const o = options as Record<string, unknown>
+  const pattern = patternOf(query, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+  if (!pattern) return { error: 'invalid' }
+  const files: SearchFile[] = []
+  for (const s of sources()) {
+    if (scope !== 'all' && scope !== s.root) continue
+    for (const f of await fileIndex.files(s.root, s.dir)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
+  }
+  return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id)
+})
+ipcMain.on('search:cancel', () => {
+  searchId++
 })
 ipcMain.handle('tree:open', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null

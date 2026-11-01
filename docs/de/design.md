@@ -237,10 +237,20 @@ Pfade.
 | `Cmd/Strg+W` | Tab schließen |
 | `Cmd/Strg+B` | Seitenleiste |
 | `Cmd/Strg+T` | zu einer Datei nach Namen gehen |
+| `Cmd/Strg+Umschalt+F` | in den Dateien suchen |
 | `Cmd/Strg+F` | im Dokument suchen |
 | `Cmd/Strg+G`, `Cmd/Strg+Umschalt+G` | der nächste Treffer, der vorige |
 
 ## Suchen
+
+`Cmd/Strg+Umschalt+F` (**Bearbeiten → In Dateien suchen** oder die Lupe auf der
+rechten Leiste) öffnet neben der Seite ein Feld, das den Text der Dateien
+durchsucht — alle, „Gemeinsam“ oder ein Projekt — mit denselben drei Optionen.
+Die Treffer kommen, sobald sie gefunden sind, nach Datei, jede Zeile mit ihrem
+Treffer; ein Klick öffnet die Datei und setzt die Suchleiste auf diesen
+Treffer. Binärdateien, Dateien über 8 MB und die vom Gehe-zu-Datei
+ausgelassenen Ordner werden nicht durchsucht; höchstens 200 Treffer je Datei
+und 5 000 insgesamt werden gelistet.
 
 `Cmd/Strg+T` (**Datei → Gehe zu Datei**) öffnet eine Palette aller Dateien,
 die folio öffnet, in „Gemeinsam“ und den sichtbaren Projekten, geordnet, während

@@ -55,6 +55,14 @@ contextBridge.exposeInMainWorld('folio', {
   onFind: listen('menu:find'),
   onGoToFile: listen('menu:go-to-file'),
   allFiles: () => ipcRenderer.invoke('files:all'),
+  searchScopes: () => ipcRenderer.invoke('search:scopes'),
+  search: (id: number, query: string, options: Record<string, boolean>, scope: string) => ipcRenderer.invoke('search:run', id, query, options, scope),
+  cancelSearch: () => ipcRenderer.send('search:cancel'),
+  onSearchHits: (callback: (id: number, batch: unknown) => void) => {
+    const handler = (_e: unknown, id: number, batch: unknown) => callback(id, batch)
+    ipcRenderer.on('search:hits', handler)
+    return () => ipcRenderer.removeListener('search:hits', handler)
+  },
   onPrint: listen('menu:print'),
   exportPdf: (target: Record<string, unknown>, options: Record<string, unknown>) => ipcRenderer.invoke('pdf:export', target, options),
   onExportPdf: listen('menu:export-pdf'),
