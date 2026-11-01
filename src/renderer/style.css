@@ -362,3 +362,17 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .search-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .search-preview b { background: rgba(255, 213, 0, 0.45); color: inherit; font-weight: 600; border-radius: 2px; }
 @media print { .search-panel { display: none !important; } }
+
+.search-toggle { flex: none; display: grid; place-items: center; width: 20px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; }
+.search-toggle svg { transition: transform 0.1s; }
+.search-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.search-replace { flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-left: 32px; }
+.search-replace input { flex: 1 1 140px; }
+.search-replace[hidden] { display: none; }
+.search-replace-all { flex: none; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.search-replace-all.confirm { flex: 1 0 100%; white-space: normal; border-color: #d1242f; background: #d1242f; color: #fff; }
+.search-include { flex: none; margin: 0; display: none; }
+.search-panel.replacing .search-include { display: inline-block; }
+.search-preview ins { background: rgba(46, 160, 67, 0.25); text-decoration: none; border-radius: 2px; }
+.search-panel.replacing .search-preview b { background: rgba(209, 36, 47, 0.18); text-decoration: line-through; }
+.search-preview ins[hidden] { display: none; }

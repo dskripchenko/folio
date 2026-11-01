@@ -125,6 +125,23 @@ export async function commitFile(root: string, path: string, message: string, au
   return git.commit({ fs, dir: root, message, author })
 }
 
+/** Commit several files at once (a replacement across a folder): one commit, null when nothing changed. */
+export async function commitFiles(root: string, paths: string[], message: string, author: Author): Promise<string | null> {
+  let staged = false
+  for (const path of paths) {
+    const filepath = toGit(root, path)
+    const committed = await headBlob(root, filepath)
+    if (!fs.existsSync(path)) continue
+    const raw = fs.readFileSync(path)
+    const content = stored(raw, committed?.blob ?? null)
+    const { oid } = await git.hashBlob({ object: content })
+    if (oid === committed?.oid) continue
+    await stage(root, filepath, raw, content)
+    staged = true
+  }
+  return staged ? git.commit({ fs, dir: root, message, author }) : null
+}
+
 /** A commit of a history list: `parents` within the list shown (see `historyOf`), `refs` naming it. */
 export interface Version {
   oid: string

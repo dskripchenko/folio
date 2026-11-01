@@ -143,6 +143,7 @@ export interface FolioBridge {
   searchScopes(): Promise<{ root: string; label: string | null }[]>
   search(id: number, query: string, options: Record<string, boolean>, scope: string): Promise<{ files: number; matches: number; truncated: boolean; canceled: boolean } | { error: string }>
   cancelSearch(): void
+  replace(query: string, options: Record<string, boolean>, replacement: string, files: string[]): Promise<{ files: number; replacements: number; commits: number } | { error: string }>
   onSearchHits(callback: (id: number, batch: unknown) => void): () => void
   allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'other' }[]>
   onPrint: Listener

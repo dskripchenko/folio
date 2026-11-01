@@ -232,6 +232,14 @@ and lands the find bar on that match. Binary files, files over 8 MB and the
 folders left out of going to a file are not searched; at most 200 matches a
 file and 5 000 in all are listed.
 
+The arrow before the query opens **Replace**: each match shows what it
+becomes, files are ticked to take part, and **Replace all** asks once more
+with the count before it writes. With a regular expression `$1`, `$&` and the
+like name its groups; without one the text is taken as it is. A file open with
+unsaved changes is left out (said so), so neither side is lost; an open file
+without changes shows the new text. A folder that keeps a history gets one
+commit for the replacement — `Replace "a" with "b"` — not a commit per file.
+
 `Cmd/Ctrl+T` (**File → Go to File**) opens a palette of every file folio opens
 in Shared and the visible projects, ranked as the name is typed: the
 characters in order, not necessarily together — `rn` finds

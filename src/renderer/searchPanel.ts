@@ -4,7 +4,7 @@
  * Shared, a project); the matches come in as the main process finds them,
  * by file, each line with its match; a click opens the file at the match.
  */
-import type { FindOptions } from '../common/pattern'
+import { patternOf, type FindOptions } from '../common/pattern'
 import { icon, iconButton } from './icons'
 
 export interface SearchText {
@@ -24,6 +24,16 @@ export interface SearchText {
   invalid: string
   matches: [string, string, string] | [string, string]
   files: [string, string, string] | [string, string]
+  toggleReplace: string
+  replacePlaceholder: string
+  replaceAll: string
+  /** `Replace {matches} in {files}?` */
+  confirm: string
+  /** `Replaced {matches} in {files}` */
+  replaced: string
+  committed: string
+  skipped: string
+  include: string
 }
 
 interface Hit {
@@ -37,6 +47,7 @@ export interface FileHits {
   root: string
   label: string | null
   path: string
+  file: string
   hits: Hit[]
   more: boolean
 }
@@ -46,6 +57,9 @@ export interface SearchBridge {
   run(id: number, query: string, options: FindOptions, scope: string): Promise<{ files: number; matches: number; truncated: boolean; canceled: boolean } | { error: string }>
   cancel(): void
   onHits(callback: (id: number, batch: unknown) => void): void
+  replace(query: string, options: FindOptions, replacement: string, files: string[]): Promise<{ files: number; replacements: number; commits: number } | { error: string }>
+  /** A file open in a tab with changes not saved: replacing in it would lose one side. */
+  isDirty(file: string): boolean
 }
 
 const OPTIONS_KEY = 'folio.search'
@@ -61,6 +75,12 @@ export class SearchPanel {
   private id = 0
   private timer: ReturnType<typeof setTimeout> | null = null
   private matches = 0
+  private readonly replaceRow: HTMLElement
+  private readonly replaceInput: HTMLInputElement
+  private readonly replaceButton: HTMLButtonElement
+  private readonly toggle: HTMLButtonElement
+  private found: { file: FileHits; box: HTMLInputElement }[] = []
+  private confirming = false
 
   constructor(
     private text: SearchText,
@@ -87,11 +107,18 @@ export class SearchPanel {
 
     const row = document.createElement('div')
     row.className = 'search-row'
+    this.toggle = document.createElement('button')
+    this.toggle.type = 'button'
+    this.toggle.className = 'search-toggle'
+    this.toggle.dataset.testid = 'search-toggle-replace'
+    this.toggle.setAttribute('aria-expanded', 'false')
+    this.toggle.append(icon('chevron'))
+    this.toggle.addEventListener('click', () => this.showReplace(this.toggle.getAttribute('aria-expanded') !== 'true'))
     this.input = document.createElement('input')
     this.input.type = 'search'
     this.input.spellcheck = false
     this.input.dataset.testid = 'search-input'
-    row.append(this.input)
+    row.append(this.toggle, this.input)
     for (const [key, glyph] of [['caseSensitive', 'Aa'], ['wholeWord', 'ab'], ['regex', '.*']] as const) {
       const b = document.createElement('button')
       b.type = 'button'
@@ -112,6 +139,29 @@ export class SearchPanel {
       this.flags.set(key, b)
       row.append(b)
     }
+    this.replaceRow = document.createElement('div')
+    this.replaceRow.className = 'search-row search-replace'
+    this.replaceRow.hidden = true
+    this.replaceInput = document.createElement('input')
+    this.replaceInput.type = 'text'
+    this.replaceInput.spellcheck = false
+    this.replaceInput.dataset.testid = 'replace-input'
+    this.replaceButton = document.createElement('button')
+    this.replaceButton.type = 'button'
+    this.replaceButton.className = 'search-replace-all'
+    this.replaceButton.dataset.testid = 'replace-all'
+    this.replaceButton.addEventListener('click', () => void this.replaceAll())
+    this.replaceInput.addEventListener('input', () => {
+      this.unconfirm()
+      this.previews()
+    })
+    this.replaceInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        this.setVisible(false)
+      }
+    })
+    this.replaceRow.append(this.replaceInput, this.replaceButton)
     this.scope = document.createElement('select')
     this.scope.className = 'search-scope'
     this.scope.dataset.testid = 'search-scope'
@@ -123,7 +173,7 @@ export class SearchPanel {
     this.results = document.createElement('div')
     this.results.className = 'search-results'
     this.results.dataset.testid = 'search-results'
-    this.el.append(header, row, this.scope, this.status, this.results)
+    this.el.append(header, row, this.replaceRow, this.scope, this.status, this.results)
     this.setText(text)
 
     this.input.addEventListener('input', () => {
@@ -152,6 +202,70 @@ export class SearchPanel {
     for (const [key, b] of this.flags) {
       b.title = text[key]
       b.setAttribute('aria-label', text[key])
+    }
+    this.toggle.title = text.toggleReplace
+    this.toggle.setAttribute('aria-label', text.toggleReplace)
+    this.replaceInput.placeholder = text.replacePlaceholder
+    this.unconfirm()
+  }
+
+  private showReplace(on: boolean): void {
+    this.toggle.setAttribute('aria-expanded', String(on))
+    this.replaceRow.hidden = !on
+    this.el.classList.toggle('replacing', on)
+    if (on) this.replaceInput.focus()
+    this.previews()
+  }
+
+  private unconfirm(): void {
+    this.confirming = false
+    this.replaceButton.textContent = this.text.replaceAll
+    this.replaceButton.classList.remove('confirm')
+  }
+
+  /** The files ticked, without the ones open with unsaved changes. */
+  private chosen(): FileHits[] {
+    return this.found.filter((f) => f.box.checked && !this.bridge.isDirty(f.file.file)).map((f) => f.file)
+  }
+
+  /** Replace in every ticked file: the first click asks, the second does it. */
+  private async replaceAll(): Promise<void> {
+    const files = this.chosen()
+    if (files.length === 0 || this.input.value === '') return
+    const count = files.reduce((n, f) => n + f.hits.length, 0)
+    if (!this.confirming) {
+      this.confirming = true
+      this.replaceButton.textContent = this.text.confirm.replace('{matches}', plural(count, this.text.matches)).replace('{files}', plural(files.length, this.text.files))
+      this.replaceButton.classList.add('confirm')
+      return
+    }
+    this.unconfirm()
+    const skipped = this.found.filter((f) => f.box.checked && this.bridge.isDirty(f.file.file)).length
+    const result = await this.bridge.replace(this.input.value, { ...this.options }, this.replaceInput.value, files.map((f) => f.file))
+    if ('error' in result) {
+      this.status.textContent = this.text.invalid
+      return
+    }
+    await this.run()
+    this.status.textContent = [
+      this.text.replaced.replace('{matches}', plural(result.replacements, this.text.matches)).replace('{files}', plural(result.files, this.text.files)),
+      result.commits > 0 ? this.text.committed : '',
+      skipped > 0 ? this.text.skipped.replace('{n}', String(skipped)) : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+  }
+
+  /** What each match becomes, shown in its line while replacing. */
+  private previews(): void {
+    const on = !this.replaceRow.hidden
+    const pattern = on ? patternOf(this.input.value, this.options) : null
+    const single = pattern ? new RegExp(pattern.source, pattern.flags.replace('g', '')) : null
+    const replacement = this.options.regex ? this.replaceInput.value : this.replaceInput.value.replace(/\$/g, '$$$$')
+    for (const ins of this.results.querySelectorAll<HTMLElement>('.search-preview ins')) {
+      const was = ins.previousElementSibling?.textContent ?? ''
+      ins.textContent = single ? was.replace(single, replacement) : ''
+      ins.hidden = !on
     }
   }
 
@@ -190,6 +304,8 @@ export class SearchPanel {
     if (this.timer) clearTimeout(this.timer)
     const id = ++this.id
     this.results.replaceChildren()
+    this.found = []
+    this.unconfirm()
     this.matches = 0
     const query = this.input.value
     if (query === '') {
@@ -234,7 +350,17 @@ export class SearchPanel {
       const count = document.createElement('span')
       count.className = 'search-file-count'
       count.textContent = `${file.hits.length}${file.more ? '+' : ''}`
-      head.append(icon('chevron'), name, where, count)
+      const box = document.createElement('input')
+      box.type = 'checkbox'
+      box.checked = true
+      box.className = 'search-include'
+      box.title = this.text.include
+      box.setAttribute('aria-label', `${this.text.include}: ${file.path}`)
+      box.dataset.testid = 'search-include'
+      box.addEventListener('click', (e) => e.stopPropagation())
+      box.addEventListener('change', () => this.unconfirm())
+      this.found.push({ file, box })
+      head.append(icon('chevron'), box, name, where, count)
       const list = document.createElement('ul')
       head.addEventListener('click', () => {
         const open = head.getAttribute('aria-expanded') !== 'true'
@@ -255,7 +381,9 @@ export class SearchPanel {
         mark.textContent = hit.preview.slice(hit.start, hit.end)
         const text = document.createElement('span')
         text.className = 'search-preview'
-        text.append(hit.preview.slice(0, hit.start).trimStart(), mark, hit.preview.slice(hit.end))
+        const ins = document.createElement('ins')
+        ins.hidden = true
+        text.append(hit.preview.slice(0, hit.start).trimStart(), mark, ins, hit.preview.slice(hit.end))
         b.append(n, text)
         b.addEventListener('click', () => {
           for (const on of this.results.querySelectorAll('.search-hit.on')) on.classList.remove('on')
@@ -268,6 +396,7 @@ export class SearchPanel {
       group.append(head, list)
       this.results.append(group)
     }
+    this.previews()
   }
 }
 
