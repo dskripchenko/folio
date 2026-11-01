@@ -187,3 +187,17 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
   .doc { max-width: none; margin: 0; padding: 0; }
   .version-bar { display: none !important; }
 }
+
+/* Export as PDF (stage 7) */
+dialog.pdf-dialog { width: min(560px, calc(100vw - 32px)); padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+dialog.pdf-dialog::backdrop { background: rgba(0, 0, 0, 0.3); }
+dialog.pdf-dialog h2 { margin: 0 0 14px; font-size: 15px; }
+dialog.pdf-dialog .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+dialog.pdf-dialog .grid label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; }
+dialog.pdf-dialog select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; }
+dialog.pdf-dialog .checks { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+dialog.pdf-dialog .check { display: flex; gap: 8px; align-items: center; }
+dialog.pdf-dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+dialog.pdf-dialog button { padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; cursor: pointer; }
+dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+@media (max-width: 520px) { dialog.pdf-dialog .grid { grid-template-columns: minmax(0, 1fr); } }

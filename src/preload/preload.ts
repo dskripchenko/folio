@@ -53,6 +53,13 @@ contextBridge.exposeInMainWorld('folio', {
   onSaveAs: listen('menu:save-as'),
   onToggleEdit: listen('menu:toggle-edit'),
   onPrint: listen('menu:print'),
+  exportPdf: (target: Record<string, unknown>, options: Record<string, unknown>) => ipcRenderer.invoke('pdf:export', target, options),
+  onExportPdf: listen('menu:export-pdf'),
+  onExportFile: listen('menu:export-file'),
+  onExportFolder: listen('menu:export-folder'),
+  /** The print page (a hidden window): its job, and that it is ready to be printed. */
+  pdfJob: () => ipcRenderer.invoke('pdf:job'),
+  pdfReady: (ok: boolean) => ipcRenderer.send('pdf:ready', ok),
   allowNetwork: (scope: 'file' | 'folder', path: string) => ipcRenderer.invoke('net:allow', scope, path),
   workspace: () => ipcRenderer.invoke('ws:get'),
   addProject: () => ipcRenderer.invoke('ws:add-project'),
