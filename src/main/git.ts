@@ -87,24 +87,46 @@ export async function startHistory(dir: string, author: Author, message: string)
 }
 
 /**
+ * A file's content as git stores it. With `core.autocrlf` (Git for Windows'
+ * default) a checkout has CRLF while the commits hold LF; isomorphic-git
+ * knows nothing of it, so a text file's CRLF go back to LF unless the
+ * committed version keeps CRs of its own.
+ */
+export function stored(content: Buffer, committed: Uint8Array | null): Buffer {
+  if (content.includes(0) || !content.includes('\r\n') || (committed && committed.includes(13))) return content
+  return Buffer.from(content.toString('latin1').replaceAll('\r\n', '\n'), 'latin1')
+}
+
+async function headBlob(root: string, filepath: string, head?: string): Promise<{ oid: string; blob: Uint8Array } | null> {
+  try {
+    const oid = head ?? (await git.resolveRef({ fs, dir: root, ref: 'HEAD' }))
+    return await git.readBlob({ fs, dir: root, oid, filepath })
+  } catch {
+    return null
+  }
+}
+
+/** Add a file to the index as git would store it. */
+async function stage(root: string, filepath: string, raw: Buffer, content: Buffer): Promise<void> {
+  if (content === raw) return git.add({ fs, dir: root, filepath })
+  const oid = await git.writeBlob({ fs, dir: root, blob: content })
+  await git.updateIndex({ fs, dir: root, filepath, oid, add: true })
+}
+
+/**
  * Commit one file as it is on disk (added, changed or removed); null when
  * nothing changed. Compared by content, not by git's stat cache: a save in
  * the same second as the last commit, of the same size, must still count.
  */
 export async function commitFile(root: string, path: string, message: string, author: Author): Promise<string | null> {
   const filepath = toGit(root, path)
-  const exists = fs.existsSync(path)
-  let committed: string | null
-  try {
-    const head = await git.resolveRef({ fs, dir: root, ref: 'HEAD' })
-    committed = (await git.readBlob({ fs, dir: root, oid: head, filepath })).oid
-  } catch {
-    committed = null
-  }
-  if (exists) {
-    const { oid } = await git.hashBlob({ object: fs.readFileSync(path) })
-    if (oid === committed) return null
-    await git.add({ fs, dir: root, filepath })
+  const committed = await headBlob(root, filepath)
+  if (fs.existsSync(path)) {
+    const raw = fs.readFileSync(path)
+    const content = stored(raw, committed?.blob ?? null)
+    const { oid } = await git.hashBlob({ object: content })
+    if (oid === committed?.oid) return null
+    await stage(root, filepath, raw, content)
   } else {
     if (committed === null) return null
     await git.remove({ fs, dir: root, filepath })
@@ -146,37 +168,38 @@ export async function textAt(root: string, path: string, oid: string): Promise<s
 type Row = [string, number, number, number]
 
 /**
- * git.statusMatrix, with files that look unchanged checked by their content
- * when they were written about as late as the index: git's stat cache cannot
- * tell a same-second, same-size change ("racy git"), and isomorphic-git does
- * not look again as the system git does.
+ * git.statusMatrix, checked by content where it guesses: a file that looks
+ * unchanged but was written as late as the index (git's stat cache cannot
+ * tell a same-second, same-size change — "racy git" — and isomorphic-git
+ * does not look again as the system git does), and a changed one that may
+ * differ only by line endings (`stored`).
  */
 async function statusRows(root: string, filepaths?: string[]): Promise<Row[]> {
   const rows = (await git.statusMatrix({ fs, dir: root, filepaths })) as Row[]
-  let indexTime: number
+  let indexTime = Infinity
   try {
     indexTime = Math.floor(fs.statSync(join(root, '.git', 'index')).mtimeMs / 1000)
   } catch {
-    return rows
+    // No index: nothing is racily clean.
   }
-  let head: string | null = null
+  let head: string | undefined
   for (const row of rows) {
     const [filepath, h, w, st] = row
-    if (!(h === 1 && w === 1 && st === 1)) continue
+    if (h !== 1 || w === 0) continue
     const path = join(root, ...filepath.split('/'))
-    let stat: fs.Stats
-    try {
-      stat = fs.statSync(path)
-    } catch {
-      continue
-    }
-    if (Math.floor(stat.mtimeMs / 1000) < indexTime) continue
+    const clean = w === 1 && st === 1
+    if (clean) {
+      try {
+        if (Math.floor(fs.statSync(path).mtimeMs / 1000) < indexTime) continue
+      } catch {
+        continue
+      }
+    } else if (!(w === 2 && st === 1)) continue
     head ??= await git.resolveRef({ fs, dir: root, ref: 'HEAD' })
-    const [{ oid: now }, { oid: then }] = await Promise.all([
-      git.hashBlob({ object: fs.readFileSync(path) }),
-      git.readBlob({ fs, dir: root, oid: head, filepath }),
-    ])
-    if (now !== then) row[2] = 2
+    const committed = await headBlob(root, filepath, head)
+    if (!committed) continue
+    const { oid } = await git.hashBlob({ object: stored(fs.readFileSync(path), committed.blob) })
+    row[2] = oid === committed.oid ? 1 : 2
   }
   return rows
 }
@@ -356,7 +379,10 @@ export async function finishMerge(root: string, author: Author): Promise<string>
   if (left.length > 0) throw new GitError('markers', left)
   for (const [filepath, , workdir] of await statusRows(root)) {
     if (workdir === 0) await git.remove({ fs, dir: root, filepath })
-    else await git.add({ fs, dir: root, filepath })
+    else {
+      const raw = fs.readFileSync(join(root, ...filepath.split('/')))
+      await stage(root, filepath, raw, stored(raw, (await headBlob(root, filepath))?.blob ?? null))
+    }
   }
   let message = 'Merge'
   try {

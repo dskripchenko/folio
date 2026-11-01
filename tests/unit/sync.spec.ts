@@ -277,3 +277,23 @@ describe('logins', () => {
     expect(new Logins(dir, cipher(false)).get('https://git.example.com/x.git')).toBeUndefined()
   })
 })
+
+describe('line endings (core.autocrlf)', () => {
+  it('a CRLF checkout of LF commits is unchanged; a real change is committed with LF', async () => {
+    const a = join(dir, 'a.md')
+    writeFileSync(a, '# A\n\none\n')
+    await startHistory(dir, me, 'Start')
+    // As Git for Windows checks it out.
+    writeFileSync(a, '# A\r\n\r\none\r\n')
+    const { changedFiles, stored } = await import('../../src/main/git')
+    expect(await changedFiles(dir)).toEqual([])
+    expect(await commitFile(dir, a, 'Nothing', me)).toBeNull()
+    writeFileSync(a, '# A\r\n\r\ntwo\r\n')
+    expect(await changedFiles(dir)).toEqual([a])
+    await commitFile(dir, a, 'Two', me)
+    expect(sh(dir, 'show', 'HEAD:a.md')).toBe('# A\n\ntwo')
+    // A file that keeps CRs in its commits keeps them; binary files are left alone.
+    expect(stored(Buffer.from('x\r\n'), Buffer.from('y\r\n')).toString()).toBe('x\r\n')
+    expect(stored(Buffer.from([0, 13, 10]), null)).toEqual(Buffer.from([0, 13, 10]))
+  })
+})
