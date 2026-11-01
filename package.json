@@ -1,0 +1,38 @@
+{
+  "name": "folio",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A desktop app to read, edit and print Markdown with live diagrams, API references and editors \u2014 portable on macOS, Windows and Linux.",
+  "license": "MIT",
+  "author": "Denis Skripchenko",
+  "homepage": "https://github.com/dskripchenko/folio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dskripchenko/folio.git"
+  },
+  "main": "dist/main.cjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "pnpm build && electron .",
+    "lint": "eslint src tests scripts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@types/node": "^22.20.5",
+    "electron": "44.9.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
+  },
+  "type": "module"
+}
