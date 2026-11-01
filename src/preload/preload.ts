@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('folio', {
   onSave: listen('menu:save'),
   onSaveAs: listen('menu:save-as'),
   onToggleEdit: listen('menu:toggle-edit'),
+  onPrint: listen('menu:print'),
   allowNetwork: (scope: 'file' | 'folder', path: string) => ipcRenderer.invoke('net:allow', scope, path),
   workspace: () => ipcRenderer.invoke('ws:get'),
   addProject: () => ipcRenderer.invoke('ws:add-project'),

@@ -185,6 +185,7 @@ function buildMenu(): void {
         { label: L().cloneRepo, click: () => send('menu:clone') },
         { label: L().save, accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => send('menu:save') },
         { label: L().saveAs, accelerator: 'CmdOrCtrl+Shift+S', registerAccelerator: false, click: () => send('menu:save-as') },
+        { label: L().print, accelerator: 'CmdOrCtrl+P', registerAccelerator: false, click: () => send('menu:print') },
         { label: L().closeTab, accelerator: 'CmdOrCtrl+W', registerAccelerator: false, click: () => send('menu:close-tab') },
         { type: 'separator' },
         mac ? { role: 'close' } : { role: 'quit' },
