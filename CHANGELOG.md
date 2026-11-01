@@ -8,6 +8,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Go to a file by its name (`Cmd/Ctrl+T`, **File → Go to File**): every file
+  of Shared and the projects, ranked fuzzily as typed (a name's initials, the
+  name before the folders); the list is kept per folder until a file comes or
+  goes, dependencies and build output left out.
 - Find in the document (`Cmd/Ctrl+F`, **Edit → Find**; `Cmd/Ctrl+G` and
   `Cmd/Ctrl+Shift+G` step): every match marked without touching the page,
   the current one brought into view, a count; case, whole word (any script),

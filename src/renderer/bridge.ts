@@ -139,6 +139,8 @@ export interface FolioBridge {
   onSaveAs: Listener
   onToggleEdit: Listener
   onFind: Listener
+  onGoToFile: Listener
+  allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'other' }[]>
   onPrint: Listener
   exportPdf(target: object, options: Record<string, unknown>): Promise<{ saved: string } | { canceled: true } | { error: string }>
   onExportPdf: Listener

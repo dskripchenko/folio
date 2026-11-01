@@ -236,10 +236,21 @@ Pfade.
 | `Cmd/Strg+E` | bearbeiten / lesen |
 | `Cmd/Strg+W` | Tab schließen |
 | `Cmd/Strg+B` | Seitenleiste |
+| `Cmd/Strg+T` | zu einer Datei nach Namen gehen |
 | `Cmd/Strg+F` | im Dokument suchen |
 | `Cmd/Strg+G`, `Cmd/Strg+Umschalt+G` | der nächste Treffer, der vorige |
 
 ## Suchen
+
+`Cmd/Strg+T` (**Datei → Gehe zu Datei**) öffnet eine Palette aller Dateien,
+die folio öffnet, in „Gemeinsam“ und den sichtbaren Projekten, geordnet, während
+der Name getippt wird: die Zeichen in Reihenfolge, nicht unbedingt beieinander —
+`rn` findet `release-notes.md`, die Anfangsbuchstaben der Wörter zählen am
+meisten, ein Treffer im Namen mehr als einer in den Ordnern. Pfeile wählen,
+Enter öffnet, Escape verlässt. Die Liste wird je Ordner einmal erstellt und
+gehalten, bis dort eine Datei hinzukommt oder verschwindet; Ordner mit
+Abhängigkeiten und Build-Ausgaben (`vendor`, `dist`, `build`, `target`,
+`coverage` …) fehlen darin, obwohl der Baum sie zeigt.
 
 `Cmd/Strg+F` (**Bearbeiten → Suchen**) öffnet eine Leiste über der Seite: jeder
 Treffer ist markiert, der aktuelle wird in den Blick gebracht; Enter und

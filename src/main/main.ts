@@ -39,6 +39,7 @@ import { Roots } from './roots'
 import { Session } from './session'
 import { labels } from './i18n'
 import { listDir } from './tree'
+import { FileIndex } from './fileIndex'
 import { Watcher } from './watcher'
 import { Workspace, type Project } from './workspace'
 
@@ -88,7 +89,11 @@ const autoCommit = new AutoCommitter({
 let gate: NetworkGate | null = null
 /** Native menus speak the system's language; known once the app is ready. */
 const L = () => labels(app.isReady() ? app.getLocale() : 'en')
-const watcher = new Watcher((changes) => send('fs:changed', changes))
+const fileIndex = new FileIndex()
+const watcher = new Watcher((changes) => {
+  for (const c of changes) fileIndex.changed(c.root, c.files)
+  send('fs:changed', changes)
+})
 let win: BrowserWindow | null = null
 
 /** Documents' windows have a session of their own: the main process's requests are not theirs. */
@@ -182,6 +187,7 @@ function buildMenu(): void {
       submenu: [
         { label: L().newNote, accelerator: 'CmdOrCtrl+N', registerAccelerator: false, click: () => send('menu:new-note') },
         { label: L().open, accelerator: 'CmdOrCtrl+O', registerAccelerator: false, click: () => void openDialog().then((docs) => docs.forEach((d) => send('doc:opened', d))) },
+        { label: L().goToFile, accelerator: 'CmdOrCtrl+T', registerAccelerator: false, click: () => send('menu:go-to-file') },
         { label: L().addProject, click: () => send('menu:add-project') },
         { label: L().cloneRepo, click: () => send('menu:clone') },
         { label: L().save, accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => send('menu:save') },
@@ -281,6 +287,19 @@ ipcMain.handle('ws:set-shared', async (_e, reset: unknown) => {
 ipcMain.handle('tree:list', (_e, root: unknown, rel: unknown, all: unknown) => {
   const dir = typeof root === 'string' ? roots.dir(root) : undefined
   return dir === undefined || typeof rel !== 'string' ? null : listDir(dir, rel, all === true)
+})
+/** Every file folio opens in Shared and the visible projects: for going to a file by name. */
+ipcMain.handle('files:all', async () => {
+  const shared = workspace.shared()
+  const sources = [{ label: null as string | null, path: shared }, ...workspace.projects().filter((p) => !p.hidden).map((p) => ({ label: p.name, path: p.path }))]
+  const out: { root: string; label: string | null; path: string; kind: string }[] = []
+  for (const source of sources) {
+    const root = roots.register(source.path)
+    const dir = roots.dir(root) ?? source.path
+    watcher.add(root, dir)
+    for (const f of await fileIndex.files(root, dir)) out.push({ root, label: source.label, path: f.path, kind: f.kind })
+  }
+  return out
 })
 ipcMain.handle('tree:open', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
