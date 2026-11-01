@@ -1,7 +1,7 @@
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fixture } from './fixture'
+import { fixture, viewMode } from './fixture'
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
 const samples = join(import.meta.dirname, '..', 'fixtures', 'diagrams')
@@ -44,10 +44,10 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     await expect(win.getByRole('tab', { name: /order\.bpmn/ })).toHaveAttribute('aria-selected', 'true')
     await expect(doc).toHaveAttribute('data-format', 'bpmn')
     await expect(doc.locator('dsk-bpmn svg').first()).toBeVisible({ timeout: 15_000 })
-    await expect(win.getByTestId('mode-visual')).toBeVisible()
+    await expect(win.getByTestId('mode')).toBeEnabled()
 
     // Edited in the BPMN editor: a task removed, the tab edited, the file changed on Save.
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     const task = doc.locator('dsk-bpmn[editable] [data-element-id="Task_Reject"]').first()
     await task.click()
     await win.keyboard.press('Delete')
@@ -63,7 +63,7 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     // draw.io: drawn, not edited.
     await open('architecture.drawio')
     await expect(doc.locator('dsk-drawio svg').first()).toBeVisible({ timeout: 15_000 })
-    await expect(win.getByTestId('mode-visual')).toBeHidden()
+    await expect(win.getByTestId('mode')).toBeDisabled()
 
     await open('events.yaml')
     await expect(doc).toHaveAttribute('data-format', 'asyncapi')
@@ -75,14 +75,14 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     // No server in the spec: samples name localhost, never folio's own address.
     await expect(doc.locator('dsk-openapi')).toContainText('http://localhost/orders')
     await expect(doc.locator('dsk-openapi')).not.toContainText('folio://')
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     await expect(doc.locator('dsk-openapi[mode="editor"]')).toBeVisible()
-    await win.getByTestId('mode-read').click()
+    await viewMode(win, 'read')
 
     // A text notation: the source beside a live preview; saved as text.
     await open('flow.mmd')
     await expect(doc.locator('dsk-diagram svg.dg')).toContainText('Review', { timeout: 15_000 })
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     const source = doc.getByTestId('source')
     await expect(source).toHaveValue('flowchart LR\n  Draft --> Review\n')
     await source.click()

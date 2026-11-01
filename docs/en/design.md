@@ -40,9 +40,10 @@ The page takes the middle; the controls stay at its edges.
   the text goes; the page itself has no frame. In **Markdown** the text takes the whole
   workspace, edge to edge; **beside the page**, the two halves meet at a line
   and scroll on their own.
-- **Right — the rail.** How the document is shown: **Read**, **Edit
-  visually**, **Markdown**, **Markdown beside the page** (a drawing offers
-  read and edit; draw.io, read). Then the history, print and PDF; settings at
+- **Right — the rail.** One button shows how the document is shown and goes
+  round the modes on a click — **Read**, **Edit visually**, **Markdown**,
+  **Markdown beside the page** (a drawing offers read and edit; draw.io,
+  read); a right click lists them to pick one. Then the history, print and PDF; settings at
   the bottom (the theme: as the system, light, dark).
 
 ## Opening documents

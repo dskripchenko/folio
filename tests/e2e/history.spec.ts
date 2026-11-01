@@ -1,7 +1,7 @@
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fixture, type Fixture } from './fixture'
+import { fixture, viewMode, type Fixture } from './fixture'
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
 const launch = (f: Fixture, pause: number) =>
@@ -22,7 +22,7 @@ async function openInTree(win: Page, project: string, file: string): Promise<voi
 }
 
 async function editHeading(win: Page, text: string): Promise<void> {
-  if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await win.getByTestId('mode-visual').click()
+  if ((await win.locator('article.doc:not([hidden]) dsk-markdown-editor').count()) === 0) await viewMode(win, 'visual')
   const h1 = win.locator('article.doc:not([hidden]) dsk-markdown-editor [contenteditable="true"] h1').first()
   await h1.click()
   await win.keyboard.press('End')

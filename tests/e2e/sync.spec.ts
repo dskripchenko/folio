@@ -2,7 +2,7 @@ import { _electron as electron, expect, test } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fixture } from './fixture'
+import { fixture, viewMode } from './fixture'
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
 const git = (cwd: string, ...args: string[]) =>
@@ -70,7 +70,7 @@ test('a repository cloned as a project: sync both ways, branches, a conflict res
     await expect(panel.getByTestId('branch')).toHaveText('main')
 
     // Both change the title: the merge stops with the conflict in the text.
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     const h1 = win.locator('article.doc:not([hidden]) dsk-markdown-editor [contenteditable="true"] h1').first()
     await h1.click()
     await win.keyboard.press('End')

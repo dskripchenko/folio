@@ -2,7 +2,7 @@ import { _electron as electron, expect, test, type ElectronApplication, type Pag
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fixture, type Fixture } from './fixture'
+import { fixture, viewMode, type Fixture } from './fixture'
 
 const launch = (f: Fixture, ...files: string[]) =>
   electron.launch({ args: ['.', ...files], env: { ...process.env, FOLIO_DATA: f.data } })
@@ -42,7 +42,7 @@ test('an edit is kept, unsaved, through a crash; the file changes only on Save',
   let app = await launch(f, file)
   try {
     let win = await app.firstWindow()
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     await expect(editor(win)).toBeVisible({ timeout: 20_000 })
     await typeInHeading(win, ' — draft')
     await expect(win.getByRole('tab', { name: /other\.md/ })).toHaveClass(/dirty/)
@@ -124,7 +124,7 @@ test('the file changed on disk during an edit: both are kept, nothing is overwri
   const app = await launch(f, file)
   try {
     const win = await app.firstWindow()
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     await expect(editor(win)).toBeVisible({ timeout: 20_000 })
     await typeInHeading(win, ' — mine')
     await settle(win)
@@ -150,7 +150,7 @@ test('closing an edited tab asks; Don\'t Save drops the edit', async () => {
   const app = await launch(f, file)
   try {
     const win = await app.firstWindow()
-    await win.getByTestId('mode-visual').click()
+    await viewMode(win, 'visual')
     await expect(editor(win)).toBeVisible({ timeout: 20_000 })
     await typeInHeading(win, ' — scratch')
     await app.evaluate(({ dialog }) => {

@@ -46,3 +46,14 @@ export function fixture(webPicture?: string): Fixture {
   writeFileSync(join(folder, 'everything.md'), doc)
   return { root, folder, doc: join(folder, 'everything.md'), other: join(folder, 'other.md'), data: join(root, 'folio-data') }
 }
+
+/** Sets the view mode with the rail's one mode button: clicked round until it shows the mode. */
+export async function viewMode(win: import('@playwright/test').Page, mode: 'read' | 'visual' | 'source' | 'split'): Promise<void> {
+  const button = win.getByTestId('mode')
+  for (let i = 0; i < 4 && (await button.getAttribute('data-mode')) !== mode; i++) {
+    const before = await button.getAttribute('data-mode')
+    await button.click()
+    await win.waitForFunction((b) => document.querySelector('[data-testid="mode"]')?.getAttribute('data-mode') !== b, before)
+  }
+  if ((await button.getAttribute('data-mode')) !== mode) throw new Error(`the mode button never showed ${mode}`)
+}

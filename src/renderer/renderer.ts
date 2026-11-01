@@ -8,7 +8,7 @@
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
 import { canEdit, editorOf, viewOf, type ViewOptions } from './formats'
-import { iconButton, type IconName } from './icons'
+import { icon, iconButton, type IconName } from './icons'
 import { popMenu } from './menu'
 import { openCloneDialog, type CloneText } from './clone'
 import { openPdfDialog, type PdfTarget, type PdfText } from './pdfDialog'
@@ -42,6 +42,7 @@ const TEXT = {
     then: 'Then',
     now: 'Now',
     viewModes: 'View',
+    modeNow: '{now} — click: {next}; right click: all modes',
     modeNames: { read: 'Read', visual: 'Edit visually', source: 'Markdown', split: 'Markdown beside the page' } as Record<'read' | 'visual' | 'source' | 'split', string>,
     print: 'Print',
     exportPdf: 'Export as PDF',
@@ -77,6 +78,7 @@ const TEXT = {
     then: 'Тогда',
     now: 'Сейчас',
     viewModes: 'Вид',
+    modeNow: '{now} — щелчок: {next}; правый щелчок: все режимы',
     modeNames: { read: 'Чтение', visual: 'Править визуально', source: 'Markdown', split: 'Markdown рядом со страницей' } as Record<'read' | 'visual' | 'source' | 'split', string>,
     print: 'Печать',
     exportPdf: 'Экспорт в PDF',
@@ -393,18 +395,28 @@ function setMode(tab: Tab | null, mode: ViewMode): void {
   syncRail()
 }
 
+/** The next mode round the cycle, among those the document offers. */
+function nextMode(tab: Tab): ViewMode {
+  const offered = MODES.map(([m]) => m).filter((m) => modesOf(tab).has(m))
+  return offered[(offered.indexOf(modeOf(tab)) + 1) % offered.length] ?? 'read'
+}
+
 function buildRail(): void {
   railRight.replaceChildren()
   const modes = document.createElement('div')
   modes.className = 'rail-group rail-modes'
-  modes.setAttribute('role', 'radiogroup')
-  modes.setAttribute('aria-label', t.viewModes)
-  for (const [mode, name] of MODES) {
-    const b = iconButton(name, t.modeNames[mode], () => setMode(active, mode), `mode-${mode}`)
-    b.setAttribute('role', 'radio')
-    b.dataset.mode = mode
-    modes.append(b)
-  }
+  // One button goes round the modes; its icon is the mode now, the menu (right click) picks one.
+  const cycle = iconButton('read', t.viewModes, () => {
+    if (active) setMode(active, nextMode(active))
+  }, 'mode')
+  cycle.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+    const tab = active
+    if (!tab) return
+    const offered = modesOf(tab)
+    popMenu(cycle, MODES.filter(([m]) => offered.has(m)).map(([m, name]) => ({ label: t.modeNames[m], icon: name, checked: m === modeOf(tab) ? true : undefined, testid: `mode-pick-${m}`, action: () => setMode(tab, m) })), 'end')
+  })
+  modes.append(cycle)
   const tools = document.createElement('div')
   tools.className = 'rail-group'
   tools.append(
@@ -420,13 +432,17 @@ function buildRail(): void {
 }
 
 function syncRail(): void {
-  const offered = modesOf(active)
-  const current = active ? modeOf(active) : null
-  for (const b of railRight.querySelectorAll<HTMLButtonElement>('[data-mode]')) {
-    const mode = b.dataset.mode as ViewMode
-    b.hidden = !offered.has(mode)
-    b.setAttribute('aria-checked', String(mode === current))
-    b.classList.toggle('on', mode === current)
+  const cycle = railRight.querySelector<HTMLButtonElement>('[data-testid="mode"]')
+  if (cycle) {
+    const offered = active ? modesOf(active) : new Set<ViewMode>()
+    const current = active ? modeOf(active) : 'read'
+    const name = MODES.find(([m]) => m === current)![1]
+    cycle.replaceChildren(icon(name))
+    cycle.dataset.mode = current
+    cycle.disabled = offered.size < 2
+    const label = active && offered.size >= 2 ? t.modeNow.replace('{now}', t.modeNames[current]).replace('{next}', t.modeNames[nextMode(active)]) : t.modeNames[current]
+    cycle.title = label
+    cycle.setAttribute('aria-label', label)
   }
   const tools = railRight.querySelectorAll<HTMLButtonElement>('[data-testid="toggle-history"], [data-testid="rail-print"], [data-testid="rail-pdf"]')
   for (const b of tools) b.disabled = !active
