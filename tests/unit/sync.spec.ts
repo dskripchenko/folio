@@ -163,7 +163,7 @@ function suite(name: string, make: () => Promise<{ transport: (root: string) => 
         await startHistory(dir, me, 'Start')
         expect((await refusal(syncRepo(dir, t.transport(dir), me))).code).toBe('no-remote')
         await setRemote(dir, t.url(join(dir, 'nowhere.git')))
-        expect(await remoteOf(dir)).toEqual({ name: 'origin', url: t.url(join(dir, 'nowhere.git')) })
+        expect(await remoteOf(dir)).toEqual({ name: 'origin', url: t.url(join(dir, 'nowhere.git')).replaceAll('\\', '/') })
         writeFileSync(join(dir, 'a.md'), 'b\n')
         expect((await refusal(syncRepo(dir, t.transport(dir), me))).code).toBe('dirty')
       } finally {
@@ -220,6 +220,13 @@ describe('the built-in transport and logins', () => {
 })
 
 describe('sync helpers', () => {
+  it('keeps a local path readable by the system git (no backslashes in its config)', async () => {
+    const { remoteUrl } = await import('../../src/main/git')
+    expect(remoteUrl('C:\\Users\\ann\\team.git')).toBe('C:/Users/ann/team.git')
+    expect(remoteUrl('https://example.com/a.git')).toBe('https://example.com/a.git')
+    expect(remoteUrl('git@example.com:me/a.git')).toBe('git@example.com:me/a.git')
+  })
+
   it('names the clone after the repository', () => {
     expect(cloneTarget('/p', 'https://github.com/me/notes.git')).toBe(join('/p', 'notes'))
     expect(cloneTarget('/p', 'git@github.com:me/handbook.git')).toBe(join('/p', 'handbook'))

@@ -273,8 +273,17 @@ export async function remoteOf(root: string): Promise<{ name: string; url: strin
   }
 }
 
+/**
+ * A remote's address as git's config can hold it: isomorphic-git writes the
+ * value as it is, and a Windows path's backslashes would read as escapes
+ * (the system git refuses the file) — a local path goes in with `/`.
+ */
+export function remoteUrl(url: string): string {
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(url) ? url : url.replaceAll('\\', '/')
+}
+
 export async function setRemote(root: string, url: string): Promise<void> {
-  await git.addRemote({ fs, dir: root, remote: 'origin', url, force: true })
+  await git.addRemote({ fs, dir: root, remote: 'origin', url: remoteUrl(url), force: true })
 }
 
 /** Remember where a branch goes: what `git pull` / `git push` of the system git use too. */
