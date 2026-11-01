@@ -71,8 +71,35 @@ a repository on branch `main` and a first commit of what is there.
   `~/.gitconfig`, else the system user.
 
 git is inside folio (isomorphic-git, pure JavaScript), so this works on a
-machine without git. Branches, pull and push, cloning a repository as a project
-(stage 4b) and a graph of the commits (4c) come next.
+machine without git.
+
+### Branches and sync
+
+- **Branches**: the branch name in the panel opens the list — switch to one, or
+  create a new one from where you are. A switch is refused while files have
+  changes it would overwrite (commits waiting for their pause are made first).
+- **A remote**: a folder without one takes an address in the panel; a
+  repository cloned in folio (**File → Clone Repository…**, or ⤓ beside
+  *Projects*) has its own and becomes a project with **Commit when saved** on.
+- **Sync** fetches, takes the remote's commits — a fast-forward, or a merge
+  commit when both sides moved — and sends yours; the button shows how many go
+  each way (↑ ↓). It wants every change committed first.
+- **A conflict** stays in the text, the way git leaves it: both versions
+  between `<<<<<<<` and `>>>>>>>` lines, the files listed in the panel. Edit
+  them (in folio or anywhere), save, and **Finish the merge** — refused while
+  a marker is left; **Cancel the merge** returns to your version. The merge is
+  kept as git keeps one (`MERGE_HEAD`), so the system git sees it too, and no
+  commit is made on save until it is finished.
+- **The network**: through the system's git when it is installed — its
+  credential helpers and SSH keys work as in a terminal (it never stops to ask
+  for a password in a terminal nobody sees). Without it, folio speaks HTTPS
+  itself: when the remote asks for a login, the panel takes a user and a token,
+  kept encrypted by the system (Keychain, DPAPI, the Secret Service) in
+  `folio-data/logins.json` — or for the session only where the system has no
+  encryption. Sync is an action you take, so it does not need the network
+  consent of documents.
+
+A graph of the commits (stage 4c) comes next.
 
 ## Unsaved changes and quick notes
 

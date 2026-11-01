@@ -1,9 +1,31 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, session as electronSession, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session as electronSession, shell } from 'electron'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
-import { authorOf, branchOf, commitFile, historyOf, repoOf, startHistory, statusUnder, textAt } from './git'
+import {
+  abortMerge,
+  aheadBehind,
+  authorOf,
+  branchesOf,
+  branchOf,
+  commitFile,
+  conflictsOf,
+  createBranch,
+  finishMerge,
+  GitError,
+  historyOf,
+  mergeHead,
+  remoteOf,
+  repoOf,
+  setRemote,
+  startHistory,
+  statusUnder,
+  switchBranch,
+  textAt,
+} from './git'
+import { Logins } from './logins'
+import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, systemTransport, type Transport } from './sync'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
@@ -35,6 +57,11 @@ const roots = new Roots()
 const consent = new Consent(data)
 const session = new Session(data)
 const buffers = new Buffers(data)
+const logins = new Logins(data, {
+  available: () => safeStorage.isEncryptionAvailable() && safeStorage.getSelectedStorageBackend?.() !== 'basic_text',
+  encrypt: (text) => safeStorage.encryptString(text),
+  decrypt: (data) => safeStorage.decryptString(data),
+})
 
 /** Who commits when git is not configured: the system user. */
 const fallbackAuthor = () => {
@@ -49,7 +76,8 @@ const fallbackAuthor = () => {
 }
 const autoCommit = new AutoCommitter({
   repoOf,
-  commitFile,
+  // A merge in progress is finished as a whole, never a file at a time.
+  commitFile: (root, path, message, author) => (mergeHead(root) ? Promise.resolve(null) : commitFile(root, path, message, author)),
   authorOf: (root) => authorOf(root, fallbackAuthor()),
   message: (root, path) => `Update ${relative(root, path).split(sep).join('/')}`,
   committed: (_root, path) => send('git:committed', { path }),
@@ -146,6 +174,7 @@ function buildMenu(): void {
         { label: L().newNote, accelerator: 'CmdOrCtrl+N', registerAccelerator: false, click: () => send('menu:new-note') },
         { label: L().open, accelerator: 'CmdOrCtrl+O', registerAccelerator: false, click: () => void openDialog().then((docs) => docs.forEach((d) => send('doc:opened', d))) },
         { label: L().addProject, click: () => send('menu:add-project') },
+        { label: L().cloneRepo, click: () => send('menu:clone') },
         { label: L().save, accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => send('menu:save') },
         { label: L().saveAs, accelerator: 'CmdOrCtrl+Shift+S', registerAccelerator: false, click: () => send('menu:save-as') },
         { label: L().closeTab, accelerator: 'CmdOrCtrl+W', registerAccelerator: false, click: () => send('menu:close-tab') },
@@ -275,13 +304,41 @@ function ownerFolder(path: string): { kind: 'project'; id: string; dir: string }
 async function gitInfo(path: string) {
   const root = await repoOf(path)
   const owner = ownerFolder(path)
+  const branches = root ? await branchesOf(root) : { current: null, local: [] }
+  const remote = root ? await remoteOf(root) : null
   return {
     root,
-    branch: root ? await branchOf(root) : null,
+    branch: branches.current,
+    branches: branches.local,
+    remote: remote?.url ?? null,
+    counts: root && remote && branches.current ? await aheadBehind(root, branches.current, remote.name) : null,
+    merging: root && mergeHead(root) ? { conflicts: await conflictsOf(root) } : null,
+    transport: (await transportOf()).kind,
     autoCommit: workspace.autoCommits(path),
     // History can be started in the file's project or Shared folder.
     canStart: root === null && owner !== null,
     canAutoCommit: owner !== null,
+  }
+}
+
+/** The network for sync and clone: the system git when there is one, else the built-in one. */
+let transport: Promise<Transport> | null = null
+const transportOf = () =>
+  (transport ??= findSystemGit().then((bin) => (bin ? systemTransport(bin) : builtinTransport((url) => logins.get(url)))))
+
+/** A git action for the window: its result, or the refusal as `{ error, detail }`. */
+async function gitAction<T>(path: unknown, act: (root: string) => Promise<T>): Promise<T | { error: string; detail: string[] }> {
+  if (typeof path !== 'string') return { error: 'invalid', detail: [] }
+  const root = await repoOf(path)
+  if (!root) return { error: 'invalid', detail: [] }
+  try {
+    return await act(root)
+  } catch (e) {
+    if (e instanceof GitError) return { error: e.code, detail: e.detail }
+    return { error: 'network', detail: [e instanceof Error ? e.message : String(e)] }
+  } finally {
+    // Branches and merges change files and statuses: the tree and the panel look again.
+    send('git:committed', { path })
   }
 }
 
@@ -319,12 +376,78 @@ ipcMain.handle('git:auto', async (_e, path: unknown, on: unknown) => {
 ipcMain.handle('git:commit', async (_e, path: unknown, message: unknown) => {
   if (typeof path !== 'string' || typeof message !== 'string' || message.trim() === '') return null
   const root = await repoOf(path)
-  if (!root) return null
+  if (!root || mergeHead(root)) return null
   autoCommit.cancel(path)
   const oid = await commitFile(root, path, message.trim(), authorOf(root, fallbackAuthor()))
   if (oid) send('git:committed', { path })
   return oid
 })
+ipcMain.handle('git:branch-create', (_e, path: unknown, name: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string' || name.trim() === '') throw new GitError('invalid')
+    await autoCommit.flush()
+    await createBranch(root, name.trim())
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:branch-switch', (_e, path: unknown, name: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string') throw new GitError('invalid')
+    // What waits for its commit goes with the branch it was saved on.
+    await autoCommit.flush()
+    await switchBranch(root, name)
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:remote', (_e, path: unknown, url: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof url !== 'string' || url.trim() === '') throw new GitError('invalid')
+    await setRemote(root, url.trim())
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:sync', (_e, path: unknown) =>
+  gitAction(path, async (root) => {
+    await autoCommit.flush()
+    return { ok: true, transport: (await transportOf()).kind, ...(await syncRepo(root, await transportOf(), authorOf(root, fallbackAuthor()))) }
+  }),
+)
+/** A login for the remote's host (the built-in transport only: the system git has its own). */
+ipcMain.handle('git:login', (_e, path: unknown, username: unknown, password: unknown, remember: unknown) =>
+  gitAction(path, async (root) => {
+    const remote = await remoteOf(root)
+    if (!remote || typeof username !== 'string' || typeof password !== 'string') throw new GitError('invalid')
+    return { ok: true, saved: logins.set(remote.url, { username, password }, remember === true) }
+  }),
+)
+ipcMain.handle('git:merge-finish', (_e, path: unknown) =>
+  gitAction(path, async (root) => ({ ok: true, oid: await finishMerge(root, authorOf(root, fallbackAuthor())) })),
+)
+ipcMain.handle('git:merge-abort', (_e, path: unknown) =>
+  gitAction(path, async (root) => {
+    await abortMerge(root)
+    return { ok: true }
+  }),
+)
+/** Clone a repository into a chosen folder, and add it as a project. */
+ipcMain.handle('git:clone', async (_e, url: unknown) => {
+  if (typeof url !== 'string' || url.trim() === '' || !win) return { error: 'invalid', detail: [] }
+  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], title: L().cloneInto })
+  const parent = result.filePaths[0]
+  if (result.canceled || !parent) return { error: 'canceled', detail: [] }
+  const dir = cloneTarget(parent, url.trim())
+  try {
+    await cloneInto(await transportOf(), url.trim(), dir)
+  } catch (e) {
+    if (e instanceof GitError) return { error: e.code, detail: e.detail }
+    return { error: 'network', detail: [e instanceof Error ? e.message : String(e)] }
+  }
+  const project = workspace.addProject(dir)
+  workspace.updateProject(project.id, { autoCommit: true })
+  send('ws:changed', workspaceView())
+  return { ok: true, dir }
+})
+
 /** The status of a tree's folder: changed files by path, and the branch for the folder's top. */
 ipcMain.handle('git:status', async (_e, root: unknown, rel: unknown) => {
   const top = typeof root === 'string' ? roots.dir(root) : undefined

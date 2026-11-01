@@ -9,6 +9,7 @@ export interface SidebarText {
   shared: string
   projects: string
   addProject: string
+  cloneRepo: string
   chooseShared: string
   showHidden: string
   noProjects: string
@@ -21,6 +22,7 @@ interface Options {
   el: HTMLElement
   text: () => SidebarText
   open: (root: string, rel: string) => void
+  clone: () => void
 }
 
 const ICON: Record<string, string> = { dir: '▸', markdown: '◧', diagram: '◇', other: '·' }
@@ -82,7 +84,10 @@ export class Sidebar {
     el.append(shared)
 
     // Projects
-    const projects = this.section(t.projects, [this.iconButton('+', t.addProject, () => void this.addProject())])
+    const projects = this.section(t.projects, [
+      this.iconButton('⤓', t.cloneRepo, () => this.o.clone()),
+      this.iconButton('+', t.addProject, () => void this.addProject()),
+    ])
     projects.dataset.testid = 'projects'
     const visible = ws.projects.filter((p) => this.showHidden || !p.hidden)
     if (visible.length === 0) {

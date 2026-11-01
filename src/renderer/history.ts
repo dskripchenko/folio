@@ -1,9 +1,10 @@
 /**
  * The history panel (ADR-001, stage 4): the versions of the active file in
  * its folder's git history, the branch, starting a history, committing on
- * save, committing now with a message. Choosing a version opens it.
+ * save, committing now with a message. Choosing a version opens it. Branches,
+ * the remote and sync, and a merge left open by conflicts (stage 4b).
  */
-import { folio, type GitInfo, type Version } from './bridge'
+import { folio, type GitInfo, type GitRefusal, type Version } from './bridge'
 
 export interface HistoryText {
   title: string
@@ -18,6 +19,31 @@ export interface HistoryText {
   noVersions: string
   nothingToCommit: string
   close: string
+  branches: string
+  newBranch: string
+  create: string
+  switched: string
+  remotePlaceholder: string
+  connect: string
+  sync: string
+  syncing: string
+  synced: Record<'up-to-date' | 'pushed' | 'pulled' | 'merged' | 'conflict', string>
+  username: string
+  token: string
+  remember: string
+  signIn: string
+  mergeConflicts: string
+  mergeReady: string
+  finishMerge: string
+  abortMerge: string
+  mergeDone: string
+  errors: Record<GitRefusal['error'] | 'authSystem', string>
+}
+
+/** Words for a git refusal: file names short, the rest as git gave it. */
+export function describeRefusal(errors: HistoryText['errors'], r: GitRefusal): string {
+  const files = r.detail.map((p) => p.split(/[\\/]/).pop()).join(', ')
+  return (errors[r.error] ?? errors.network).replace('{files}', files).replace('{detail}', r.detail.join(' '))
 }
 
 interface Options {
@@ -25,6 +51,8 @@ interface Options {
   text: () => HistoryText
   locale: () => string
   open: (path: string, version: Version) => void
+  /** Open a file (a conflicted one, from the merge). */
+  openFile: (path: string) => void
   /** The version open in the document, to mark it. */
   current: () => string | null
 }
@@ -40,7 +68,17 @@ export class HistoryPanel {
    */
   private form: HTMLFormElement | null = null
 
-  constructor(private readonly o: Options) {}
+  /** While a merge is open, files resolved anywhere (here or in another editor) update its list. */
+  private merging = false
+  private fsTimer: ReturnType<typeof setTimeout> | null = null
+
+  constructor(private readonly o: Options) {
+    folio().onFsChanged(() => {
+      if (!this.merging || !this.visible) return
+      if (this.fsTimer) clearTimeout(this.fsTimer)
+      this.fsTimer = setTimeout(() => void this.refresh(), 200)
+    })
+  }
 
   get visible(): boolean {
     return !this.o.el.hidden
@@ -93,6 +131,7 @@ export class HistoryPanel {
       el.replaceChildren(...parts)
       return
     }
+    this.merging = info.merging !== null
     const versions = await folio().gitHistory(path)
     if (gen !== this.generation) return
     const focused = this.form?.contains(document.activeElement) ? document.activeElement : null
@@ -120,12 +159,20 @@ export class HistoryPanel {
   private settings(path: string, info: GitInfo): HTMLElement[] {
     const t = this.o.text()
     const out: HTMLElement[] = []
-    if (info.branch) {
-      const b = document.createElement('div')
-      b.className = 'branch'
-      b.dataset.testid = 'branch'
-      b.textContent = info.branch
-      out.push(b)
+    if (info.branch) out.push(this.branchBlock(path, info))
+    out.push(this.remoteBlock(path, info))
+    if (this.note) {
+      const p = document.createElement('p')
+      p.className = `git-note ${this.note.kind}`
+      p.dataset.testid = 'git-note'
+      p.setAttribute('role', this.note.kind === 'error' ? 'alert' : 'status')
+      p.textContent = this.note.text
+      out.push(p)
+    }
+    if (this.loginFor === info.remote && info.remote) out.push(this.loginForm(path))
+    if (info.merging) {
+      out.push(this.mergeBlock(path, info.merging.conflicts))
+      return out
     }
     const actions = document.createElement('div')
     actions.className = 'actions'
@@ -143,6 +190,220 @@ export class HistoryPanel {
     actions.append(this.commitForm())
     out.push(actions)
     return out
+  }
+
+  /** What a git action said, shown under the branch until the next action. */
+  private note: { kind: 'ok' | 'error'; text: string } | null = null
+  /** The remote whose login is asked for (the built-in transport). */
+  private loginFor: string | null = null
+  private branchesOpen = false
+
+  private say(kind: 'ok' | 'error', text: string): void {
+    this.note = text === '' ? null : { kind, text }
+  }
+
+  private refusal(r: GitRefusal): string {
+    return describeRefusal(this.o.text().errors, r)
+  }
+
+  /** Run an action; a refusal becomes the note, then the panel is drawn again. */
+  private async act<T extends object>(run: () => Promise<T | GitRefusal>, done?: (result: T) => void): Promise<void> {
+    const result = await run()
+    if ('error' in result) this.say('error', this.refusal(result as GitRefusal))
+    else {
+      this.note = null
+      done?.(result as T)
+    }
+    await this.refresh()
+  }
+
+  private branchBlock(path: string, info: GitInfo): HTMLElement {
+    const t = this.o.text()
+    const box = document.createElement('div')
+    box.className = 'branches'
+    const current = document.createElement('button')
+    current.type = 'button'
+    current.className = 'branch'
+    current.dataset.testid = 'branch'
+    current.textContent = info.branch
+    current.title = t.branches
+    current.setAttribute('aria-expanded', String(this.branchesOpen))
+    current.addEventListener('click', () => {
+      this.branchesOpen = !this.branchesOpen
+      void this.refresh()
+    })
+    box.append(current)
+    if (!this.branchesOpen) return box
+
+    const menu = document.createElement('div')
+    menu.className = 'branch-menu'
+    menu.dataset.testid = 'branch-menu'
+    for (const name of info.branches) {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.textContent = name
+      b.classList.toggle('current', name === info.branch)
+      b.disabled = name === info.branch || info.merging !== null
+      b.addEventListener('click', () =>
+        void this.act(() => folio().gitBranchSwitch(path, name), () => {
+          this.branchesOpen = false
+          this.say('ok', t.switched.replace('{branch}', name))
+        }),
+      )
+      menu.append(b)
+    }
+    const form = document.createElement('form')
+    form.className = 'inline-form'
+    const input = document.createElement('input')
+    input.placeholder = t.newBranch
+    input.dataset.testid = 'new-branch'
+    input.setAttribute('aria-label', t.newBranch)
+    const go = document.createElement('button')
+    go.type = 'submit'
+    go.className = 'action'
+    go.textContent = t.create
+    form.append(input, go)
+    form.addEventListener('submit', (event) => {
+      event.preventDefault()
+      const name = input.value.trim()
+      if (name === '') return
+      void this.act(() => folio().gitBranchCreate(path, name), () => {
+        this.branchesOpen = false
+        this.say('ok', t.switched.replace('{branch}', name))
+      })
+    })
+    menu.append(form)
+    box.append(menu)
+    return box
+  }
+
+  private remoteBlock(path: string, info: GitInfo): HTMLElement {
+    const t = this.o.text()
+    const box = document.createElement('div')
+    box.className = 'remote'
+    if (!info.remote) {
+      const form = document.createElement('form')
+      form.className = 'inline-form'
+      const input = document.createElement('input')
+      input.placeholder = t.remotePlaceholder
+      input.dataset.testid = 'remote-url'
+      input.setAttribute('aria-label', t.remotePlaceholder)
+      const go = document.createElement('button')
+      go.type = 'submit'
+      go.className = 'action'
+      go.textContent = t.connect
+      form.append(input, go)
+      form.addEventListener('submit', (event) => {
+        event.preventDefault()
+        if (input.value.trim() !== '') void this.act(() => folio().gitRemote(path, input.value.trim()))
+      })
+      box.append(form)
+      return box
+    }
+    const where = document.createElement('span')
+    where.className = 'remote-url'
+    where.textContent = info.remote.replace(/^https?:\/\//, '').replace(/\.git$/, '')
+    where.title = info.remote
+    const sync = document.createElement('button')
+    sync.type = 'button'
+    sync.className = 'action'
+    sync.dataset.testid = 'sync'
+    const counts = info.counts && (info.counts.ahead || info.counts.behind) ? ` ↑${info.counts.ahead} ↓${info.counts.behind}` : ''
+    sync.textContent = t.sync + counts
+    sync.disabled = info.merging !== null
+    sync.addEventListener('click', () => void this.sync(path, sync))
+    box.append(where, sync)
+    return box
+  }
+
+  private async sync(path: string, button: HTMLButtonElement): Promise<void> {
+    const t = this.o.text()
+    button.disabled = true
+    button.textContent = t.syncing
+    const info = await folio().gitInfo(path)
+    const result = await folio().gitSync(path)
+    if ('error' in result && result.error === 'auth') {
+      // The built-in transport asks for a login here; the system git has its own ways (a credential helper, SSH keys).
+      const builtin = info?.transport === 'builtin'
+      if (builtin && info?.remote) this.loginFor = info.remote
+      this.say('error', (builtin ? t.errors.auth : t.errors.authSystem).replace('{detail}', result.detail.join(' ')))
+      return this.refresh()
+    }
+    await this.act(async () => result, (r) => {
+      this.loginFor = null
+      this.say('ok', t.synced[r.result])
+    })
+  }
+
+  private loginForm(path: string): HTMLElement {
+    const t = this.o.text()
+    const form = document.createElement('form')
+    form.className = 'login'
+    form.dataset.testid = 'login'
+    const user = document.createElement('input')
+    user.placeholder = t.username
+    user.setAttribute('aria-label', t.username)
+    user.autocomplete = 'username'
+    const token = document.createElement('input')
+    token.type = 'password'
+    token.placeholder = t.token
+    token.setAttribute('aria-label', t.token)
+    token.autocomplete = 'current-password'
+    const label = document.createElement('label')
+    const remember = document.createElement('input')
+    remember.type = 'checkbox'
+    remember.checked = true
+    label.append(remember, t.remember)
+    const go = document.createElement('button')
+    go.type = 'submit'
+    go.className = 'action'
+    go.textContent = t.signIn
+    form.append(user, token, label, go)
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault()
+      if (token.value === '') return
+      const saved = await folio().gitLogin(path, user.value || 'git', token.value, remember.checked)
+      if ('error' in saved) {
+        this.say('error', this.refusal(saved))
+        return void this.refresh()
+      }
+      this.loginFor = null
+      const sync = this.o.el.querySelector<HTMLButtonElement>('[data-testid="sync"]')
+      if (sync) await this.sync(path, sync)
+    })
+    return form
+  }
+
+  private mergeBlock(path: string, conflicts: string[]): HTMLElement {
+    const t = this.o.text()
+    const box = document.createElement('div')
+    box.className = 'merge'
+    box.dataset.testid = 'merge'
+    const p = document.createElement('p')
+    p.textContent = conflicts.length ? t.mergeConflicts.replace('{n}', String(conflicts.length)) : t.mergeReady
+    box.append(p)
+    if (conflicts.length) {
+      const ul = document.createElement('ul')
+      for (const file of conflicts) {
+        const li = document.createElement('li')
+        const b = document.createElement('button')
+        b.type = 'button'
+        b.textContent = file.split(/[\\/]/).pop() ?? file
+        b.title = file
+        b.addEventListener('click', () => this.o.openFile(file))
+        li.append(b)
+        ul.append(li)
+      }
+      box.append(ul)
+    }
+    const actions = document.createElement('div')
+    actions.className = 'actions row'
+    actions.append(
+      this.button(t.finishMerge, 'merge-finish', () => void this.act(() => folio().gitMergeFinish(path), () => this.say('ok', t.mergeDone))),
+      this.button(t.abortMerge, 'merge-abort', () => void this.act(() => folio().gitMergeAbort(path))),
+    )
+    box.append(actions)
+    return box
   }
 
   private commitForm(): HTMLFormElement {

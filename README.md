@@ -70,7 +70,7 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 1 | Reading: a Markdown file with every block live, offline — **done** |
 | 2 | The workspace: Shared and projects in the sidebar, groups, pinning, file trees that follow the disk — **done** |
 | 3 | Editing: visual and source, live blocks, saving; unsaved changes and quick notes survive closing and restarts, as in Sublime Text — **done** |
-| 4 | History with git, per folder, if you want it: versions and their differences, restoring one, status in the tree, commits on save — **done (4a)**; branches and sync (4b); a graph of the commits (4c) |
+| 4 | History with git, per folder, if you want it: versions and their differences, restoring one, status in the tree, commits on save — **done (4a)**; branches, sync, cloning, conflicts in the text — **done (4b)**; a graph of the commits (4c) |
 | 5 | Diagram and API files on their own, in their editors |
 | 6 | A printed form for every widget (in embed) |
 | 7 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF |

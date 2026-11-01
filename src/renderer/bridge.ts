@@ -33,10 +33,26 @@ export type SaveResult = { saved: OpenResult; baseline: string } | { conflict: t
 export interface GitInfo {
   root: string | null
   branch: string | null
+  branches: string[]
+  /** The remote's address, if the repository has one. */
+  remote: string | null
+  /** Commits to send and to receive, as last fetched; null before the remote has the branch. */
+  counts: { ahead: number; behind: number } | null
+  merging: { conflicts: string[] } | null
+  /** How sync reaches the remote: the system's git, or the built-in one (HTTPS with a token). */
+  transport: 'system' | 'builtin'
   autoCommit: boolean
   canStart: boolean
   canAutoCommit: boolean
 }
+
+/** A git action's refusal: a code the window has words for, and files, a host or git's words. */
+export interface GitRefusal {
+  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled'
+  detail: string[]
+}
+
+export type SyncOutcome = { ok: true; transport: 'system' | 'builtin'; result: 'up-to-date' | 'pushed' | 'pulled' | 'merged' | 'conflict'; conflicts?: string[] }
 
 export interface Version {
   oid: string
@@ -98,6 +114,15 @@ export interface FolioBridge {
   gitStart(path: string): Promise<GitInfo | null>
   gitAuto(path: string, on: boolean): Promise<GitInfo | null>
   gitCommit(path: string, message: string): Promise<string | null>
+  gitBranchCreate(path: string, name: string): Promise<{ ok: true } | GitRefusal>
+  gitBranchSwitch(path: string, name: string): Promise<{ ok: true } | GitRefusal>
+  gitRemote(path: string, url: string): Promise<{ ok: true } | GitRefusal>
+  gitSync(path: string): Promise<SyncOutcome | GitRefusal>
+  gitLogin(path: string, username: string, password: string, remember: boolean): Promise<{ ok: true; saved: boolean } | GitRefusal>
+  gitMergeFinish(path: string): Promise<{ ok: true; oid: string } | GitRefusal>
+  gitMergeAbort(path: string): Promise<{ ok: true } | GitRefusal>
+  gitClone(url: string): Promise<{ ok: true; dir: string } | GitRefusal>
+  onClone: Listener
   gitStatus(root: string, rel: string): Promise<{ branch: string | null; files: Record<string, 'new' | 'modified' | 'deleted'> } | null>
   onCommitted: Listener
   onToggleHistory: Listener

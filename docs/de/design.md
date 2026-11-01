@@ -77,8 +77,39 @@ Commit dessen, was da ist.
   Repositorys, dann aus `~/.gitconfig`, sonst der Systembenutzer.
 
 git steckt in folio (isomorphic-git, reines JavaScript), das funktioniert also
-auch ohne installiertes git. Als Nächstes: Branches, Pull und Push, ein
-Repository als Projekt klonen (Stufe 4b) und ein Graph der Commits (4c).
+auch ohne installiertes git.
+
+### Branches und Synchronisieren
+
+- **Branches**: Der Branch-Name im Panel öffnet die Liste — zu einem anderen
+  wechseln oder vom aktuellen Stand einen neuen anlegen. Ein Wechsel wird
+  abgelehnt, solange Dateien Änderungen haben, die er überschreiben würde
+  (Commits, die auf ihre Pause warten, werden vorher gemacht).
+- **Ein Remote**: Ein Ordner ohne Remote bekommt im Panel eine Adresse; ein in
+  folio geklontes Repository (**Datei → Repository klonen…** oder ⤓ neben
+  *Projekte*) bringt seines mit und wird ein Projekt mit eingeschaltetem
+  **Beim Speichern committen**.
+- **Synchronisieren** holt, übernimmt die Commits des Remotes — Vorspulen oder
+  ein Merge-Commit, wenn sich beide Seiten bewegt haben — und sendet die
+  eigenen; der Knopf zeigt, wie viele in jede Richtung gehen (↑ ↓). Alle
+  Änderungen müssen vorher committet sein.
+- **Ein Konflikt** bleibt im Text, wie git ihn hinterlässt: beide Fassungen
+  zwischen `<<<<<<<`- und `>>>>>>>`-Zeilen, die Dateien im Panel aufgelistet.
+  Bearbeiten (in folio oder anderswo), speichern, **Merge abschließen** — solange
+  ein Marker übrig ist, wird abgelehnt; **Merge abbrechen** kehrt zur eigenen
+  Fassung zurück. Der Merge wird wie bei git gehalten (`MERGE_HEAD`), das
+  System-git sieht ihn also auch, und bis zum Abschluss entsteht beim Speichern
+  kein Commit.
+- **Das Netz**: über das git des Systems, wenn es installiert ist — seine
+  Credential-Helper und SSH-Schlüssel wirken wie im Terminal (es fragt nie in
+  einem unsichtbaren Terminal nach einem Passwort). Ohne es spricht folio selbst
+  HTTPS: Verlangt das Remote eine Anmeldung, nimmt das Panel Benutzer und Token
+  an, vom System verschlüsselt (Keychain, DPAPI, Secret Service) in
+  `folio-data/logins.json` abgelegt — oder nur für die Sitzung, wo das System
+  keine Verschlüsselung bietet. Synchronisieren ist eine eigene Aktion und
+  braucht die Netzfreigabe der Dokumente nicht.
+
+Als Nächstes: ein Graph der Commits (Stufe 4c).
 
 ## Ungespeichertes und schnelle Notizen
 

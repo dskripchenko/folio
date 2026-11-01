@@ -8,6 +8,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Branches and sync (stage 4b). The branch in the **History** panel lists the
+  branches: switch (refused over changes it would overwrite) or create one.
+  **Sync** fetches, fast-forwards or merges, and pushes, with ↑/↓ counts; a
+  folder without a remote takes an address. **Clone Repository…** (File menu,
+  ⤓ beside *Projects*) clones into a chosen folder and adds it as a project. A
+  conflicting merge leaves git's markers in the text and stays open as git
+  keeps it (`MERGE_HEAD`): the panel lists the files, **Finish the merge**
+  (refused while a marker is left) or **Cancel the merge**; no commits on save
+  meanwhile. The network goes through the system git when installed, else
+  isomorphic-git over HTTPS with a user and token asked in the panel, kept
+  encrypted by the system (`folio-data/logins.json`) or for the session only.
 - History with git, per folder (stage 4a), through isomorphic-git (no git needed):
   **Keep a history** starts one (`git init`, a first commit); **Commit when
   saved** commits a saved file 3 minutes after its last save (one commit for a
