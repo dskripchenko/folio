@@ -217,10 +217,20 @@ relative paths.
 | `Cmd/Ctrl+E` | edit / read |
 | `Cmd/Ctrl+W` | close the tab |
 | `Cmd/Ctrl+B` | the sidebar |
+| `Cmd/Ctrl+T` | go to a file by its name |
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |
 
 ## Finding
+
+`Cmd/Ctrl+T` (**File → Go to File**) opens a palette of every file folio opens
+in Shared and the visible projects, ranked as the name is typed: the
+characters in order, not necessarily together — `rn` finds
+`release-notes.md`, a word's first letters count most, a match in the name
+more than one in the folders. Arrows choose, Enter opens, Escape leaves. The
+list is walked once per folder and kept until a file is added or removed
+there; folders of dependencies and build output (`vendor`, `dist`, `build`,
+`target`, `coverage`…) are left out of it, though the tree shows them.
 
 `Cmd/Ctrl+F` (**Edit → Find**) opens a bar over the page: every match is
 marked, the current one brought into view; Enter and Shift+Enter step through

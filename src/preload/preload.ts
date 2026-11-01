@@ -53,6 +53,8 @@ contextBridge.exposeInMainWorld('folio', {
   onSaveAs: listen('menu:save-as'),
   onToggleEdit: listen('menu:toggle-edit'),
   onFind: listen('menu:find'),
+  onGoToFile: listen('menu:go-to-file'),
+  allFiles: () => ipcRenderer.invoke('files:all'),
   onPrint: listen('menu:print'),
   exportPdf: (target: Record<string, unknown>, options: Record<string, unknown>) => ipcRenderer.invoke('pdf:export', target, options),
   onExportPdf: listen('menu:export-pdf'),
