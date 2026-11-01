@@ -12,11 +12,9 @@
  *   text, not only the lines in view.
  */
 
-export interface FindOptions {
-  caseSensitive: boolean
-  wholeWord: boolean
-  regex: boolean
-}
+import { matchesIn, MAX_MATCHES, patternOf, type FindOptions } from '../common/pattern'
+
+export { matchesIn, MAX_MATCHES, patternOf, type FindOptions }
 
 /** What a view searches itself with (a big code view). */
 export interface FindTarget {
@@ -27,36 +25,8 @@ export interface FindTarget {
   clear(): void
 }
 
-export const MAX_MATCHES = 10_000
-
 /** The element a view hangs its own target on. */
 export type WithFindTarget = HTMLElement & { folioFind?: FindTarget }
-
-/** The pattern for a query: literal unless asked; a whole word by letters of any script. */
-export function patternOf(query: string, o: FindOptions): RegExp | null {
-  if (query === '') return null
-  let source = o.regex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  if (o.wholeWord) source = `(?<![\\p{L}\\p{N}_])(?:${source})(?![\\p{L}\\p{N}_])`
-  try {
-    return new RegExp(source, `gu${o.caseSensitive ? '' : 'i'}`)
-  } catch {
-    return null
-  }
-}
-
-/** Matches in a text: [start, end) pairs, empty matches passed over. */
-export function matchesIn(text: string, pattern: RegExp, limit = MAX_MATCHES): [number, number][] {
-  const out: [number, number][] = []
-  pattern.lastIndex = 0
-  for (let m = pattern.exec(text); m && out.length < limit; m = pattern.exec(text)) {
-    if (m[0] === '') {
-      pattern.lastIndex = m.index + 1
-      continue
-    }
-    out.push([m.index, m.index + m[0].length])
-  }
-  return out
-}
 
 const ALL = 'folio-find'
 const CURRENT = 'folio-find-current'

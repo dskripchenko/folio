@@ -41,6 +41,8 @@ export class FindBar {
   private pattern: RegExp | null = null
   private total = 0
   private index = -1
+  /** The match to land on once the page has it (a document still being drawn). */
+  private wanted: number | null = null
   private timer: ReturnType<typeof setTimeout> | null = null
   private readonly observer: MutationObserver
 
@@ -103,7 +105,10 @@ export class FindBar {
     close.dataset.testid = 'find-close'
     this.el.append(this.input, this.flags.caseSensitive, this.flags.wholeWord, this.flags.regex, this.counter, prev, next, close)
 
-    this.input.addEventListener('input', () => this.search(true))
+    this.input.addEventListener('input', () => {
+      this.wanted = null
+      this.search(true)
+    })
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault()
@@ -148,6 +153,17 @@ export class FindBar {
     this.retarget()
   }
 
+  /** Open with a query of its own and land on its `index`-th match (from a search in files). */
+  openWith(query: string, options: FindOptions, index: number): void {
+    this.options = { ...options }
+    for (const [key, b] of Object.entries(this.flags) as [keyof FindOptions, HTMLButtonElement][]) b.setAttribute('aria-pressed', String(this.options[key]))
+    this.input.value = query
+    this.wanted = index
+    this.el.hidden = false
+    this.retarget()
+    this.later()
+  }
+
   close(handOver = false): void {
     if (this.el.hidden) return
     this.el.hidden = true
@@ -167,6 +183,7 @@ export class FindBar {
   step(direction: 1 | -1): void {
     if (this.el.hidden) return this.open()
     if (this.total === 0) return
+    this.wanted = null
     this.index = (this.index + direction + this.total) % this.total
     this.show()
   }
@@ -203,6 +220,12 @@ export class FindBar {
     this.total = target.search(this.pattern)
     this.observer.takeRecords()
     this.index = this.total === 0 ? -1 : fresh ? 0 : Math.min(Math.max(this.index, 0), this.total - 1)
+    // Asked to land on a match: once the page has that many.
+    if (this.wanted !== null && this.total > this.wanted) {
+      this.index = this.wanted
+      this.wanted = null
+      return this.show(false)
+    }
     this.show(!fresh)
   }
 

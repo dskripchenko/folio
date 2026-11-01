@@ -140,6 +140,10 @@ export interface FolioBridge {
   onToggleEdit: Listener
   onFind: Listener
   onGoToFile: Listener
+  searchScopes(): Promise<{ root: string; label: string | null }[]>
+  search(id: number, query: string, options: Record<string, boolean>, scope: string): Promise<{ files: number; matches: number; truncated: boolean; canceled: boolean } | { error: string }>
+  cancelSearch(): void
+  onSearchHits(callback: (id: number, batch: unknown) => void): () => void
   allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'other' }[]>
   onPrint: Listener
   exportPdf(target: object, options: Record<string, unknown>): Promise<{ saved: string } | { canceled: true } | { error: string }>

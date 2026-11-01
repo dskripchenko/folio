@@ -218,10 +218,19 @@ relative paths.
 | `Cmd/Ctrl+W` | close the tab |
 | `Cmd/Ctrl+B` | the sidebar |
 | `Cmd/Ctrl+T` | go to a file by its name |
+| `Cmd/Ctrl+Shift+F` | search the files |
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |
 
 ## Finding
+
+`Cmd/Ctrl+Shift+F` (**Edit → Find in Files**, or the magnifier on the right
+rail) opens a panel beside the page that searches the text of the files — all
+of them, Shared or one project — with the same three options. Matches come in
+as they are found, by file, each line with its match; a click opens the file
+and lands the find bar on that match. Binary files, files over 8 MB and the
+folders left out of going to a file are not searched; at most 200 matches a
+file and 5 000 in all are listed.
 
 `Cmd/Ctrl+T` (**File → Go to File**) opens a palette of every file folio opens
 in Shared and the visible projects, ranked as the name is typed: the

@@ -8,6 +8,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Search the files' text (`Cmd/Ctrl+Shift+F`, **Edit → Find in Files**, the
+  magnifier on the rail): everything, Shared or one project, case / whole word
+  / regular expression; matches stream in by file and line, a click opens the
+  file with the find bar on that match. Binary files and files over 8 MB are
+  passed over.
 - Go to a file by its name (`Cmd/Ctrl+T`, **File → Go to File**): every file
   of Shared and the projects, ranked fuzzily as typed (a name's initials, the
   name before the folders); the list is kept per folder until a file comes or
