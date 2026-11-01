@@ -31,7 +31,7 @@ contextBridge.exposeInMainWorld('folio', {
   saveAs: (text: string, name: string, dir: string | null) => ipcRenderer.invoke('doc:save-as', text, name, dir),
   confirmClose: (name: string) => ipcRenderer.invoke('doc:confirm-close', name),
   gitInfo: (path: string) => ipcRenderer.invoke('git:info', path),
-  gitHistory: (path: string) => ipcRenderer.invoke('git:history', path),
+  gitHistory: (path: string, scope: 'file' | 'all') => ipcRenderer.invoke('git:history', path, scope),
   gitTextAt: (path: string, oid: string) => ipcRenderer.invoke('git:text-at', path, oid),
   gitStart: (path: string) => ipcRenderer.invoke('git:start', path),
   gitAuto: (path: string, on: boolean) => ipcRenderer.invoke('git:auto', path, on),

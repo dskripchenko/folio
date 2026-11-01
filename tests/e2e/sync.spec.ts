@@ -93,6 +93,19 @@ test('a repository cloned as a project: sync both ways, branches, a conflict res
     await expect(panel.getByTestId('merge')).toHaveCount(0)
     await expect(panel.getByTestId('versions').locator('.message').first()).toHaveText(/^Merge origin\/main into main/)
     await expect(panel.getByTestId('sync')).toHaveText(/↑2 ↓0/)
+
+    // The graph beside the versions: the merge is a ring joining two lanes.
+    const graph = panel.getByTestId('graph')
+    // A dot for each version (counted together: the panel may be drawn again meanwhile).
+    await expect.poll(() => panel.evaluate((el) => el.querySelectorAll('[data-testid="graph"] circle.dg-commit-dot').length - el.querySelectorAll('[data-testid="versions"] li').length)).toBe(0)
+    await expect(graph.locator('circle.dg-commit-merge')).toHaveCount(1)
+    // Every commit of the repository, with its branches named.
+    await panel.getByTestId('scope-all').click()
+    await expect(panel.getByTestId('versions').locator('li').first().locator('.ref.head')).toHaveText('main')
+    await expect(panel.getByTestId('versions').locator('.ref', { hasText: 'draft' })).toHaveCount(1)
+    await expect(panel.getByTestId('versions').locator('.ref', { hasText: 'origin/main' })).toHaveCount(1)
+    await expect(graph.locator('circle.dg-commit-head')).toHaveCount(1)
+    await panel.getByTestId('scope-file').click()
     await panel.getByTestId('sync').click()
     await expect(note).toHaveText(/Sent|Отправлено/)
     git(bob, 'pull', '--no-rebase', 'origin', 'main')

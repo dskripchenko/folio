@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@dskripchenko/diagrams':
+        specifier: ^1.4.0
+        version: 1.4.0
       isomorphic-git:
         specifier: 1.44.3
         version: 1.44.3
@@ -50,6 +53,10 @@ packages:
 
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
+
+  '@dskripchenko/diagrams@1.4.0':
+    resolution: {integrity: sha512-5IF96MS+QKkEZNecMwRBw0IFmFqLh9tJ5q084R0rLAidmjlxXXahZr5QvUwkIcO2Omo4k/O8vcY06m8vndj93A==}
+    engines: {node: '>=20'}
 
   '@dskripchenko/embed@1.9.0':
     resolution: {integrity: sha512-44B9JWHxYhrI5ANu60UV7OIwce60EX2JtpvFmHPyz6eKCpcNZxe8UVuUtEs9iZoXRZGsHLicN+TjCQn0LW/50A==}
@@ -1247,6 +1254,8 @@ snapshots:
     dependencies:
       hashery: 1.5.1
       keyv: 5.6.0
+
+  '@dskripchenko/diagrams@1.4.0': {}
 
   '@dskripchenko/embed@1.9.0': {}
 

@@ -13,15 +13,6 @@ export interface Author {
   email: string
 }
 
-export interface Version {
-  oid: string
-  message: string
-  author: string
-  email: string
-  /** Seconds since the epoch. */
-  time: number
-}
-
 export type FileStatus = 'new' | 'modified' | 'deleted' | 'clean'
 
 const toGit = (root: string, path: string) => relative(root, path).split(sep).join('/')
@@ -134,25 +125,151 @@ export async function commitFile(root: string, path: string, message: string, au
   return git.commit({ fs, dir: root, message, author })
 }
 
-/** The versions of a file, newest first. */
+/** A commit of a history list: `parents` within the list shown (see `historyOf`), `refs` naming it. */
+export interface Version {
+  oid: string
+  message: string
+  author: string
+  email: string
+  /** Seconds since the epoch. */
+  time: number
+  parents: string[]
+  refs: string[]
+}
+
+type LogEntry = Awaited<ReturnType<typeof git.log>>[number]
+
+const versionOf = (e: LogEntry, parents: string[], refs: string[] = []): Version => ({
+  oid: e.oid,
+  message: e.commit.message.trim(),
+  author: e.commit.author.name,
+  email: e.commit.author.email,
+  time: e.commit.author.timestamp,
+  parents,
+  refs,
+})
+
+/**
+ * Parents rewritten to the nearest commits of a subset, as `git log -- file`
+ * simplifies history: a line of a commit graph runs from a version to the
+ * versions before it, through the commits that did not touch the file. The
+ * one reached down the first parents comes first.
+ */
+export function rewriteParents(oid: string, keep: ReadonlySet<string>, parentsOf: (oid: string) => readonly string[] | undefined): string[] {
+  // The first parent is the one down the first-parent line: the main line stays the main lane.
+  let first = parentsOf(oid)?.[0]
+  const line = new Set<string>()
+  while (first !== undefined && !keep.has(first) && !line.has(first)) {
+    line.add(first)
+    first = parentsOf(first)?.[0]
+  }
+  const out: string[] = first !== undefined && keep.has(first) ? [first] : []
+  const seen = new Set<string>()
+  const queue = [...(parentsOf(oid) ?? [])]
+  while (queue.length > 0) {
+    const x = queue.shift()!
+    if (seen.has(x)) continue
+    seen.add(x)
+    if (keep.has(x)) {
+      if (!out.includes(x)) out.push(x)
+      continue
+    }
+    queue.push(...(parentsOf(x) ?? []))
+  }
+  return out
+}
+
+/** The versions of a file, newest first, with their parents among these versions. */
 export async function historyOf(root: string, path: string, depth = 200): Promise<Version[]> {
   try {
-    const log = await git.log({ fs, dir: root, filepath: toGit(root, path), depth, force: true })
+    // isomorphic-git may list a commit twice when a merge leads to it on two paths.
+    const log = [...new Map((await git.log({ fs, dir: root, filepath: toGit(root, path), depth, force: true })).map((e) => [e.oid, e])).values()]
     // In the order of the history itself, newest first: two commits in one second keep their order.
     const walk = await git.log({ fs, dir: root, depth: Math.max(depth * 5, 1000) })
     const at = new Map(walk.map((e, i) => [e.oid, i]))
+    const parents = new Map(walk.map((e) => [e.oid, e.commit.parent]))
     log.sort((a, b) => (at.get(a.oid) ?? Infinity) - (at.get(b.oid) ?? Infinity))
-    return log.map((e) => ({
-      oid: e.oid,
-      message: e.commit.message.trim(),
-      author: e.commit.author.name,
-      email: e.commit.author.email,
-      time: e.commit.author.timestamp,
-    }))
+    const keep = new Set(log.map((e) => e.oid))
+    return log.map((e) => versionOf(e, rewriteParents(e.oid, keep, (oid) => parents.get(oid))))
   } catch {
     // No commit yet, or the file was never committed.
     return []
   }
+}
+
+/**
+ * Every commit of the repository — of its branches, the remotes' branches as
+ * last fetched and its tags — newest first, a child always above its
+ * parents, up to `limit`; `refs` name the branches and tags on each.
+ */
+export async function repositoryHistory(root: string, limit = 300): Promise<Version[]> {
+  const tips = new Map<string, string[]>()
+  const name = (oid: string, ref: string) => tips.set(oid, [...(tips.get(oid) ?? []), ref])
+  const resolve = async (ref: string) => {
+    try {
+      return await git.resolveRef({ fs, dir: root, ref })
+    } catch {
+      return null
+    }
+  }
+  const current = await branchOf(root)
+  try {
+    for (const b of await git.listBranches({ fs, dir: root })) {
+      const oid = await resolve(`refs/heads/${b}`)
+      if (oid) name(oid, b === current ? `HEAD -> ${b}` : b)
+    }
+    for (const r of await git.listRemotes({ fs, dir: root })) {
+      for (const b of await git.listBranches({ fs, dir: root, remote: r.remote })) {
+        if (b === 'HEAD') continue
+        const oid = await resolve(`refs/remotes/${r.remote}/${b}`)
+        if (oid) name(oid, `${r.remote}/${b}`)
+      }
+    }
+    for (const tag of await git.listTags({ fs, dir: root })) {
+      let oid = await resolve(`refs/tags/${tag}`)
+      if (!oid) continue
+      // An annotated tag points at a tag object: the commit is behind it.
+      try {
+        oid = (await git.readTag({ fs, dir: root, oid })).tag.object
+      } catch {
+        // A lightweight tag: the commit itself.
+      }
+      name(oid, `tag: ${tag}`)
+    }
+  } catch {
+    return []
+  }
+  if (!current) {
+    const head = await resolve('HEAD')
+    if (head) name(head, 'HEAD')
+  }
+  const commits = new Map<string, LogEntry>()
+  for (const tip of tips.keys()) {
+    try {
+      for (const e of await git.log({ fs, dir: root, ref: tip, depth: limit })) commits.set(e.oid, e)
+    } catch {
+      // A ref to a commit that is not here (a shallow clone).
+    }
+  }
+  // Children before parents; among the commits free to go next, the newest.
+  const children = new Map<string, number>()
+  for (const e of commits.values()) for (const p of e.commit.parent) if (commits.has(p)) children.set(p, (children.get(p) ?? 0) + 1)
+  const ready = [...commits.values()].filter((e) => !children.get(e.oid))
+  const out: Version[] = []
+  const when = (e: LogEntry) => e.commit.committer.timestamp
+  while (ready.length > 0 && out.length < limit) {
+    let best = 0
+    for (let i = 1; i < ready.length; i++) if (when(ready[i]!) > when(ready[best]!)) best = i
+    const e = ready.splice(best, 1)[0]!
+    out.push(versionOf(e, e.commit.parent, tips.get(e.oid)))
+    for (const p of e.commit.parent) {
+      const left = (children.get(p) ?? 0) - 1
+      children.set(p, left)
+      const parent = commits.get(p)
+      if (left === 0 && parent) ready.push(parent)
+    }
+  }
+  return out
 }
 
 /** A file's text as a commit has it; null when it was not there. */
