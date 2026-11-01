@@ -1,4 +1,5 @@
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fixture, type Fixture } from './fixture'
@@ -26,7 +27,9 @@ async function hardKill(app: ElectronApplication): Promise<void> {
   // As a crash or a power cut: no chance to say goodbye.
   const proc = app.process()
   const gone = new Promise((r) => proc.once('exit', r))
-  proc.kill('SIGKILL')
+  // The whole tree, as a crash takes it: on Windows the helper processes outlive a killed parent.
+  if (process.platform === 'win32') execFileSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'])
+  else proc.kill('SIGKILL')
   await gone
   // Its helper processes let go of the single-instance lock a moment later (Windows).
   await new Promise((r) => setTimeout(r, process.platform === 'win32' ? 3000 : 500))
