@@ -32,6 +32,28 @@ starting it again with a file: the running one opens it. A link to another
 document of the same folder opens that document in a tab. The open documents and
 the active one come back after a restart.
 
+### Diagram and API files
+
+Not only Markdown: a diagram or an API description opens in a tab of its
+own, drawn by its embed element, and links to such files in a document open
+them too.
+
+| File | Drawn by | Edited in |
+|---|---|---|
+| `.bpmn`, `.dmn` | `<dsk-bpmn>`, `<dsk-dmn>` | their editors: palette, context pad, properties, undo |
+| `.drawio`, `.dio`, `.drawio.svg` | `<dsk-drawio>`, page tabs | — (shown only) |
+| OpenAPI / Swagger (`.yaml`, `.yml`, `.json`) | `<dsk-openapi>`, the reference | its visual editor, with source and preview |
+| AsyncAPI (`.yaml`, `.yml`, `.json`) | `<dsk-asyncapi>` | the source beside a live preview |
+| `.mmd`, `.puml`, `.dot`, `.gv`, `.d2`, `.dbml`, `.dsl`, `.wardley` | `<dsk-diagram>`, the syntax by the extension | the source beside a live preview |
+| other text | as text | the source |
+
+YAML and JSON are recognised by a top-level `openapi`, `swagger` or
+`asyncapi` key; the tree lists YAML files and JSON files named like an API
+description (`openapi.json`), not every `package.json`. An API without a
+server on the web gets no try-it, and its request samples name
+`http://localhost`. Saving, unsaved edits that survive a restart, the
+history and its comparisons work for these files as for Markdown.
+
 ## Shared and projects
 
 The workspace has two parts: **Shared**, one folder for the documents common to

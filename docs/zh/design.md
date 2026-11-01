@@ -24,6 +24,23 @@ Markdown 文件可能来自任何地方，因此窗口不信任它：
 文件；如果 folio 已在运行，再次带文件启动时会由正在运行的 folio 打开它。指向同一文件夹中
 另一个文档的链接会在标签页中打开该文档。重启后，打开过的文档和当前文档都会恢复。
 
+### 图表与 API 文件
+
+不只是 Markdown：图表或 API 描述会在自己的标签页中打开，由对应的 embed 元素绘制；文档中指向这类文件的链接同样会打开它们。
+
+| 文件 | 绘制方式 | 编辑方式 |
+|---|---|---|
+| `.bpmn`、`.dmn` | `<dsk-bpmn>`、`<dsk-dmn>` | 各自的编辑器：组件面板、上下文菜单、属性、撤销 |
+| `.drawio`、`.dio`、`.drawio.svg` | `<dsk-drawio>`，带页面标签 | —（仅查看） |
+| OpenAPI / Swagger（`.yaml`、`.yml`、`.json`） | `<dsk-openapi>`，参考文档 | 其可视化编辑器，含源码与预览 |
+| AsyncAPI（`.yaml`、`.yml`、`.json`） | `<dsk-asyncapi>` | 源码与实时预览并排 |
+| `.mmd`、`.puml`、`.dot`、`.gv`、`.d2`、`.dbml`、`.dsl`、`.wardley` | `<dsk-diagram>`，按扩展名确定语法 | 源码与实时预览并排 |
+| 其他文本 | 作为文本 | 源码 |
+
+YAML 和 JSON 通过顶层的 `openapi`、`swagger` 或 `asyncapi` 键识别；文件树列出 YAML 文件以及名称类似 API 描述的
+JSON 文件（`openapi.json`），而不是每个 `package.json`。没有网络服务器地址的 API 不提供“试用”，其请求示例使用
+`http://localhost`。保存、在重启后仍保留的未保存修改、历史记录及其比较，对这些文件与 Markdown 一样适用。
+
 ## 共享与项目
 
 工作区分为两部分：**共享**——存放通用文档的一个文件夹（默认是 `folio-data/library`，

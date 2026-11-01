@@ -8,6 +8,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- Diagram and API files open directly (stage 5), each in its embed element:
+  `.bpmn`/`.dmn` in `<dsk-bpmn>`/`<dsk-dmn>` and their editors, draw.io
+  (`.drawio`, `.dio`, `.drawio.svg`) shown, OpenAPI/Swagger in the reference
+  and its visual editor, AsyncAPI and the text notations (`.mmd`, `.puml`,
+  `.dot`, `.d2`, `.dbml`, `.dsl`, `.wardley`) as source beside a live
+  preview, other text as text. YAML/JSON are told apart by a top-level
+  `openapi`/`swagger`/`asyncapi` key. Links to these files open them in a
+  tab; the Open dialog and the tree offer them. An API without a server on
+  the web gets no try-it and samples against `http://localhost` (not
+  `folio://app`). Save As keeps a file's extension.
 - The commit graph (stage 4c): beside the History list, lanes, merges and
   branches drawn as in Fork, by `@dskripchenko/diagrams` 1.4
   (`renderCommitGraph`). **This file** — the file's versions, their parents

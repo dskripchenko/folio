@@ -1,8 +1,12 @@
 /** What the preload offers the window (see src/preload/preload.ts). */
+/** How a document is drawn and edited (stage 5). */
+export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'text'
+
 export interface Opened {
   path: string
   name: string
   text: string
+  format: Format
   base: string
   folder: string
   owner: 'shared' | 'project' | 'file'

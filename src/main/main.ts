@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session as electronSession, shell } from 'electron'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, relative, sep } from 'node:path'
+import { extname, join, relative, sep } from 'node:path'
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
 import {
@@ -30,7 +30,8 @@ import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, syst
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
-import { documentOfUrl, DocumentError, filesFromArgv, MARKDOWN, openDocument, type OpenedDocument } from './documents'
+import { documentOfUrl, DocumentError, filesFromArgv, openDocument, type OpenedDocument } from './documents'
+import { DIAGRAM_SYNTAX, MARKDOWN_EXT, OPENABLE_EXT } from './formats'
 import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
@@ -121,7 +122,13 @@ async function openDialog(): Promise<Opened[]> {
   if (!win) return []
   const result = await dialog.showOpenDialog(win, {
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Markdown', extensions: MARKDOWN.map((e) => e.slice(1)) }, { name: 'All files', extensions: ['*'] }],
+    filters: [
+      { name: L().openableFiles, extensions: OPENABLE_EXT.map((e) => e.slice(1)) },
+      { name: 'Markdown', extensions: MARKDOWN_EXT.map((e) => e.slice(1)) },
+      { name: L().diagramFiles, extensions: ['bpmn', 'dmn', 'drawio', 'dio', ...Object.keys(DIAGRAM_SYNTAX).map((e) => e.slice(1))] },
+      { name: 'OpenAPI / AsyncAPI', extensions: ['yaml', 'yml', 'json'] },
+      { name: L().allFiles, extensions: ['*'] },
+    ],
   })
   return result.canceled ? [] : result.filePaths.map(open)
 }
@@ -572,9 +579,11 @@ ipcMain.handle('doc:save-as', async (_e, text: unknown, name: unknown, dir: unkn
   if (!win || typeof text !== 'string') return { canceled: true }
   const folder = typeof dir === 'string' && existsSync(dir) ? dir : workspace.shared()
   const suggested = (typeof name === 'string' && name.trim() !== '' ? name.trim() : 'note').replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 80)
+  // A file keeps its kind (order.bpmn stays BPMN); a note becomes Markdown.
+  const ext = extname(suggested).slice(1)
   const result = await dialog.showSaveDialog(win, {
-    defaultPath: join(folder, suggested.endsWith('.md') ? suggested : `${suggested}.md`),
-    filters: [{ name: 'Markdown', extensions: ['md'] }],
+    defaultPath: join(folder, ext ? suggested : `${suggested}.md`),
+    filters: ext && ext !== 'md' ? [{ name: ext.toUpperCase(), extensions: [ext] }, { name: L().allFiles, extensions: ['*'] }] : [{ name: 'Markdown', extensions: ['md'] }],
   })
   if (result.canceled || !result.filePath) return { canceled: true }
   try {

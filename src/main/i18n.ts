@@ -25,6 +25,9 @@ const LABELS = {
     unsavedDetail: 'Without saving, the changes are lost.',
     history: 'History',
     cloneRepo: 'Clone Repository…',
+    openableFiles: 'Documents and diagrams',
+    diagramFiles: 'Diagrams',
+    allFiles: 'All files',
     cloneInto: 'Where to clone the repository',
   },
   ru: {
@@ -52,6 +55,9 @@ const LABELS = {
     unsavedDetail: 'Без сохранения изменения пропадут.',
     history: 'История',
     cloneRepo: 'Клонировать репозиторий…',
+    openableFiles: 'Документы и схемы',
+    diagramFiles: 'Схемы',
+    allFiles: 'Все файлы',
     cloneInto: 'Куда клонировать репозиторий',
   },
 }
