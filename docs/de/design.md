@@ -109,7 +109,17 @@ auch ohne installiertes git.
   keine Verschlüsselung bietet. Synchronisieren ist eine eigene Aktion und
   braucht die Netzfreigabe der Dokumente nicht.
 
-Als Nächstes: ein Graph der Commits (Stufe 4c).
+### Der Commit-Graph
+
+Neben der Liste ein Graph wie in Fork: eine Spur je Entwicklungslinie,
+Merges als Ringe, die Spuren verbinden, Branches laufen neben ihrer Basis und
+biegen wieder ein. **Diese Datei** zeigt die Fassungen der Datei, ihre Linien
+durch die Commits gezogen, die die Datei nicht berührten (wie `git log --
+file` die Historie vereinfacht); **Alle Commits** zeigt das ganze Repository —
+seine Branches, die des Remotes vom letzten Abruf und die Tags, an ihren
+Commits benannt, der ausgecheckte markiert. Ein gewählter Commit öffnet die
+Datei, wie sie damals war. Gezeichnet wird der Graph von
+`@dskripchenko/diagrams` (`renderCommitGraph`).
 
 ## Ungespeichertes und schnelle Notizen
 

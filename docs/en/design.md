@@ -99,7 +99,16 @@ machine without git.
   encryption. Sync is an action you take, so it does not need the network
   consent of documents.
 
-A graph of the commits (stage 4c) comes next.
+### The commit graph
+
+Beside the list, a graph as in Fork: a lane per line of development, merges
+as rings joining lanes, branches running beside their base until they bend
+back in. **This file** shows the file's versions, their lines drawn through
+the commits that left the file alone (as `git log -- file` simplifies
+history); **All commits** shows the whole repository — its branches, the
+remote's as last fetched and the tags, named on their commits, the
+checked-out one marked. Choosing a commit opens the file as it was then. The
+graph is drawn by `@dskripchenko/diagrams` (`renderCommitGraph`).
 
 ## Unsaved changes and quick notes
 

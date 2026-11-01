@@ -18,6 +18,7 @@ import {
   mergeHead,
   remoteOf,
   repoOf,
+  repositoryHistory,
   setRemote,
   startHistory,
   statusUnder,
@@ -343,10 +344,12 @@ async function gitAction<T>(path: unknown, act: (root: string) => Promise<T>): P
 }
 
 ipcMain.handle('git:info', (_e, path: unknown) => (typeof path === 'string' ? gitInfo(path) : null))
-ipcMain.handle('git:history', async (_e, path: unknown) => {
+/** The file's versions, or (`all`) every commit of its repository. */
+ipcMain.handle('git:history', async (_e, path: unknown, scope: unknown) => {
   if (typeof path !== 'string') return []
   const root = await repoOf(path)
-  return root ? historyOf(root, path) : []
+  if (!root) return []
+  return scope === 'all' ? repositoryHistory(root) : historyOf(root, path)
 })
 ipcMain.handle('git:text-at', async (_e, path: unknown, oid: unknown) => {
   if (typeof path !== 'string' || typeof oid !== 'string' || !/^[0-9a-f]{40}$/.test(oid)) return null

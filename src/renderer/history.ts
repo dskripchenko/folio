@@ -4,7 +4,8 @@
  * save, committing now with a message. Choosing a version opens it. Branches,
  * the remote and sync, and a merge left open by conflicts (stage 4b).
  */
-import { folio, type GitInfo, type GitRefusal, type Version } from './bridge'
+import { renderCommitGraph } from '@dskripchenko/diagrams'
+import { folio, prefs, type GitInfo, type GitRefusal, type Version } from './bridge'
 
 export interface HistoryText {
   title: string
@@ -19,6 +20,9 @@ export interface HistoryText {
   noVersions: string
   nothingToCommit: string
   close: string
+  scopeFile: string
+  scopeAll: string
+  graph: string
   branches: string
   newBranch: string
   create: string
@@ -39,6 +43,9 @@ export interface HistoryText {
   mergeDone: string
   errors: Record<GitRefusal['error'] | 'authSystem', string>
 }
+
+/** The height of a version in the list: the graph's rows are drawn to it. */
+const ROW = 44
 
 /** Words for a git refusal: file names short, the rest as git gave it. */
 export function describeRefusal(errors: HistoryText['errors'], r: GitRefusal): string {
@@ -132,10 +139,10 @@ export class HistoryPanel {
       return
     }
     this.merging = info.merging !== null
-    const versions = await folio().gitHistory(path)
+    const versions = await folio().gitHistory(path, this.scope)
     if (gen !== this.generation) return
     const focused = this.form?.contains(document.activeElement) ? document.activeElement : null
-    el.replaceChildren(head, ...this.settings(path, info), this.list(path, versions))
+    el.replaceChildren(head, ...this.settings(path, info), this.scopes(), this.list(path, versions))
     if (focused instanceof HTMLElement) focused.focus()
   }
 
@@ -443,12 +450,49 @@ export class HistoryPanel {
     return form
   }
 
+  /** The file's versions, or every commit of the repository; kept between starts. */
+  private scope: 'file' | 'all' = prefs.get<'file' | 'all'>('historyScope', 'file')
+
+  private scopes(): HTMLElement {
+    const t = this.o.text()
+    const box = document.createElement('div')
+    box.className = 'scopes'
+    box.setAttribute('role', 'tablist')
+    for (const [scope, label] of [['file', t.scopeFile], ['all', t.scopeAll]] as const) {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.setAttribute('role', 'tab')
+      b.setAttribute('aria-selected', String(this.scope === scope))
+      b.dataset.testid = `scope-${scope}`
+      b.textContent = label
+      b.addEventListener('click', () => {
+        this.scope = scope
+        prefs.set('historyScope', scope)
+        void this.refresh()
+      })
+      box.append(b)
+    }
+    return box
+  }
+
   private list(path: string, versions: Version[]): HTMLElement {
     const t = this.o.text()
     if (versions.length === 0) return this.hint(t.noVersions)
+    // The graph beside the list, Fork-style: a column whose rows are the list's rows.
+    const box = document.createElement('div')
+    box.className = 'graph-list'
+    const head = versions.find((v) => v.refs.some((r) => r === 'HEAD' || r.startsWith('HEAD -> ')))?.oid
+    const graph = renderCommitGraph(versions.map((v) => ({ id: v.oid, parents: v.parents })), { rowHeight: ROW, head, id: 'folio-history-graph', title: t.graph })
+    const column = document.createElement('div')
+    column.className = 'graph'
+    column.dataset.testid = 'graph'
+    column.innerHTML = graph.svg
+    box.style.setProperty('--graph-width', `${graph.width}px`)
+    box.style.setProperty('--row', `${ROW}px`)
     const ul = document.createElement('ul')
     ul.className = 'versions'
     ul.dataset.testid = 'versions'
+    box.append(column, ul)
     const when = new Intl.DateTimeFormat(this.o.locale(), { dateStyle: 'medium', timeStyle: 'short' })
     for (const v of versions) {
       const li = document.createElement('li')
@@ -457,7 +501,13 @@ export class HistoryPanel {
       li.classList.toggle('active', this.o.current() === v.oid)
       const message = document.createElement('span')
       message.className = 'message'
-      message.textContent = v.message.split('\n')[0] ?? ''
+      for (const ref of v.refs) {
+        const chip = document.createElement('span')
+        chip.className = ref.startsWith('HEAD') ? 'ref head' : ref.startsWith('tag: ') ? 'ref tag' : 'ref'
+        chip.textContent = ref.replace(/^HEAD -> /, '').replace(/^tag: /, '')
+        message.append(chip)
+      }
+      message.append(v.message.split('\n')[0] ?? '')
       const meta = document.createElement('span')
       meta.className = 'meta'
       meta.textContent = `${v.author} · ${when.format(new Date(v.time * 1000))} · ${v.oid.slice(0, 7)}`
@@ -473,6 +523,6 @@ export class HistoryPanel {
       })
       ul.append(li)
     }
-    return ul
+    return box
   }
 }

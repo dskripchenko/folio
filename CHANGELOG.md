@@ -8,6 +8,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Added
+- The commit graph (stage 4c): beside the History list, lanes, merges and
+  branches drawn as in Fork, by `@dskripchenko/diagrams` 1.4
+  (`renderCommitGraph`). **This file** — the file's versions, their parents
+  rewritten through commits that left it alone; **All commits** — every
+  branch, remote branch and tag of the repository, named on its commit, the
+  checked-out one marked.
 - Branches and sync (stage 4b). The branch in the **History** panel lists the
   branches: switch (refused over changes it would overwrite) or create one.
   **Sync** fetches, fast-forwards or merges, and pushes, with ↑/↓ counts; a

@@ -60,6 +60,10 @@ export interface Version {
   author: string
   email: string
   time: number
+  /** Within the list shown: for a file's versions, the versions before it. */
+  parents: string[]
+  /** Branches and tags on it (`HEAD -> main`, `origin/main`, `tag: v1`). */
+  refs: string[]
 }
 
 export interface Entry {
@@ -109,7 +113,7 @@ export interface FolioBridge {
   saveAs(text: string, name: string, dir: string | null): Promise<SaveResult>
   confirmClose(name: string): Promise<'save' | 'discard' | 'cancel'>
   gitInfo(path: string): Promise<GitInfo | null>
-  gitHistory(path: string): Promise<Version[]>
+  gitHistory(path: string, scope: 'file' | 'all'): Promise<Version[]>
   gitTextAt(path: string, oid: string): Promise<string | null>
   gitStart(path: string): Promise<GitInfo | null>
   gitAuto(path: string, on: boolean): Promise<GitInfo | null>

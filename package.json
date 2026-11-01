@@ -38,6 +38,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@dskripchenko/diagrams": "^1.4.0",
     "isomorphic-git": "1.44.3"
   }
 }

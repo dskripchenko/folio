@@ -115,12 +115,22 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
 .history button.action { align-self: flex-start; padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; cursor: pointer; }
 .history .commit-form { display: flex; gap: 6px; }
 .history .commit-form input { flex: 1; min-width: 0; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
-.versions { list-style: none; margin: 0; padding: 0 6px 24px; }
-.versions li { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.history .scopes { display: flex; margin: 2px 14px 6px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.history .scopes button { flex: 1; padding: 3px 0; border: 0; background: var(--bg); color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.history .scopes button + button { border-left: 1px solid var(--line); }
+.history .scopes button[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 14%, var(--bg)); color: var(--fg); }
+.graph-list { position: relative; padding: 0 6px 24px; }
+.graph-list .graph { position: absolute; top: 0; left: 6px; pointer-events: none; z-index: 1; }
+.graph-list .graph svg { display: block; --dg-row-fill: var(--tab); }
+.versions { list-style: none; margin: 0; padding: 0; }
+.versions li { box-sizing: border-box; height: var(--row, 44px); padding: 5px 8px 5px calc(var(--graph-width, 0px) + 6px); border-radius: 6px; cursor: pointer; overflow: hidden; }
 .versions li:hover { background: color-mix(in srgb, var(--line) 60%, transparent); }
 .versions li.active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .versions .message { display: block; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.versions .meta { display: block; color: var(--muted); font-size: 11px; }
+.versions .meta { display: block; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.versions .ref { display: inline-block; margin-right: 4px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 11px; line-height: 16px; vertical-align: 1px; }
+.versions .ref.head { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.versions .ref.tag { border-style: dashed; }
 
 .version-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 0 14px; border-bottom: 1px solid var(--line); margin-bottom: 16px; font-size: 13px; }
 .version-bar .title { flex: 1 1 100%; color: var(--muted); }
