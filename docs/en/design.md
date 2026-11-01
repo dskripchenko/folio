@@ -67,7 +67,7 @@ them too.
 | OpenAPI / Swagger (`.yaml`, `.yml`, `.json`) | `<dsk-openapi>`, the reference | its visual editor, with source and preview |
 | AsyncAPI (`.yaml`, `.yml`, `.json`) | `<dsk-asyncapi>` | the source beside a live preview |
 | `.mmd`, `.puml`, `.dot`, `.gv`, `.d2`, `.dbml`, `.dsl`, `.wardley` | `<dsk-diagram>`, the syntax by the extension | the source beside a live preview |
-| code, data, logs, configuration — every text file with a known language (17 programming languages, JSON, XML, logs, TOML, INI, `.env`, CSV, diff, Dockerfile, Makefile, …) | numbered lines in the colours of its language (`@dskripchenko/syntax`; the language by name, extension or `#!` line); a data file (JSON, YAML, XML, TOML, CSV, INI, `.env`) checked — errors marked at their lines, a count in the head steps through them; blocks fold by the arrows beside the numbers | the source |
+| code, data, logs, configuration — every text file with a known language (17 programming languages, JSON, XML, logs, TOML, INI, `.env`, CSV, diff, Dockerfile, Makefile, …) | numbered lines in the colours of its language (`@dskripchenko/syntax`; the language by name, extension or `#!` line); a data file (JSON, YAML, XML, TOML, CSV, INI, `.env`) checked — errors marked at their lines, a count in the head steps through them; blocks fold by the arrows beside the numbers; a big file (over 2 MB or 20 000 lines, up to 200 MB) draws only the lines in view and is read-only past 5 MB; a log filters by level (a stack trace stays with its entry) and, read at its end, follows what is written | the source |
 | other text | as text | the source |
 
 YAML and JSON are recognised by a top-level `openapi`, `swagger` or

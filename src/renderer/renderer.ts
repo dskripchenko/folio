@@ -7,7 +7,8 @@
  */
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
-import { canEdit, editorOf, viewOf, type ViewOptions } from './formats'
+import { canEdit, editorOf, READ_ONLY_BYTES, viewOf, type ViewOptions } from './formats'
+import type { CodeState } from './code'
 import { icon, iconButton, type IconName } from './icons'
 import { popMenu } from './menu'
 import { openCloneDialog, type CloneText } from './clone'
@@ -127,6 +128,8 @@ interface Tab {
   baseline: string | null
   buffer: string | null
   conflict: boolean
+  /** The code view's own state (the levels a log hides), kept over redraws. */
+  code: CodeState
   blocked: string[]
   scroll: number
   /** A version from the history shown instead of the document. */
@@ -199,7 +202,7 @@ function formatOf(tab: Tab): Format {
 }
 
 function viewOptions(tab: Tab, main = false): ViewOptions {
-  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main }
+  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main, code: main ? tab.code : undefined }
 }
 
 /** A version from the history: as it was, its changes against now, or the two side by side. */
@@ -366,7 +369,8 @@ function modesOf(tab: Tab | null): Set<ViewMode> {
   if (!tab || (tab.error && !tab.buffer && tab.saved !== null)) return new Set()
   const format = formatOf(tab)
   if (format === 'markdown') return new Set(['read', 'visual', 'source', 'split'])
-  return new Set(canEdit(format) ? ['read', 'visual'] : ['read'])
+  // A big file is read, not edited: a text box of 100 MB is no editor.
+  return new Set(canEdit(format) && tab.text.length <= READ_ONLY_BYTES ? ['read', 'visual'] : ['read'])
 }
 
 function modeOf(tab: Tab): ViewMode {
@@ -543,6 +547,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
     baseline: null,
     buffer: null,
     conflict: false,
+    code: {},
     blocked: [],
     scroll: 0,
     version: null,
@@ -800,13 +805,15 @@ folio.onFsChanged(async (value) => {
       continue
     }
     const top = viewEl.scrollTop
+    // A log read at its end follows it: what is written appears in view.
+    const follow = tab === active && formatOf(tab) === 'text' && top + viewEl.clientHeight >= viewEl.scrollHeight - 4
     tab.text = tab.saved = disk.text
     tab.baseline = disk.hash
     const reopened = await folio.open(tab.path)
     if (isOpened(reopened)) tab.doc = reopened
     if (tab.view === 'read' || formatOf(tab) !== 'markdown') render(tab)
     else (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { value: string }) | null)?.setAttribute('value', disk.text)
-    if (tab === active) requestAnimationFrame(() => (viewEl.scrollTop = top))
+    if (tab === active) requestAnimationFrame(() => (viewEl.scrollTop = follow ? viewEl.scrollHeight : top))
   }
 })
 

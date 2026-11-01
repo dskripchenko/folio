@@ -4,137 +4,10 @@
  * (never parsed as markup). The view is used for the document, a version
  * from the history and the two sides of a comparison alike.
  */
-import { canValidate, foldRanges, highlightLines, languageOf, languages, THEME_CSS, validate, type Diagnostic } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
+import { codeView, type CodeState } from './code'
 
-/** Highlighting this much is still instant; a bigger file is shown as plain lines (large files: a later stage). */
-const HIGHLIGHT_LIMIT = { bytes: 2 * 1024 * 1024, lines: 50_000 }
-
-let themed = false
-/** The token colours, once per window: light and dark follow folio's theme (`data-theme`, or the system's). */
-function syntaxTheme(): void {
-  if (themed) return
-  themed = true
-  const style = document.createElement('style')
-  style.dataset.syntax = ''
-  style.textContent = THEME_CSS
-  document.head.prepend(style)
-}
-
-const LANGUAGE_NAMES = new Map(languages().map((l) => [l.id, l.name]))
-
-/**
- * Any other text file: its lines numbered (numbers stay out of a copy), in
- * the colours of its language — by name, extension or the `#!` line — or
- * plain when no language is known or the file is too big to highlight at once.
- * A data file is checked (errors marked at the line numbers, a count in the
- * head that steps through them); blocks fold by the arrows beside the numbers.
- */
-export function codeView(text: string, name: string): HTMLElement {
-  syntaxTheme()
-  const language = languageOf(name, text.slice(0, 200).split('\n')[0])
-  // A final line break ends the last line; it does not start another.
-  const source = text.replace(/\r?\n$/, '')
-  const lines = source.split(/\r?\n/)
-  const tooBig = text.length > HIGHLIGHT_LIMIT.bytes || lines.length > HIGHLIGHT_LIMIT.lines
-  const box = document.createElement('div')
-  box.className = 'code-view'
-  box.dataset.testid = 'code-view'
-  if (language) box.dataset.language = language
-  const ru = document.documentElement.lang === 'ru'
-  const head = document.createElement('div')
-  head.className = 'code-head'
-  const count = ru ? `строк: ${lines.length.toLocaleString('ru')}` : `${lines.length.toLocaleString('en')} ${lines.length === 1 ? 'line' : 'lines'}`
-  const plain = ru ? 'без подсветки: файл большой' : 'not highlighted: the file is big'
-  const label = document.createElement('span')
-  label.textContent = [language ? LANGUAGE_NAMES.get(language) : null, count, tooBig ? plain : null].filter(Boolean).join(' · ')
-  head.append(label)
-
-  const html = language && !tooBig ? highlightLines(source, language) : null
-  const diagnostics = language && !tooBig && canValidate(language) ? validate(source, language) : []
-  const folds = language && !tooBig ? foldRanges(source, language) : []
-  const byLine = new Map<number, Diagnostic[]>()
-  for (const d of diagnostics) byLine.set(d.line, [...(byLine.get(d.line) ?? []), d])
-  const foldAt = new Map(folds.map((f) => [f.start, f.end]))
-
-  const pre = document.createElement('pre')
-  pre.className = 'code-lines'
-  pre.style.setProperty('--gutter', `${String(lines.length).length + 1}ch`)
-  const parts: string[] = []
-  for (let i = 0; i < lines.length; i++) {
-    const n = i + 1
-    // Each line its own element: the gutter numbers it from an attribute, never part of the text.
-    const body = html ? html[i] ?? '' : escapeText(lines[i]!)
-    const found = byLine.get(n)
-    const severity = found ? (found.some((d) => d.severity === 'error') ? 'error' : 'warning') : null
-    const attrs = [`data-n="${n}"`]
-    if (severity) attrs.push(`data-diagnostic="${severity}"`, `title="${escapeAttr(found!.map((d) => `${d.line}:${d.column} ${d.message}`).join('\n'))}"`)
-    const end = foldAt.get(n)
-    if (end) attrs.push(`data-fold-end="${end}"`)
-    const toggle = end ? `<span class="code-fold" data-testid="fold-${n}" role="button" aria-expanded="true"></span>` : '<span class="code-fold"></span>'
-    // The line break inside the line: a copy keeps it, a folded line hides it with itself.
-    parts.push(`<span class="code-line" ${attrs.join(' ')}>${toggle}${body}${n < lines.length ? '\n' : ''}</span>`)
-  }
-  pre.innerHTML = parts.join('')
-  const rows = [...pre.children] as HTMLElement[]
-
-  // Folding: a line hidden while any range holding it is folded (ranges nest).
-  pre.addEventListener('click', (e) => {
-    const toggle = (e.target as HTMLElement).closest<HTMLElement>('.code-fold[role="button"]')
-    if (!toggle) return
-    const row = toggle.parentElement!
-    const start = Number(row.dataset.n)
-    const end = Number(row.dataset.foldEnd)
-    const fold = row.dataset.folded !== 'true'
-    row.dataset.folded = String(fold)
-    toggle.setAttribute('aria-expanded', String(!fold))
-    for (let k = start; k < end; k++) {
-      const r = rows[k]!
-      const hidden = Number(r.dataset.hidden ?? 0) + (fold ? 1 : -1)
-      if (hidden > 0) r.dataset.hidden = String(hidden)
-      else delete r.dataset.hidden
-    }
-  })
-
-  if (diagnostics.length > 0) {
-    const errors = diagnostics.filter((d) => d.severity === 'error').length
-    const warnings = diagnostics.length - errors
-    const step = document.createElement('button')
-    step.type = 'button'
-    step.className = 'code-problems'
-    step.dataset.testid = 'code-problems'
-    step.dataset.severity = errors > 0 ? 'error' : 'warning'
-    step.textContent = [errors ? plural(errors, ru, ['ошибка', 'ошибки', 'ошибок'], ['error', 'errors']) : null, warnings ? plural(warnings, ru, ['предупреждение', 'предупреждения', 'предупреждений'], ['warning', 'warnings']) : null].filter(Boolean).join(', ')
-    step.title = ru ? 'К следующей' : 'To the next one'
-    const marked = [...new Set(diagnostics.map((d) => d.line))].sort((a, b) => a - b)
-    let next = 0
-    step.addEventListener('click', () => {
-      const n = marked[next % marked.length]!
-      next++
-      const row = rows[n - 1]!
-      // Unfold whatever hides it.
-      for (const r of rows) if (r.dataset.folded === 'true' && Number(r.dataset.n) < n && Number(r.dataset.foldEnd) >= n) r.querySelector<HTMLElement>('.code-fold')!.click()
-      row.scrollIntoView({ block: 'center' })
-      row.classList.remove('code-flash')
-      void row.offsetWidth
-      row.classList.add('code-flash')
-    })
-    head.append(step)
-  }
-  box.append(head, pre)
-  return box
-}
-
-function plural(n: number, ru: boolean, ruForms: [string, string, string], en: [string, string]): string {
-  if (!ru) return `${n} ${n === 1 ? en[0] : en[1]}`
-  const m10 = n % 10
-  const m100 = n % 100
-  const form = m10 === 1 && m100 !== 11 ? 0 : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 1 : 2
-  return `${n} ${ruForms[form]}`
-}
-
-const escapeAttr = (s: string): string => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)
-const escapeText = (s: string): string => s.replace(/[&<>]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'))
+export { READ_ONLY_BYTES } from './code'
 
 /** `<dsk-diagram>`'s syntax by extension, so a notation is never guessed wrong. */
 const SYNTAX: Record<string, string> = {
@@ -185,6 +58,8 @@ export interface ViewOptions {
   name: string
   /** The document's own view (a table of contents for Markdown); not a version or one side of a comparison. */
   main?: boolean
+  /** What the code view keeps over redraws (the levels a log hides). */
+  code?: CodeState
 }
 
 /** The document drawn, read-only. */
@@ -227,7 +102,7 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
       return el
     }
     default:
-      return codeView(text, o.name)
+      return codeView(text, o.name, o.code)
   }
 }
 
