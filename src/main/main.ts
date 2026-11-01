@@ -240,7 +240,7 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
 })
 
 ipcMain.handle('app:startup', () => {
-  const fromArgv = filesFromArgv(process.argv, app.isPackaged, process.cwd())
+  const fromArgv = filesFromArgv(process.argv, process.cwd())
   type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean }
   const restore = (path: string | null, bufferId: string | null): Restored | null => {
     const buffer = bufferId ? buffers.get(bufferId) : null
@@ -379,7 +379,7 @@ ipcMain.handle('net:allow', (_e, scope: unknown, path: unknown) => {
 })
 
 app.on('second-instance', (_event, argv, cwd) => {
-  openInWindow(filesFromArgv(argv, app.isPackaged, cwd))
+  openInWindow(filesFromArgv(argv, cwd))
 })
 
 // macOS: a file dropped on the Dock icon or opened with folio.

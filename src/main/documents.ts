@@ -67,10 +67,36 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
   }
 }
 
-/** The files to open from a command line: what is after the app (and `.` in development). */
-export function filesFromArgv(argv: string[], packaged: boolean, cwd: string): string[] {
-  const args = argv.slice(packaged ? 1 : 2)
-  return args.filter((a) => !a.startsWith('-') && a !== '.').map((a) => resolve(cwd, a))
+/** Options that take the next argument as their value (Electron's and Node's, e.g. a test runner's `-r loader.js`). */
+const WITH_VALUE = new Set(['-r', '--require', '--inspect-port', '--user-data-dir'])
+
+/**
+ * The files to open from a command line: the arguments after the app (and
+ * `.` in development) that are files — not options, not their values.
+ */
+export function filesFromArgv(argv: string[], cwd: string, isFile: (path: string) => boolean = fileExists): string[] {
+  // After the executable; in development the app's folder (`.`) is a folder, not a file, and is passed over too.
+  const args = argv.slice(1)
+  const out: string[] = []
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i] ?? ''
+    if (WITH_VALUE.has(a)) {
+      i++
+      continue
+    }
+    if (a.startsWith('-') || a === '.') continue
+    const path = resolve(cwd, a)
+    if (isFile(path)) out.push(path)
+  }
+  return out
+}
+
+function fileExists(path: string): boolean {
+  try {
+    return statSync(path).isFile()
+  } catch {
+    return false
+  }
 }
 
 /**

@@ -571,6 +571,15 @@ resizer.addEventListener('pointerdown', (event) => {
   resizer.addEventListener('pointerup', () => resizer.removeEventListener('pointermove', move), { once: true })
 })
 
+// A failure while starting is shown, not left as an empty window.
+function startupFailed(error: unknown): void {
+  const p = welcomeEl.querySelector('p')
+  if (p) {
+    p.textContent = `folio could not start: ${error instanceof Error ? error.message : String(error)}`
+    p.dataset.testid = 'startup-error'
+  }
+}
+
 // Start: what was open comes back — files, unsaved edits, quick notes.
 void folio.startup().then(async ({ tabs: restored, active: activeIndex, locale, shared }) => {
   const lang = locale.toLowerCase().startsWith('ru') ? 'ru' : 'en'
@@ -602,4 +611,4 @@ void folio.startup().then(async ({ tabs: restored, active: activeIndex, locale, 
   }
   for (const tab of tabs) syncLabel(tab)
   activate(tabs[activeIndex ?? -1] ?? tabs[tabs.length - 1] ?? null)
-})
+}).catch(startupFailed)

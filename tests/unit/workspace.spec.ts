@@ -89,8 +89,11 @@ describe('documents', () => {
   })
 
   it('takes the files of a command line, after the app', () => {
-    expect(filesFromArgv(['/x/electron', '.', 'a.md', '--flag'], false, '/w')).toEqual([resolve('/w', 'a.md')])
-    expect(filesFromArgv(['/opt/folio', '/d/b.md'], true, '/w')).toEqual([resolve('/d/b.md')])
+    const files = (...names: string[]) => (p: string) => names.some((n) => p === resolve(n))
+    expect(filesFromArgv(['/x/electron', '.', 'a.md', '--flag'], '/w', files('/w/a.md'))).toEqual([resolve('/w', 'a.md')])
+    expect(filesFromArgv(['/opt/folio', '/d/b.md'], '/w', files('/d/b.md'))).toEqual([resolve('/d/b.md')])
+    // A test runner's `-r loader.js` and the like are not documents; nor is what does not exist.
+    expect(filesFromArgv(['/x/electron.exe', '-r', '/pw/loader.js', '--inspect=0', '.', '/d/b.md', 'gone.md'], '/w', files('/pw/loader.js', '/d/b.md'))).toEqual([resolve('/d/b.md')])
   })
 })
 
