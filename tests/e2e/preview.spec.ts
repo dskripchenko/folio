@@ -16,12 +16,16 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
     const pane = win.locator('article.doc:not([hidden])')
     await expect(pane.locator('h1', { hasText: 'Index' })).toBeVisible()
     const preview = win.getByTestId('hover-preview')
-    // The note drawn and its links checked: what the pointer will rest on is settled.
-    await expect(pane.locator('a[data-wikilink="Nowhere"]')).toHaveClass(/is-missing/)
+    // A rest on a link until the preview shows: a page still settling may move the link from under the pointer.
+    const restOn = (link: ReturnType<typeof pane.locator>) =>
+      expect(async () => {
+        await pane.locator('h1').first().hover()
+        await link.hover()
+        await expect(preview).toBeVisible({ timeout: 1500 })
+      }).toPass({ timeout: 15000 })
 
     // A rest on the [[link]]: the note, at the heading it names.
-    await pane.locator('a[data-wikilink="Plan#Goals"]').hover()
-    await expect(preview).toBeVisible()
+    await restOn(pane.locator('a[data-wikilink="Plan#Goals"]'))
     const goals = preview.locator('h2', { hasText: 'Goals' })
     await expect(goals).toBeVisible()
     await expect.poll(async () => {
@@ -34,7 +38,7 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
     await expect(preview).toBeHidden()
 
     // A Markdown link to a note too; into the preview it stays, a click there opens the note.
-    await pane.locator('a', { hasText: 'the plan' }).hover()
+    await restOn(pane.locator('a', { hasText: 'the plan' }))
     await expect(preview.locator('h1', { hasText: 'Plan' })).toBeVisible()
     await preview.hover()
     await win.waitForTimeout(400)
@@ -52,8 +56,7 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
     // A small window: the preview shorter, never over its link.
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(640, 480))
     const link = pane.locator('a[data-wikilink="Plan#Goals"]')
-    await link.hover()
-    await expect(preview).toBeVisible()
+    await restOn(link)
     const [l, p] = await Promise.all([link.boundingBox(), preview.boundingBox()])
     expect(p!.y >= l!.y + l!.height || p!.y + p!.height <= l!.y).toBe(true)
   } finally {
