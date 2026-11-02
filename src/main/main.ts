@@ -232,6 +232,7 @@ function buildMenu(): void {
     {
       label: L().view,
       submenu: [
+        { label: L().commands, accelerator: 'CmdOrCtrl+K', registerAccelerator: false, click: () => send('menu:palette') },
         { label: L().toggleEdit, accelerator: 'CmdOrCtrl+E', registerAccelerator: false, click: () => send('menu:toggle-edit') },
         { label: L().history, accelerator: 'CmdOrCtrl+Shift+H', registerAccelerator: false, click: () => send('menu:toggle-history') },
         { label: L().toggleSidebar, accelerator: 'CmdOrCtrl+B', registerAccelerator: false, click: () => send('menu:toggle-sidebar') },

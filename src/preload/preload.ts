@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('folio', {
   onSave: listen('menu:save'),
   onSaveAs: listen('menu:save-as'),
   onToggleEdit: listen('menu:toggle-edit'),
+  onPalette: listen('menu:palette'),
   onFind: listen('menu:find'),
   onGoToFile: listen('menu:go-to-file'),
   onToggleConsole: listen('menu:toggle-console'),

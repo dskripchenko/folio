@@ -259,6 +259,7 @@ relative paths.
 | `Cmd/Ctrl+W` | close the tab |
 | `Cmd/Ctrl+B` | the sidebar |
 | `Cmd/Ctrl+T` | go to a file by its name |
+| `Cmd/Ctrl+K`, `F1` | the commands: any action by its name |
 | `Cmd/Ctrl+Shift+F` | search the files |
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |
@@ -280,6 +281,11 @@ like name its groups; without one the text is taken as it is. A file open with
 unsaved changes is left out (said so), so neither side is lost; an open file
 without changes shows the new text. A folder that keeps a history gets one
 commit for the replacement — `Replace "a" with "b"` — not a commit per file.
+
+`Cmd/Ctrl+K` or `F1` (**View → Commands**) opens a palette of folio's actions —
+those of the menus and the rails — found the same way by their names, each with
+its keys; the ones used lately come first, and the ones that cannot run now
+(saving with no document open, the mode already on) are not offered.
 
 `Cmd/Ctrl+T` (**File → Go to File**) opens a palette of every file folio opens
 in Shared and the visible projects, ranked as the name is typed: the

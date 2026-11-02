@@ -22,6 +22,10 @@ import { describeRefusal, HistoryPanel, type HistoryText } from './history'
 import { Sidebar, type SidebarText } from './sidebar'
 import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import { LinksPanel, type LinksText } from './linksPanel'
+import { CommandPalette, type Command, type PaletteText } from './commandPalette'
+
+/** The palette's own words and the titles of the commands the menus name only in the main process. */
+type CommandsText = PaletteText & Record<'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'findInFiles' | 'sidebar', string>
 import type { GitRefusal, Version } from './bridge'
 
 const TEXT = {
@@ -64,6 +68,7 @@ const TEXT = {
     console: { title: 'Console', newConsole: 'New console', close: 'Close the console', hide: 'Hide the consoles (Ctrl+`)', ended: '[the shell ended, code {code}]', failed: 'The console did not start: {error}', split: 'Split: a console beside', toRight: 'Beside the page', toBottom: 'Under the page', maximize: 'The whole window', restore: 'Back to the panel', copy: 'Copy', paste: 'Paste', selectAll: 'Select all', clear: 'Clear', find: 'Find…', closePane: 'Close this console', running: 'Running: {command}' } as ConsoleText,
     search: { title: 'Search', placeholder: 'Search the files', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', close: 'Close', everywhere: 'Everywhere', shared: 'Shared', searching: 'Searching…', summary: '{matches} in {files}', truncated: '(the first ones)', none: 'Nothing found', invalid: 'Invalid expression', matches: ['match', 'matches'], files: ['file', 'files'], toggleReplace: 'Replace', replacePlaceholder: 'Replace with', replaceAll: 'Replace all', confirm: 'Replace {matches} in {files}?', replaced: 'Replaced {matches} in {files}.', committed: 'Committed to the history.', skipped: 'Left out, open with unsaved changes: {n}.', include: 'Replace in this file' } as SearchText,
     links: { title: 'Links', close: 'Close', incoming: 'Linked here', outgoing: 'Links from this note', mentions: 'Named without a link', noNote: 'Open a note to see its links.', none: 'None', missing: 'No such note yet: a click makes it.', link: 'Link', linked: 'Made a link.', changed: 'The note has changed meanwhile: look again.' } as LinksText,
+    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
@@ -108,6 +113,7 @@ const TEXT = {
     console: { title: 'Консоль', newConsole: 'Новая консоль', close: 'Закрыть консоль', hide: 'Скрыть консоли (Ctrl+`)', ended: '[оболочка завершилась, код {code}]', failed: 'Консоль не запустилась: {error}', split: 'Разделить: консоль рядом', toRight: 'Справа от страницы', toBottom: 'Под страницей', maximize: 'На всё окно', restore: 'Вернуть в панель', copy: 'Копировать', paste: 'Вставить', selectAll: 'Выделить всё', clear: 'Очистить', find: 'Найти…', closePane: 'Закрыть эту консоль', running: 'Выполняется: {command}' } as ConsoleText,
     search: { title: 'Поиск', placeholder: 'Искать в файлах', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', close: 'Закрыть', everywhere: 'Везде', shared: 'Общие', searching: 'Поиск…', summary: '{matches} в {files}', truncated: '(первые)', none: 'Ничего не найдено', invalid: 'Неверное выражение', matches: ['совпадение', 'совпадения', 'совпадений'], files: ['файле', 'файлах', 'файлах'], toggleReplace: 'Заменить', replacePlaceholder: 'Заменить на', replaceAll: 'Заменить всё', confirm: 'Заменить {matches} в {files}?', replaced: 'Заменено: {matches} в {files}.', committed: 'Зафиксировано в истории.', skipped: 'Пропущены открытые с несохранёнными правками: {n}.', include: 'Заменять в этом файле' } as SearchText,
     links: { title: 'Ссылки', close: 'Закрыть', incoming: 'Ссылаются сюда', outgoing: 'Ссылки из заметки', mentions: 'Упоминания без ссылки', noNote: 'Откройте заметку, чтобы увидеть её ссылки.', none: 'Нет', missing: 'Такой заметки ещё нет: щелчок создаст её.', link: 'Связать', linked: 'Ссылка добавлена.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as LinksText,
+    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
@@ -173,6 +179,7 @@ function applyText(): void {
   goToFile.setText(t.goToFile)
   searchPanel.setText(t.search)
   linksPanel?.setText(t.links)
+  palette.setText(t.commands)
   consolePanel.setText(t.console)
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const value = t[el.dataset.i18n as keyof typeof t]
@@ -546,7 +553,6 @@ function openSettings(anchor: HTMLElement): void {
 
 // Buffers -------------------------------------------------------------------------
 
-/** The text changed: mark it, and write the buffer once typing settles. */
 /** The note a tab shows, for the links panel: a Markdown file, its text as in the tab. */
 function noteOf(tab: Tab | null): { path: string; text: () => string } | null {
   return tab?.path && formatOf(tab) === 'markdown' && !tab.version ? { path: tab.path, text: () => tab.text } : null
@@ -560,6 +566,7 @@ function linksSoon(): void {
   linksTimer = setTimeout(() => void linksPanel?.refresh(), 600)
 }
 
+/** The text changed: mark it, and write the buffer once typing settles. */
 function edited(tab: Tab): void {
   syncLabel(tab)
   if (tab === active) linksSoon()
@@ -1020,6 +1027,38 @@ const goToFile = new GoToFile(t.goToFile, () => folio.allFiles(), (f) => void fo
 document.body.append(goToFile.el)
 folio.onGoToFile(() => void goToFile.open())
 
+/** Every action by its name: what the menus and the rails do, offered when it can run. */
+function commands(): Command[] {
+  const c = t.commands
+  const has = (): boolean => active !== null
+  const file = c.file
+  const view = c.view
+  const list: Command[] = [
+    { id: 'new-note', group: file, title: c.newNote, keys: `${mod}N`, icon: 'note', run: () => newNote() },
+    { id: 'open', group: file, title: t.open, keys: `${mod}O`, icon: 'open', run: () => void folio.openDialog().then(async (docs) => { for (const d of docs) await add(d) }) },
+    { id: 'go-to-file', group: file, title: c.goToFile, keys: `${mod}T`, icon: 'file', run: () => void goToFile.open() },
+    { id: 'add-project', group: file, title: c.addProject, icon: 'folderPlus', run: () => void sidebar.addProject() },
+    { id: 'clone', group: file, title: c.clone, icon: 'clone', run: () => openClone() },
+    { id: 'save', group: file, title: c.save, keys: `${mod}S`, icon: 'save', when: has, run: () => active && void save(active, false) },
+    { id: 'save-as', group: file, title: c.saveAs, keys: `${mod}⇧S`, icon: 'save', when: has, run: () => active && void save(active, true) },
+    { id: 'print', group: file, title: t.print, keys: `${mod}P`, icon: 'print', when: has, run: () => void printActive() },
+    { id: 'export-pdf', group: file, title: t.exportPdf, keys: `${mod}⇧P`, icon: 'pdf', when: has, run: () => exportActive() },
+    { id: 'close-tab', group: file, title: c.closeTab, keys: `${mod}W`, icon: 'close', when: has, run: () => active && void close(active) },
+    { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: has, run: () => findBar.open() },
+    { id: 'find-in-files', group: c.edit, title: c.findInFiles, keys: `${mod}⇧F`, icon: 'search', run: () => void searchPanel.open() },
+    ...MODES.map(([m, name]): Command => ({ id: `mode-${m}`, group: view, title: t.modeNames[m], icon: name, when: () => modesOf(active).has(m) && modeOf(active!) !== m, run: () => setMode(active, m) })),
+    { id: 'sidebar', group: view, title: c.sidebar, keys: `${mod}B`, icon: 'collapse', run: () => sidebar.toggleCollapsed() },
+    { id: 'console', group: view, title: t.console.title, keys: 'Ctrl+`', icon: 'console', run: () => consolePanel.toggle(null) },
+    { id: 'history', group: view, title: t.history, keys: `${mod}⇧H`, icon: 'history', when: () => !!active?.path, run: () => toggleHistory() },
+    { id: 'links', group: view, title: t.links.title, icon: 'links', run: () => linksPanel?.setVisible(!linksPanel.visible) },
+    ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),
+  ]
+  return list
+}
+const palette = new CommandPalette(t.commands, commands)
+document.body.append(palette.el)
+folio.onPalette(() => palette.open())
+
 const searchPanel = new SearchPanel(
   t.search,
   { scopes: () => folio.searchScopes(), run: (id, q, o, scope) => folio.search(id, q, { ...o }, scope), cancel: () => folio.cancelSearch(), onHits: (cb) => void folio.onSearchHits(cb), replace: (q, o, r, files) => folio.replace(q, { ...o }, r, files), isDirty: (file) => tabs.some((tab) => tab.path === file && isDirty(tab)) },
@@ -1104,6 +1143,12 @@ window.addEventListener(
     // Ctrl with a letter in a console is the shell's (^W, ^E, ^P…), not folio's: off a Mac the shortcuts stay out.
     // Except Ctrl+F: the find bar over the output (as in VS Code's terminal).
     if (folio.platform !== 'darwin' && (event.target as HTMLElement | null)?.closest?.('.dsk-term') && !(event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'f')) return
+    // F1, as in code editors: the commands.
+    if (event.key === 'F1' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+      event.preventDefault()
+      palette.open()
+      return
+    }
     const mod = folio.platform === 'darwin' ? event.metaKey : event.ctrlKey
     if (!mod || event.altKey) return
     const key = event.key.toLowerCase()
@@ -1126,6 +1171,7 @@ window.addEventListener(
       b: () => sidebar.toggleCollapsed(),
       f: () => (event.shiftKey ? void searchPanel.open() : findBar.open()),
       t: () => void goToFile.open(),
+      k: () => palette.open(),
       g: () => findBar.step(event.shiftKey ? -1 : 1),
     }
     const fn = act[key]
