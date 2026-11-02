@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-03
+
+The first release: portable builds for macOS, Windows and Linux.
+
 ### Fixed
 - A PDF of a document whose drawings hold links (draw.io, diagrams) is
   exported again: the print page failed on their SVG links.
@@ -226,3 +230,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   isolation, sandbox, a content security policy, no navigation away, links to
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
+
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/dskripchenko/folio/releases/tag/v1.0.0
