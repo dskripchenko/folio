@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Two documents side by side: **Open beside** in a tab's menu, `Cmd/Ctrl+\` or
+  the command; each view with its own document and scroll, the divider dragged.
 - Commands (`Cmd/Ctrl+K`, `F1`, **View → Commands**): every action of the menus
   and rails by its name, with its keys; the last used first.
 - The links panel (the link icon on the right rail): the notes linking to the

@@ -15,7 +15,7 @@ import { GoToFile, type GoToFileText } from './goToFile'
 import { SearchPanel, type SearchText } from './searchPanel'
 import { ConsolePanel, type ConsoleText } from './consolePanel'
 import { icon, iconButton, type IconName } from './icons'
-import { popMenu } from './menu'
+import { popMenu, popMenuAt } from './menu'
 import { openCloneDialog, type CloneText } from './clone'
 import { openPdfDialog, type PdfTarget, type PdfText } from './pdfDialog'
 import { describeRefusal, HistoryPanel, type HistoryText } from './history'
@@ -37,6 +37,8 @@ const TEXT = {
     allowFolder: 'Allow for its folder',
     close: 'Close',
     linksUpdated: 'Links updated in {n} notes.',
+    openBeside: 'Open beside',
+    backToMain: 'Back to the main view',
     saveBeforePictures: 'Save the note first: its pictures go beside it.',
     pictureNotSaved: 'The picture was not saved.',
     edit: 'Edit',
@@ -82,6 +84,8 @@ const TEXT = {
     allowFolder: 'Разрешить для его папки',
     close: 'Закрыть',
     linksUpdated: 'Ссылки обновлены в заметках: {n}.',
+    openBeside: 'Открыть рядом',
+    backToMain: 'Вернуть в основной вид',
     saveBeforePictures: 'Сначала сохраните заметку: картинки кладутся рядом с ней.',
     pictureNotSaved: 'Картинку сохранить не удалось.',
     edit: 'Править',
@@ -132,6 +136,9 @@ let t = TEXT.en
 let sharedDir: string | null = null
 const tabsEl = document.querySelector<HTMLElement>('.tabs')!
 const viewEl = document.querySelector<HTMLElement>('.view')!
+/** The view beside the main one, and the divider between them. */
+const besideEl = document.querySelector<HTMLElement>('.view-beside')!
+const splitEl = document.querySelector<HTMLElement>('.split')!
 const welcomeEl = document.querySelector<HTMLElement>('.welcome')!
 const bannerEl = document.querySelector<HTMLElement>('.banner')!
 const noticeEl = document.querySelector<HTMLElement>('.notice')!
@@ -173,6 +180,9 @@ interface Tab {
 
 const tabs: Tab[] = []
 let active: Tab | null = null
+/** The tab of the main view, and the one beside it (null: one view). `active` is one of them. */
+let mainTab: Tab | null = null
+let beside: Tab | null = null
 
 function applyText(): void {
   findBar.setText(t.find)
@@ -579,7 +589,7 @@ function flush(tab: Tab): void {
   tab.timer = null
   if (isDirty(tab)) {
     tab.buffer ??= crypto.randomUUID()
-    const buffer: BufferData = { id: tab.buffer, path: tab.path, text: tab.text, baseline: tab.baseline, mode: tab.mode, scroll: tab === active ? viewEl.scrollTop : tab.scroll }
+    const buffer: BufferData = { id: tab.buffer, path: tab.path, text: tab.text, baseline: tab.baseline, mode: tab.mode, scroll: tab === mainTab || tab === beside ? scrollerOf(tab).scrollTop : tab.scroll }
     folio.writeBuffer(buffer)
   } else if (tab.buffer) {
     folio.dropBuffer(tab.buffer)
@@ -599,22 +609,79 @@ function report(): void {
 
 // Tabs ----------------------------------------------------------------------------
 
+/**
+ * The tab in use: shown in the main view — or, when it is the one beside,
+ * there; the other view keeps its document. Panels, find and the history
+ * follow the tab in use.
+ */
 function activate(tab: Tab | null): void {
-  if (active && active !== tab) active.scroll = viewEl.scrollTop
+  const wasShown = tab !== null && (tab === mainTab || tab === beside)
+  if (tab !== beside && mainTab && mainTab !== tab) mainTab.scroll = viewEl.scrollTop
+  if (tab !== beside) mainTab = tab
   active = tab
   for (const other of tabs) {
-    other.pane.hidden = other !== tab
+    other.pane.hidden = other !== mainTab && other !== beside
     other.button.setAttribute('aria-selected', String(other === tab))
+    other.button.classList.toggle('shown', other !== tab && (other === mainTab || other === beside))
+    other.button.classList.toggle('beside', other === beside)
   }
-  welcomeEl.hidden = tab !== null
+  welcomeEl.hidden = mainTab !== null
   sidebar.setActive(tab?.path ?? null)
   history.show(tab?.path ?? null)
   linksPanel?.show(noteOf(tab))
   showBanners()
-  if (tab) requestAnimationFrame(() => (viewEl.scrollTop = tab.scroll))
+  // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
+  if (tab && !wasShown) requestAnimationFrame(() => (scrollerOf(tab).scrollTop = tab.scroll))
   if (tab) recheckLinks.get(tab.pane)?.()
   findBar?.retarget()
   report()
+}
+
+/** The view a tab is drawn in. */
+function scrollerOf(tab: Tab): HTMLElement {
+  return tab === beside ? besideEl : viewEl
+}
+
+/** A tab beside the main view; the main view keeps (or takes) another tab. */
+function openBeside(tab: Tab): void {
+  if (tab === beside) return activate(tab)
+  // The main view needs a document of its own: the one there, or another open tab.
+  const left = tab === mainTab ? (tabs.filter((x) => x !== tab && x !== beside).at(-1) ?? null) : mainTab
+  if (!left) return
+  if (beside) backToMain(beside)
+  tab.scroll = tab === mainTab ? viewEl.scrollTop : tab.scroll
+  beside = tab
+  besideEl.append(tab.pane)
+  besideEl.hidden = false
+  splitEl.hidden = false
+  document.querySelector('.content')!.classList.add('two-views')
+  if (mainTab !== left) {
+    mainTab = null
+    activate(left)
+  }
+  activate(tab)
+  requestAnimationFrame(() => (besideEl.scrollTop = tab.scroll))
+}
+
+/** The document beside goes back among the main view's tabs. */
+function backToMain(tab: Tab): void {
+  if (tab !== beside) return
+  tab.scroll = besideEl.scrollTop
+  beside = null
+  viewEl.append(tab.pane)
+  besideEl.hidden = true
+  splitEl.hidden = true
+  document.querySelector('.content')!.classList.remove('two-views')
+  tab.pane.hidden = tab !== mainTab
+  tab.button.classList.remove('beside', 'shown')
+}
+
+/** Close the side view: its document stays open, in a tab of the main view. */
+function closeBeside(): void {
+  const tab = beside
+  if (!tab) return
+  backToMain(tab)
+  activate(active === tab ? mainTab : active)
 }
 
 /** Each pane's check of its `[[links]]`: run again when the tab is shown, as files may have come or gone. */
@@ -663,6 +730,16 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   button.addEventListener('auxclick', (event) => {
     if (event.button === 1) void close(tab)
   })
+  // Its menu: beside the main view, or back; closed.
+  button.addEventListener('contextmenu', (event) => {
+    event.preventDefault()
+    popMenuAt(event.clientX, event.clientY, [
+      tab === beside
+        ? { label: t.backToMain, testid: 'tab-back', action: () => closeBeside() }
+        : { label: t.openBeside, testid: 'tab-beside', disabled: tabs.filter((x) => x !== tab).length === 0, action: () => openBeside(tab) },
+      { label: t.close, testid: 'tab-close', action: () => void close(tab) },
+    ])
+  })
   tabs.push(tab)
   tabsEl.append(button)
   viewEl.append(pane)
@@ -697,9 +774,18 @@ function remove(tab: Tab): void {
   if (i < 0) return
   if (tab.timer) clearTimeout(tab.timer)
   tabs.splice(i, 1)
+  if (tab === beside) backToMain(tab)
   tab.pane.remove()
   tab.button.remove()
-  if (active === tab) activate(tabs[Math.min(i, tabs.length - 1)] ?? null)
+  if (tab === mainTab) {
+    // The main view takes a neighbour, never the document beside.
+    const rest = tabs.filter((x) => x !== beside)
+    mainTab = null
+    const next = rest[Math.min(i, rest.length - 1)] ?? null
+    if (next) activate(next)
+    else if (beside) closeBeside()
+    else activate(null)
+  } else if (active === tab) activate(mainTab)
   else report()
 }
 
@@ -723,12 +809,13 @@ function toggleEdit(tab: Tab | null): void {
 /** Reading or editing: drawn again where the reader was, as near as the other view allows. */
 function toggleEditTo(tab: Tab, view: 'read' | 'edit'): void {
   if ((tab.error && !tab.buffer && tab.saved !== null) || !canEdit(formatOf(tab))) return
-  const ratio = viewEl.scrollHeight > 0 ? viewEl.scrollTop / viewEl.scrollHeight : 0
+  const scroller = scrollerOf(tab)
+  const ratio = scroller.scrollHeight > 0 ? scroller.scrollTop / scroller.scrollHeight : 0
   tab.version = null
   tab.view = view
   render(tab)
   showBanners()
-  requestAnimationFrame(() => (viewEl.scrollTop = ratio * viewEl.scrollHeight))
+  requestAnimationFrame(() => (scroller.scrollTop = ratio * scroller.scrollHeight))
 }
 
 // Saving ---------------------------------------------------------------------------
@@ -840,7 +927,7 @@ const history = new HistoryPanel({
     if (!tab || text === null) return
     tab.version = { oid: v.oid, text, message: v.message, time: v.time, mode: tab.version?.mode ?? 'version' }
     render(tab)
-    viewEl.scrollTop = 0
+    scrollerOf(tab).scrollTop = 0
   },
 })
 function toggleHistory(): void {
@@ -932,16 +1019,18 @@ folio.onFsChanged(async (value) => {
       }
       continue
     }
-    const top = viewEl.scrollTop
+    const scroller = scrollerOf(tab)
+    const shown = tab === mainTab || tab === beside
+    const top = scroller.scrollTop
     // A log read at its end follows it: what is written appears in view.
-    const follow = tab === active && formatOf(tab) === 'text' && top + viewEl.clientHeight >= viewEl.scrollHeight - 4
+    const follow = shown && formatOf(tab) === 'text' && top + scroller.clientHeight >= scroller.scrollHeight - 4
     tab.text = tab.saved = disk.text
     tab.baseline = disk.hash
     const reopened = await folio.open(tab.path)
     if (isOpened(reopened)) tab.doc = reopened
     if (tab.view === 'read' || formatOf(tab) !== 'markdown') render(tab)
     else (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { value: string }) | null)?.setAttribute('value', disk.text)
-    if (tab === active) requestAnimationFrame(() => (viewEl.scrollTop = follow ? viewEl.scrollHeight : top))
+    if (shown) requestAnimationFrame(() => (scroller.scrollTop = follow ? scroller.scrollHeight : top))
   }
 })
 
@@ -950,7 +1039,7 @@ async function followWikiLink(from: string, target: string): Promise<void> {
   await add(result)
   const tab = tabs.find((t) => t.path === result.path)
   // After the frame that gives the tab back its own scroll.
-  if (tab && result.heading) requestAnimationFrame(() => revealHeading(tab.pane, result.heading!, viewEl))
+  if (tab && result.heading) requestAnimationFrame(() => revealHeading(tab.pane, result.heading!, scrollerOf(tab)))
 }
 
 async function openFiles(): Promise<void> {
@@ -958,7 +1047,7 @@ async function openFiles(): Promise<void> {
 }
 
 // Links: a document of the folder opens in a tab, the web and mail leave folio; anchors stay.
-viewEl.addEventListener('click', (event) => {
+function onLinkClick(event: MouseEvent): void {
   const a = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
   if (!a || event.defaultPrevented) return
   // `[[A note]]`: found by its name in the note's root (made when it is not there); in the editor, with ⌘ / Ctrl.
@@ -978,7 +1067,46 @@ viewEl.addEventListener('click', (event) => {
     event.preventDefault()
     folio.external(href)
   }
+}
+viewEl.addEventListener('click', onLinkClick)
+besideEl.addEventListener('click', onLinkClick)
+
+// A click or focus in a view puts its document in use.
+for (const [el, which] of [[viewEl, () => mainTab], [besideEl, () => beside]] as const) {
+  const take = (): void => {
+    const tab = which()
+    if (tab && active !== tab) activate(tab)
+  }
+  el.addEventListener('pointerdown', take, true)
+  el.addEventListener('focusin', take)
+}
+
+// The divider between the views: dragged, the main view's share kept for next time.
+splitEl.addEventListener('pointerdown', (event) => {
+  event.preventDefault()
+  splitEl.setPointerCapture(event.pointerId)
+  splitEl.classList.add('dragging')
+  const move = (e: PointerEvent): void => {
+    const r = viewEl.getBoundingClientRect()
+    const share = Math.min(0.8, Math.max(0.2, (e.clientX - r.left) / (r.width + besideEl.getBoundingClientRect().width)))
+    shareViews(share)
+    prefs.set('mainShare', share)
+  }
+  const up = (): void => {
+    splitEl.classList.remove('dragging')
+    splitEl.removeEventListener('pointermove', move)
+    splitEl.removeEventListener('pointerup', up)
+  }
+  splitEl.addEventListener('pointermove', move)
+  splitEl.addEventListener('pointerup', up)
 })
+/** The main view's share of the two, the rest beside. */
+function shareViews(share: number): void {
+  const box = document.querySelector<HTMLElement>('.content')!
+  box.style.setProperty('--main-grow', String(share))
+  box.style.setProperty('--side-grow', String(1 - share))
+}
+shareViews(prefs.get<number>('mainShare', 0.5))
 
 // Dropping files on the window opens them.
 viewEl.addEventListener('dragover', (event) => {
@@ -1047,6 +1175,8 @@ function commands(): Command[] {
     { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: has, run: () => findBar.open() },
     { id: 'find-in-files', group: c.edit, title: c.findInFiles, keys: `${mod}⇧F`, icon: 'search', run: () => void searchPanel.open() },
     ...MODES.map(([m, name]): Command => ({ id: `mode-${m}`, group: view, title: t.modeNames[m], icon: name, when: () => modesOf(active).has(m) && modeOf(active!) !== m, run: () => setMode(active, m) })),
+    { id: 'beside', group: view, title: t.openBeside, keys: `${mod}\\`, icon: 'panelRight', when: () => !!active && active !== beside && tabs.length > 1, run: () => active && openBeside(active) },
+    { id: 'back-to-main', group: view, title: t.backToMain, keys: `${mod}\\`, icon: 'panelRight', when: () => beside !== null, run: () => closeBeside() },
     { id: 'sidebar', group: view, title: c.sidebar, keys: `${mod}B`, icon: 'collapse', run: () => sidebar.toggleCollapsed() },
     { id: 'console', group: view, title: t.console.title, keys: 'Ctrl+`', icon: 'console', run: () => consolePanel.toggle(null) },
     { id: 'history', group: view, title: t.history, keys: `${mod}⇧H`, icon: 'history', when: () => !!active?.path, run: () => toggleHistory() },
@@ -1172,6 +1302,8 @@ window.addEventListener(
       f: () => (event.shiftKey ? void searchPanel.open() : findBar.open()),
       t: () => void goToFile.open(),
       k: () => palette.open(),
+      // The active document beside the main view, or the side view closed.
+      '\\': () => (beside ? closeBeside() : active && openBeside(active)),
       g: () => findBar.step(event.shiftKey ? -1 : 1),
     }
     const fn = act[key]
@@ -1198,9 +1330,13 @@ async function printActive(): Promise<void> {
   window.DskEmbed?.configure({ theme: 'light' })
   // It waits for the widgets still drawing (a document just switched to reading), then makes the forms.
   const restore = (await window.DskEmbed?.print?.prepare(tab.pane)) ?? (() => {})
+  document.body.dataset.printing = ''
+  tab.pane.dataset.printing = ''
   try {
     window.print()
   } finally {
+    delete document.body.dataset.printing
+    delete tab.pane.dataset.printing
     restore()
     window.DskEmbed?.configure({ theme })
   }
