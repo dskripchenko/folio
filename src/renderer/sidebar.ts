@@ -22,7 +22,6 @@ export interface SidebarText {
   chooseShared: string
   resetShared: string
   showHidden: string
-  noProjects: string
   missing: string
   empty: string
   ungrouped: string
@@ -175,12 +174,6 @@ export class Sidebar {
     ])
     projects.dataset.testid = 'projects'
     const visible = ws.projects.filter((p) => this.showHidden || !p.hidden)
-    if (visible.length === 0) {
-      const hint = document.createElement('p')
-      hint.className = 'hint'
-      hint.textContent = t.noProjects
-      projects.append(hint)
-    }
     const byName = (a: ProjectView, b: ProjectView) => a.name.localeCompare(b.name, undefined, { numeric: true })
     const pinned = visible.filter((p) => p.pinned).sort(byName)
     const rest = visible.filter((p) => !p.pinned)
