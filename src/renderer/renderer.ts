@@ -61,7 +61,7 @@ const TEXT = {
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
-    sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project', addFolder: 'Add a folder…', cloneRepo: 'Clone a repository…', sharedMenu: 'Shared: folder', projectsMenu: 'Projects: view', resetShared: 'The default folder', openFile: 'Open a file (⌘O)', newNote: 'New quick note (⌘N)', collapse: 'Collapse the sidebar (⌘B)', expand: 'Expand the sidebar (⌘B)', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group' } as SidebarText,
+    sidebar: { shared: 'Shared', projects: 'Projects', addProject: 'Add a project', addFolder: 'Add a folder…', cloneRepo: 'Clone a repository…', sharedMenu: 'Shared: folder', projectsMenu: 'Projects: view', resetShared: 'The default folder', openFile: 'Open a file (⌘O)', newNote: 'New quick note (⌘N)', collapse: 'Collapse the sidebar (⌘B)', expand: 'Expand the sidebar (⌘B)', chooseShared: 'Choose the Shared folder', showHidden: 'Show hidden projects', missing: 'not found', empty: 'No documents yet', ungrouped: 'No group', newName: 'Name', newNoteInShared: 'New note', newFolderInShared: 'New folder', errors: { exists: 'There is one with this name already', characters: 'A name cannot have / \\ : * ? " < > |', empty: 'A name is needed', long: 'The name is too long', inside: 'A folder cannot go into itself', failed: 'It did not work' } } as SidebarText,
   },
   ru: {
     open: 'Открыть…',
@@ -101,7 +101,7 @@ const TEXT = {
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
-    sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить проект', addFolder: 'Добавить папку…', cloneRepo: 'Клонировать репозиторий…', sharedMenu: '«Общие»: папка', projectsMenu: 'Проекты: вид', resetShared: 'Папка по умолчанию', openFile: 'Открыть файл (⌘O)', newNote: 'Новая быстрая заметка (⌘N)', collapse: 'Свернуть панель (⌘B)', expand: 'Развернуть панель (⌘B)', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы' } as SidebarText,
+    sidebar: { shared: 'Общие', projects: 'Проекты', addProject: 'Добавить проект', addFolder: 'Добавить папку…', cloneRepo: 'Клонировать репозиторий…', sharedMenu: '«Общие»: папка', projectsMenu: 'Проекты: вид', resetShared: 'Папка по умолчанию', openFile: 'Открыть файл (⌘O)', newNote: 'Новая быстрая заметка (⌘N)', collapse: 'Свернуть панель (⌘B)', expand: 'Развернуть панель (⌘B)', chooseShared: 'Выбрать папку «Общих»', showHidden: 'Показать скрытые проекты', missing: 'не найдена', empty: 'Документов пока нет', ungrouped: 'Без группы', newName: 'Имя', newNoteInShared: 'Новая заметка', newFolderInShared: 'Новая папка', errors: { exists: 'Такое имя уже есть', characters: 'В имени нельзя / \\ : * ? " < > |', empty: 'Нужно имя', long: 'Имя слишком длинное', inside: 'Папку нельзя переместить в неё саму', failed: 'Не получилось' } } as SidebarText,
   },
 }
 
@@ -755,7 +755,8 @@ const sidebar = new Sidebar({
   rail: document.querySelector<HTMLElement>('.rail-left')!,
   flyout: document.querySelector<HTMLElement>('.flyout')!,
   // Shortcut hints as the system writes them: ⌘ on a Mac, Ctrl+ elsewhere.
-  text: () => Object.fromEntries(Object.entries(t.sidebar).map(([k, v]) => [k, v.replace('⌘', mod)])) as unknown as SidebarText,
+  // The shortcuts' key as the system writes it (strings only: the errors are a group of their own).
+  text: () => Object.fromEntries(Object.entries(t.sidebar).map(([k, v]) => [k, typeof v === 'string' ? v.replace('⌘', mod) : v])) as unknown as SidebarText,
   open: (root, rel) => void folio.openEntry(root, rel).then((result) => add(result)),
   clone: () => openClone(),
   openFile: () => void openFiles(),
@@ -827,6 +828,29 @@ folio.onSaveAs(() => {
   if (active) void save(active, true)
 })
 folio.onToggleEdit(() => toggleEdit(active))
+
+// A file or folder renamed or moved in the tree: its open documents follow it.
+folio.onFsMoved(async (value) => {
+  const { from, to } = value as { from: string; to: string }
+  for (const tab of tabs) {
+    if (!tab.path || (tab.path !== from && !tab.path.startsWith(from + (folio.platform === 'win32' ? '\\' : '/')))) continue
+    tab.path = to + tab.path.slice(from.length)
+    const reopened = await folio.open(tab.path)
+    if (isOpened(reopened)) tab.doc = reopened
+    syncLabel(tab)
+  }
+  if (active) sidebar.setActive(active.path)
+  report()
+})
+// Put in the trash: its clean tabs close; one with unsaved changes stays, as a note to save elsewhere.
+folio.onFsRemoved((value) => {
+  const { path } = value as { path: string }
+  const sep = folio.platform === 'win32' ? '\\' : '/'
+  for (const tab of [...tabs]) {
+    if (!tab.path || (tab.path !== path && !tab.path.startsWith(path + sep))) continue
+    if (!isDirty(tab)) void close(tab)
+  }
+})
 
 // A file changed on disk: a clean tab takes it, an edited one is told (nothing is overwritten).
 folio.onFsChanged(async (value) => {

@@ -420,3 +420,10 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .pop-menu-separator { height: 1px; margin: 4px 6px; background: var(--line); }
 .pop-menu button:disabled { opacity: 0.45; cursor: default; }
 .pop-menu-keys { margin-left: auto; padding-left: 18px; color: var(--muted); font-size: 11px; }
+
+/* The tree: a name typed in place, a folder taking what is dragged onto it. */
+.tree-input { flex: 1; min-width: 0; margin: -2px 0; padding: 1px 4px; border: 1px solid var(--accent); border-radius: 4px; background: var(--bg); color: var(--fg); font: inherit; outline: none; }
+.tree-input.invalid { border-color: #d1242f; }
+.row.drop-target { background: color-mix(in srgb, var(--accent) 18%, transparent); outline: 1px dashed var(--accent); outline-offset: -1px; }
+.row.drop-refused { animation: drop-refused 0.4s; }
+@keyframes drop-refused { 25%, 75% { transform: translateX(-3px); } 50% { transform: translateX(3px); } }

@@ -93,6 +93,19 @@ The trees list folders and the files folio opens, folders first, and follow the
 disk: a file added, changed or removed elsewhere shows at once, and an open
 document is drawn again. `Cmd/Ctrl+B` hides the sidebar.
 
+### Files and folders
+
+The tree makes and changes files too: **New Note** and **New Folder** in a
+folder's or a project's right-click menu (and in Shared's **…** menu) — the name
+typed in place, a note opened at once with its title as a heading; **Rename…**
+(or `F2`) edits the name in its row, the extension kept; a file or folder
+dragged onto a folder (or a project) moves there; **Duplicate** makes a copy
+beside it; **Move to Trash** (or `Delete`, `Cmd+Backspace`) asks first and puts
+it in the system's trash, from where it can be put back. Open documents follow
+a rename or a move; a document put in the trash closes, unless it has unsaved
+changes. A name with `/ \ : * ? " < > |` or one already there is refused in
+place, with the reason.
+
 ## History with git
 
 Per folder — Shared and each project — and only if you want it. A folder that

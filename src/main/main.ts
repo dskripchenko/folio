@@ -42,6 +42,7 @@ import { Session } from './session'
 import { labels } from './i18n'
 import { listDir } from './tree'
 import { FileIndex } from './fileIndex'
+import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry } from './fileOps'
 import { Consoles } from './pty'
 import { replaceInFiles, searchFiles, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
@@ -409,14 +410,89 @@ ipcMain.handle('tree:open', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
   return file === null ? { error: 'Not a file of this folder', path: String(rel) } : open(file)
 })
+// Files and folders from the tree: made, renamed, moved, copied, put in the trash.
+
+/** An operation's error as a word the window shows ('exists', 'characters'…). */
+function fileOp<T>(op: () => T): T | { error: string } {
+  try {
+    return op()
+  } catch (e) {
+    return { error: e instanceof FileOpError ? e.message : 'failed' }
+  }
+}
+
+/** Moved or renamed: open documents follow, the histories take both sides. */
+function moved(from: string, to: string): void {
+  send('fs:moved', { from, to })
+  for (const p of [from, to]) if (workspace.autoCommits(p) && statSync(to).isFile()) autoCommit.saved(p)
+}
+
+async function trash(file: string): Promise<void> {
+  if (!win) return
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning',
+    buttons: [L().trashConfirm, L().cancel],
+    defaultId: 0,
+    cancelId: 1,
+    message: L().trashQuestion.replace('{name}', basename(file)),
+    detail: L().trashDetail,
+  })
+  if (response !== 0) return
+  await shell.trashItem(file)
+  send('fs:removed', { path: file })
+  if (workspace.autoCommits(file) && !existsSync(file)) autoCommit.saved(file)
+}
+
+ipcMain.handle('fs:trash', async (_e, root: unknown, rel: unknown) => {
+  const path = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
+  if (path === null || path === roots.dir(root as string)) return
+  await trash(path)
+})
+ipcMain.handle('fs:create', (_e, root: unknown, dir: unknown, name: unknown, kind: unknown) => {
+  const folder = typeof root === 'string' && typeof dir === 'string' ? roots.resolve(root, dir) : null
+  if (folder === null || typeof name !== 'string' || (kind !== 'note' && kind !== 'folder')) return { error: 'failed' }
+  return fileOp(() => {
+    const path = createEntry(folder, name, kind)
+    if (kind === 'note' && workspace.autoCommits(path)) autoCommit.saved(path)
+    return { path, rel: relative(roots.dir(root as string)!, path).split(sep).join('/') }
+  })
+})
+ipcMain.handle('fs:rename', (_e, root: unknown, rel: unknown, name: unknown) => {
+  const path = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
+  if (path === null || typeof name !== 'string' || path === roots.dir(root as string)) return { error: 'failed' }
+  return fileOp(() => {
+    const to = renameEntry(path, name)
+    if (to !== path) moved(path, to)
+    return { from: path, to }
+  })
+})
+ipcMain.handle('fs:move', (_e, fromRoot: unknown, fromRel: unknown, toRoot: unknown, toDir: unknown) => {
+  const path = typeof fromRoot === 'string' && typeof fromRel === 'string' ? roots.resolve(fromRoot, fromRel) : null
+  const dir = typeof toRoot === 'string' && typeof toDir === 'string' ? roots.resolve(toRoot, toDir) : null
+  if (path === null || dir === null || path === roots.dir(fromRoot as string)) return { error: 'failed' }
+  return fileOp(() => {
+    const to = moveEntry(path, dir)
+    if (to !== path) moved(path, to)
+    return { from: path, to }
+  })
+})
+
 ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
   if (file === null || !win) return
   const folder = existsSync(file) && statSync(file).isDirectory()
+  // The folder new entries go into: this one, or the file's own.
+  const dirRel = folder ? rel : (rel as string).split('/').slice(0, -1).join('/')
   Menu.buildFromTemplate([
+    { label: L().newNoteHere, click: () => send('tree:create', { root, dir: dirRel, kind: 'note' }) },
+    { label: L().newFolder, click: () => send('tree:create', { root, dir: dirRel, kind: 'folder' }) },
+    { type: 'separator' },
+    { label: L().renameEntry, click: () => send('tree:rename', { root, rel }) },
+    { label: L().duplicate, click: () => void fileOp(() => duplicateEntry(file)) },
+    { label: L().trash, click: () => void trash(file) },
+    { type: 'separator' },
     { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
     { label: L().consoleHere, click: () => send('menu:console', folder ? file : dirname(file)) },
-    { type: 'separator' },
     { label: L().reveal, click: () => shell.showItemInFolder(file) },
   ]).popup({ window: win })
 })
@@ -433,6 +509,9 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
     { label: L().rename, click: () => send('ws:edit', { id: project.id, field: 'name' }) },
     { label: L().group, click: () => send('ws:edit', { id: project.id, field: 'group' }) },
     { label: project.hidden ? L().show : L().hide, click: () => update({ hidden: !project.hidden }) },
+    { type: 'separator' },
+    { label: L().newNoteHere, click: () => send('tree:create', { root: roots.register(project.path), dir: '', kind: 'note' }) },
+    { label: L().newFolder, click: () => send('tree:create', { root: roots.register(project.path), dir: '', kind: 'folder' }) },
     { type: 'separator' },
     { label: L().exportFolderPdf, click: () => send('menu:export-folder', project.path) },
     { label: L().consoleHere, click: () => send('menu:console', project.path) },
