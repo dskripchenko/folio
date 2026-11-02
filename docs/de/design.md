@@ -159,6 +159,12 @@ Einfügemarke, **Neue Notiz aus Vorlage…** macht eine Schnellnotiz daraus;
 `{{title}}`, `{{date}}`, `{{time}}` und `{{date:DD.MM.YYYY}}` werden ausgefüllt.
 Beide Ordner werden im Einstellungsmenü gewählt.
 
+`![[Notiz]]` bettet eine andere Notiz in diese ein — gezeichnet wie beim Lesen,
+in einem Rahmen mit ihrem Link; `![[Notiz#Überschrift]]` bettet den Abschnitt
+ein. Eine Einbettung in einer Einbettung wird ebenfalls gezeichnet (drei Ebenen
+tief), eine Notiz, die sich selbst einbettet, bleibt ein Link, und im Editor ist
+eine Einbettung ihr Link, wie geschrieben erhalten.
+
 Andere Namen einer Notiz — `aliases:` in ihren Eigenschaften (`aliases: [Fahrplan]`)
 — gelten in Links als ihr Name: `[[Fahrplan]]` erreicht sie, wenn keine Datei so
 heißt, und `[[` bietet sie an und schreibt `[[Roadmap|Fahrplan]]`.

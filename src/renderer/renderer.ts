@@ -24,6 +24,7 @@ import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
 import { HoverPreview } from './hoverPreview'
+import { watchEmbeds } from './embeds'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
 import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
@@ -845,6 +846,10 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   }
   pane.dataset.path = tab.path ?? ''
   recheckLinks.set(pane, watchWikiLinks(pane, () => (formatOf(tab) === 'markdown' && !tab.version ? tab.path : null), folio.wikiExists))
+  watchEmbeds(pane, () => (formatOf(tab) === 'markdown' ? tab.path : null), {
+    peek: (from, link) => folio.peek(from, link),
+    draw: (note, text) => viewOf('markdown', text, { base: note.base, name: note.name }),
+  })
   button.addEventListener('click', (event) => {
     if ((event.target as HTMLElement).classList.contains('close')) void close(tab)
     else activate(tab)

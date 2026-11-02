@@ -146,6 +146,11 @@ template is a note in the templates folder (`Templates` in Shared):
 a quick note of it; `{{title}}`, `{{date}}`, `{{time}}` and `{{date:DD.MM.YYYY}}`
 are filled in. Both folders are chosen in the settings menu.
 
+`![[Note]]` embeds another note in this one — drawn as when read, in a frame
+with its link; `![[Note#Heading]]` embeds that heading's section. An embed
+inside an embed is drawn too (three deep), a note embedding itself stays a
+link, and in the editor an embed is its link, kept as written.
+
 A note's other names — `aliases:` in its properties (`aliases: [Road map]`) —
 work as its name in links: `[[Road map]]` reaches it when no file is named so,
 and `[[` offers them, writing `[[Roadmap|Road map]]`.
