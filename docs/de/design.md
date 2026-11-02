@@ -159,6 +159,14 @@ Einfügemarke, **Neue Notiz aus Vorlage…** macht eine Schnellnotiz daraus;
 `{{title}}`, `{{date}}`, `{{time}}` und `{{date:DD.MM.YYYY}}` werden ausgefüllt.
 Beide Ordner werden im Einstellungsmenü gewählt.
 
+### Lesezeichen
+
+Eine Datei griffbereit: **Zu Lesezeichen** im Menü eines Tabs, im Menü einer
+Datei im Baum oder unter den Befehlen. Die Lesezeichen stehen über
+„Gemeinsam“; ein Klick öffnet eines, sein Menü entfernt es. Ein Lesezeichen
+folgt seiner Datei, wenn sie in folio umbenannt oder verschoben wird; eines,
+dessen Datei anderswo verschwunden ist, bleibt blass stehen.
+
 ### Vorschau
 
 Ruht der Zeiger auf einem `[[Link]]` oder einem Link zu einer Notiz, erscheint

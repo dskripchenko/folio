@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session as electronSession, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
 import {
@@ -269,6 +269,7 @@ function workspaceView() {
       if (!p.hidden) watcher.add(root, dir)
       return { ...p, path: dir, root, missing: !existsSync(p.path) }
     }),
+    bookmarks: workspace.bookmarks().map((path) => ({ path, name: basename(path), missing: !existsSync(path) })),
   }
 }
 
@@ -277,6 +278,13 @@ function workspaceChanged(): void {
 }
 
 ipcMain.handle('ws:get', () => workspaceView())
+/** A file kept at hand in the sidebar's bookmarks, or let go. */
+ipcMain.handle('ws:bookmark', (_e, path: unknown, on: unknown) => {
+  if (typeof path === 'string' && typeof on === 'boolean') workspace.setBookmark(path, on)
+  const view = workspaceView()
+  send('ws:changed', view)
+  return view
+})
 ipcMain.handle('ws:add-project', async () => {
   if (!win) return workspaceView()
   const result = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'multiSelections', 'createDirectory'] })
@@ -428,6 +436,7 @@ function fileOp<T>(op: () => T): T | { error: string } {
 
 /** Moved or renamed: open documents follow, the histories take both sides. */
 function moved(from: string, to: string): void {
+  if (workspace.moveBookmarks(from, to)) workspaceChanged()
   send('fs:moved', { from, to })
   for (const p of [from, to]) if (workspace.autoCommits(p) && statSync(to).isFile()) autoCommit.saved(p)
 }
@@ -756,6 +765,11 @@ ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
     { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
     { label: L().consoleHere, click: () => send('menu:console', folder ? file : dirname(file)) },
     { label: L().reveal, click: () => shell.showItemInFolder(file) },
+    ...(folder
+      ? []
+      : [{ type: 'separator' as const }, workspace.bookmarks().includes(resolve(file))
+          ? { label: L().unbookmark, click: () => { workspace.setBookmark(file, false); workspaceChanged() } }
+          : { label: L().bookmark, click: () => { workspace.setBookmark(file, true); workspaceChanged() } }]),
   ]).popup({ window: win })
 })
 /** A project's menu, native: pin, rename, group, hide, reveal, remove. */

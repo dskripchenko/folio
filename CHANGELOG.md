@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Bookmarks: files kept at hand above Shared — added from a tab, the tree or
+  the commands; they follow a rename or a move.
 - Daily notes (`Cmd/Ctrl+Shift+D`, the days before and after) and templates
   (inserted at the caret, or a new note from one; `{{title}}`, `{{date}}`,
   `{{time}}`, `{{date:FORMAT}}`); their folders chosen in the settings menu.
