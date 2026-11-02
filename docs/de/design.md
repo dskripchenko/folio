@@ -532,6 +532,23 @@ Den Ordner des Programms zu löschen entfernt daher alles, was es je geschrieben
 hat. Die Kehrseite: Der Ordner muss beschreibbar sein — entpacken Sie folio
 nicht dorthin, wo nur ein Administrator schreiben darf.
 
+## Aktualisierungen
+
+Einmal am Tag beim Start schaut folio nach der neuesten Version auf GitHub.
+Eine neuere wird nach `folio-data/update/` geladen, gegen die daneben
+veröffentlichte `.sha256` geprüft und dort entpackt; sie ersetzt das Programm,
+wenn folio geschlossen wird — `.app` oder AppImage werden an ihren Platz
+umbenannt, unter Windows werden die Dateien des Ordners überschrieben, sobald
+folio beendet ist (`folio-data/` bleibt unberührt) — oder sofort mit
+**Neu starten und aktualisieren** in den Einstellungen. Im Hintergrund läuft
+nichts. **Nach Updates suchen** prüft jetzt; **Täglich nach Updates suchen**
+schaltet die tägliche Prüfung ab.
+
+Die Prüfsumme belegt, dass das Archiv das in der Version genannte und
+vollständig ist; sie kommt über TLS aus derselben Version und belegt daher
+nicht, wer die Version erstellt hat. Dafür gibt es die Herkunftsbestätigung
+des Builds: `gh attestation verify folio-….zip --repo dskripchenko/folio`.
+
 ## Ein Fenster
 
 Ein zweiter Start holt das laufende folio nach vorn, statt eine zweite Kopie zu

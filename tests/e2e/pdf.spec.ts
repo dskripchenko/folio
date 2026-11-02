@@ -157,3 +157,20 @@ test('a note as slides: shown one at a time, keys and clicks go through them; it
     await app.close()
   }
 })
+
+test('a document with every widget exported as PDF: links inside drawings left as drawn', async () => {
+  const f = fixture()
+  const app = await electron.launch({ args: ['.', f.doc], env: { ...process.env, FOLIO_DATA: f.data } })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('article.doc:not([hidden]) svg.dg')).toHaveCount(3, { timeout: 30_000 })
+    const file = join(f.root, 'everything.pdf')
+    await saveAs(app, file)
+    await win.keyboard.press(`${mod}+Shift+p`)
+    await exportWith(win, {})
+    await expect(win.getByTestId('notice')).toContainText('everything.pdf')
+    expect(readFileSync(file).subarray(0, 5).toString()).toBe('%PDF-')
+  } finally {
+    await app.close()
+  }
+})

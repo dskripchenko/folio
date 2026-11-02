@@ -34,6 +34,8 @@ export interface WorkspaceData {
   bookmarks?: string[]
   /** Spelling checked as text is written; unset — on where the system checks it (macOS, Windows). */
   spellcheck?: boolean
+  /** A new version looked for once a day at start; unset — on. */
+  updates?: boolean
 }
 
 export class Workspace {
@@ -48,6 +50,7 @@ export class Workspace {
       ...(loaded.dailyFolder ? { dailyFolder: loaded.dailyFolder } : {}),
       ...(loaded.templatesFolder ? { templatesFolder: loaded.templatesFolder } : {}),
       ...(typeof loaded.spellcheck === 'boolean' ? { spellcheck: loaded.spellcheck } : {}),
+      ...(typeof loaded.updates === 'boolean' ? { updates: loaded.updates } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
@@ -95,6 +98,15 @@ export class Workspace {
 
   setSpellcheck(on: boolean): void {
     this.data.spellcheck = on
+    this.save()
+  }
+
+  updates(): boolean {
+    return this.data.updates ?? true
+  }
+
+  setUpdates(on: boolean): void {
+    this.data.updates = on
     this.save()
   }
 

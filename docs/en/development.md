@@ -23,6 +23,22 @@ directory; `FOLIO_DATA=/some/dir pnpm start` puts it elsewhere. `FOLIO_COMMIT_PA
 On Linux without a display, run the end-to-end tests under a virtual one:
 `xvfb-run --auto-servernum pnpm test:e2e`.
 
+## Portable builds
+
+```sh
+pnpm dist           # build, then the archives for this system into release/
+node scripts/checksums.mjs release
+FOLIO_APP=… FOLIO_ARCHIVE=… pnpm exec playwright test -c playwright.package.config.ts --workers=1
+```
+
+`electron-builder.yml` makes a zip on macOS (Apple Silicon and Intel, signed
+ad hoc) and Windows and an AppImage on Linux. `tests/package/` runs the
+unpacked program: every widget, a console, a PDF, its data beside it, and an
+update put in its place (`FOLIO_UPDATE_URL` points the updater at a local
+server). The release workflow does all of it on the three systems; a `v*` tag
+whose version matches `package.json` publishes the archives with their
+checksums and provenance.
+
 ## Layout
 
 | Path | What |

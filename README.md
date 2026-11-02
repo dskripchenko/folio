@@ -62,10 +62,28 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
   `folio-data/` beside the program, not into the user profile; deleting the
   folder removes folio completely. No registry, no file associations, no
   background services.
+- **Updates replace the program in its folder**, once a day at start or when
+  asked: the release's archive downloaded, checked against its `.sha256`, and
+  put in place when folio closes. No background service; it can be turned off.
 - **A document is not trusted.** It sees only the files of its own folder, runs
   no code with access to the system, and reaches the network — "Try it" in an
   API reference, a picture by URL — only after you allow it for that file or
   folder.
+
+## Honest limits
+
+- **Size.** Electron brings its own Chromium: about 130 MB an archive. "Light"
+  here means no installation, services or traces in the system, not megabytes.
+- **No publisher's signature.** macOS says it cannot check the developer: open
+  folio from its context menu (Open) the first time, or remove the quarantine
+  with `xattr -dr com.apple.quarantine folio.app`. Windows SmartScreen says
+  "unknown publisher": More info → Run anyway. What each archive is can be
+  checked by its `.sha256` and its provenance
+  (`gh attestation verify <archive> --repo dskripchenko/folio`).
+- **Linux.** An AppImage needs FUSE 2 (`libfuse2`), or run it with
+  `--appimage-extract-and-run`. Where unprivileged user namespaces are
+  restricted (Ubuntu 24.04 and later), Chromium's sandbox cannot start: allow
+  them for folio with an AppArmor profile, or run it with `--no-sandbox`.
 
 ## Plan
 
@@ -79,7 +97,7 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 5 | Diagram and API files on their own, in their editors — **done** |
 | 6 | A printed form for every widget (in embed) — **done**: File → Print |
 | 7 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF — **done** |
-| 8 | Portable builds and updating itself |
+| 8 | Portable builds and updating itself — **done** |
 | 9 | Releases: checksums, provenance, a virus scan report — 1.0 |
 
 ## Development

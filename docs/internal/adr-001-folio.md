@@ -360,7 +360,7 @@ macOS и Windows, на Linux он собирается при установке
 | 5 | Файлы схем напрямую: конструкторы embed для .bpmn/.dmn/.drawio/OpenAPI/AsyncAPI, исходник+превью для текстовых нотаций (**сделано**: drawio — только просмотр, редактора в embed нет; API без сервера — try-it выключен, base-url http://localhost) | |
 | 6 | **embed: печатный вид всех виджетов** (релиз embed/кита) — **сделано**: embed 1.10.0/1.10.1 (`DskEmbed.print.prepare`, формы печати), openapi 1.3.0 (`printView`), ui 1.23.0/1.23.1 (print-стили); в folio — Файл → Печать | печать страницы со всеми виджетами без интерактивных панелей |
 | 7 | PDF: настройки страницы, колонтитулы, оглавление и закладки, папка в один PDF (**сделано**: скрытое окно + printToPDF, generateDocumentOutline/tagged; оглавление ссылками без номеров страниц — Chromium их не знает; embed 1.10.2 — свои формы не трогаются beforeprint) | проверка PDF (pdftotext/pdfimages) в CI |
-| 8 | Portable-сборка: zip/zip/AppImage, `folio-data/` рядом, самозамена | запуск из архива без прав администратора на трёх ОС |
+| 8 | Portable-сборка: zip/zip/AppImage, `folio-data/` рядом, самозамена — **сделано**: `electron-builder.yml` (mac zip arm64+x64 ad hoc, win zip x64, AppImage x64, node-pty вне asar без пересборки — N-API), `src/main/update.ts` (GitHub latest → `.sha256` → `folio-data/update/` → подмена при выходе: rename `.app`/AppImage, на Windows отсоединённый PowerShell + robocopy без `folio-data`), `tests/package/` (смоук и самообновление распакованной программы), `release.yml`/`virustotal.yml` | запуск из архива без прав администратора на трёх ОС |
 | 9 | Выпуск: sha256, Sigstore, VirusTotal, бейджи, 1.0.0 | релиз с отчётом сканирования |
 
 Оценка: этап 6 — самый большой (L, в embed и ките); 3, 4, 7, 8 — M/L;

@@ -22,27 +22,29 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "pretest:e2e": "node -e \"require('electron')\"",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "dist": "pnpm build && electron-builder --publish never"
   },
   "devDependencies": {
+    "@dskripchenko/diagrams": "^1.4.0",
     "@dskripchenko/embed": "1.18.0",
+    "@dskripchenko/syntax": "^0.3.0",
+    "@dskripchenko/terminal": "^0.2.0",
     "@eslint/js": "10.0.1",
     "@fontsource/stix-two-math": "5.3.0",
     "@playwright/test": "1.64.1",
     "@types/node": "^22.20.5",
     "electron": "44.9.0",
+    "electron-builder": "26.17.0",
     "esbuild": "0.28.2",
     "eslint": "10.14.0",
+    "isomorphic-git": "1.44.3",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
     "vitest": "5.0.5"
   },
   "type": "module",
   "dependencies": {
-    "@dskripchenko/diagrams": "^1.4.0",
-    "@dskripchenko/syntax": "^0.3.0",
-    "@dskripchenko/terminal": "^0.2.0",
-    "isomorphic-git": "1.44.3",
     "node-pty": "^1.1.0"
   }
 }

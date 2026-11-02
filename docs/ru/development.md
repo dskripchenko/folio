@@ -23,6 +23,22 @@ pnpm test:e2e       # запустить собранное приложение
 На Linux без дисплея сквозные тесты запускают под виртуальным:
 `xvfb-run --auto-servernum pnpm test:e2e`.
 
+## Portable-сборки
+
+```sh
+pnpm dist           # сборка, затем архивы для этой системы в release/
+node scripts/checksums.mjs release
+FOLIO_APP=… FOLIO_ARCHIVE=… pnpm exec playwright test -c playwright.package.config.ts --workers=1
+```
+
+`electron-builder.yml` делает zip на macOS (Apple Silicon и Intel, подпись ad
+hoc) и Windows и AppImage на Linux. `tests/package/` запускает распакованную
+программу: все виджеты, консоль, PDF, данные рядом и обновление на её место
+(`FOLIO_UPDATE_URL` направляет обновление на локальный сервер). Workflow
+release делает всё это на трёх системах; тег `v*`, совпадающий с версией в
+`package.json`, публикует архивы с контрольными суммами и подписью
+происхождения.
+
 ## Раскладка
 
 | Путь | Что |
