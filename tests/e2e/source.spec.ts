@@ -23,6 +23,11 @@ test('the Markdown source in colour; an edit in the visual mode changes only the
     await expect(shade).toBeVisible()
     await expect(shade.locator('.uid-code__tok--heading').first()).toContainText('Title')
     expect(await shade.textContent()).toBe((await pane.locator('textarea.dsk-md__source').inputValue()) + '\n')
+    // A link in parts: its address underlined apart from its text.
+    await pane.locator('textarea.dsk-md__source').fill('See [the docs](https://example.com/docs).\n')
+    await expect(shade.locator('.uid-code__tok--link')).toHaveText('https://example.com/docs')
+    await expect(shade.locator('.uid-code__tok--string')).toHaveText('the docs')
+    await pane.locator('textarea.dsk-md__source').fill(text)
 
     // An edit in the visual mode: the rest of the file is as it was.
     await viewMode(win, 'visual')
