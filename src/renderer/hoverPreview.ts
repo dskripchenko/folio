@@ -35,6 +35,8 @@ export class HoverPreview {
   /** The link waited on, for the delay. */
   private waitingFor: HTMLAnchorElement | null = null
   private pending: ReturnType<typeof setTimeout> | null = null
+  /** Where the pointer was when it came onto the link. */
+  private point = { x: 0, y: 0 }
   private leaving: ReturnType<typeof setTimeout> | null = null
   private note: Peeked | null = null
   private seq = 0
@@ -67,6 +69,7 @@ export class HoverPreview {
       // In the editor a link is text being written: the preview only with ⌘ / Ctrl.
       if (a.closest('[contenteditable="true"]') && !(e.metaKey || e.ctrlKey)) return
       this.cancel()
+      this.point = { x: e.clientX, y: e.clientY }
       this.waitingFor = a
       this.pending = setTimeout(() => void this.show(a, link), DELAY)
     })
@@ -101,7 +104,14 @@ export class HoverPreview {
     this.waitingFor = null
     const seq = ++this.seq
     const note = await this.deps.peek(this.deps.fromOf(a), link)
-    if (seq !== this.seq || !note || !a.isConnected) return
+    if (seq !== this.seq || !note) return
+    // The document drawn again meanwhile (a slow first draw): the same link, now under the pointer.
+    if (!a.isConnected) {
+      const again = document.elementFromPoint(this.point.x, this.point.y)?.closest<HTMLAnchorElement>('a[href]')
+      const same = again ? linkOf(again) : null
+      if (!again || !same || same.wiki !== link.wiki || same.url !== link.url) return
+      a = again
+    }
     this.note = note
     this.shownFor = a
     const body = document.createElement('div')

@@ -16,6 +16,8 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
     const pane = win.locator('article.doc:not([hidden])')
     await expect(pane.locator('h1', { hasText: 'Index' })).toBeVisible()
     const preview = win.getByTestId('hover-preview')
+    // The note drawn and its links checked: what the pointer will rest on is settled.
+    await expect(pane.locator('a[data-wikilink="Nowhere"]')).toHaveClass(/is-missing/)
 
     // A rest on the [[link]]: the note, at the heading it names.
     await pane.locator('a[data-wikilink="Plan#Goals"]').hover()
