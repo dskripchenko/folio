@@ -7,7 +7,7 @@ mkdirSync('dist/renderer', { recursive: true })
 
 const common = { bundle: true, sourcemap: true, logLevel: 'warning', target: 'es2023' }
 
-await build({ ...common, entryPoints: ['src/main/main.ts'], outfile: 'dist/main.cjs', platform: 'node', format: 'cjs', external: ['electron', 'node-pty'] })
+await build({ ...common, entryPoints: ['src/main/main.ts'], outfile: 'dist/main.cjs', platform: 'node', format: 'cjs', external: ['electron', 'node-pty'], loader: { '.zsh': 'text', '.bash': 'text', '.ps1': 'text' } })
 await build({ ...common, entryPoints: ['src/preload/preload.ts'], outfile: 'dist/preload.cjs', platform: 'node', format: 'cjs', external: ['electron'] })
 await build({ ...common, entryPoints: ['src/renderer/renderer.ts'], outfile: 'dist/renderer/renderer.js', platform: 'browser', format: 'iife' })
 // The print page: documents laid out for a PDF in a hidden window (stage 7).

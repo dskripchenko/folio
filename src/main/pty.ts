@@ -8,6 +8,7 @@ import { chmodSync, existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { IPty } from 'node-pty'
+import { integrate } from './shellIntegration'
 
 export interface ConsoleSink {
   data(id: number, data: string): void
@@ -67,7 +68,11 @@ export class Consoles {
   private next = 1
   private fixed = false
 
-  constructor(private readonly sink: ConsoleSink) {}
+  constructor(
+    private readonly sink: ConsoleSink,
+    /** Where the shell integration's scripts are written (folio's data folder). */
+    private readonly scripts: string,
+  ) {}
 
   /** A shell in a folder; its id, or an error people can read. */
   open(cwd: string, cols: number, rows: number): { id: number } | { error: string } {
@@ -78,8 +83,12 @@ export class Consoles {
     // Loaded at the first console: a window that never opens one does not load a native module.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pty = require('node-pty') as typeof import('node-pty')
-    const { file, args } = shellOf()
+    const shell = shellOf()
     const env = shellEnv(process.env)
+    const integration = integrate(shell.file, shell.args, this.scripts, env)
+    const file = shell.file
+    const args = integration?.args ?? shell.args
+    if (integration) Object.assign(env, integration.env)
     Object.assign(env, { TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'folio' })
     env.LANG ??= 'en_US.UTF-8'
     let p: IPty
