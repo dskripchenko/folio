@@ -32,6 +32,8 @@ const LEAVE = 250
 export class HoverPreview {
   readonly el: HTMLElement
   private shownFor: HTMLAnchorElement | null = null
+  /** The link waited on, for the delay. */
+  private waitingFor: HTMLAnchorElement | null = null
   private pending: ReturnType<typeof setTimeout> | null = null
   private leaving: ReturnType<typeof setTimeout> | null = null
   private note: Peeked | null = null
@@ -58,19 +60,25 @@ export class HoverPreview {
   attach(area: HTMLElement): void {
     area.addEventListener('mouseover', (e) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
-      if (!a || a === this.shownFor) return
+      // The pointer still over the same link (moving over its own parts): the wait goes on.
+      if (!a || a === this.shownFor || a === this.waitingFor) return
       const link = linkOf(a)
       if (!link) return
       // In the editor a link is text being written: the preview only with ⌘ / Ctrl.
       if (a.closest('[contenteditable="true"]') && !(e.metaKey || e.ctrlKey)) return
       this.cancel()
+      this.waitingFor = a
       this.pending = setTimeout(() => void this.show(a, link), DELAY)
     })
     area.addEventListener('mouseout', (e) => {
       const a = (e.target as HTMLElement).closest('a[href]')
-      if (!a) return
-      if (this.pending) clearTimeout(this.pending)
-      this.pending = null
+      // Leaving the link, not moving between its parts.
+      if (!a || (e.relatedTarget instanceof Node && a.contains(e.relatedTarget))) return
+      if (a === this.waitingFor) {
+        if (this.pending) clearTimeout(this.pending)
+        this.pending = null
+        this.waitingFor = null
+      }
       if (a === this.shownFor) this.leaveSoon()
     })
   }
@@ -83,8 +91,14 @@ export class HoverPreview {
     this.note = null
   }
 
+  /** The view scrolled: a shown preview no longer sits by its link. */
+  hideShown(): void {
+    if (!this.el.hidden) this.hide()
+  }
+
   private async show(a: HTMLAnchorElement, link: { wiki?: string; url?: string }): Promise<void> {
     this.pending = null
+    this.waitingFor = null
     const seq = ++this.seq
     const note = await this.deps.peek(this.deps.fromOf(a), link)
     if (seq !== this.seq || !note || !a.isConnected) return
@@ -126,6 +140,7 @@ export class HoverPreview {
     if (this.leaving) clearTimeout(this.leaving)
     this.pending = null
     this.leaving = null
+    this.waitingFor = null
     this.seq++
   }
 }

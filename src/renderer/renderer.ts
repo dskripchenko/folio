@@ -1111,9 +1111,9 @@ const preview = new HoverPreview({
 document.body.append(preview.el)
 preview.attach(viewEl)
 preview.attach(besideEl)
-// A tab switched or the view scrolled: the preview of what was under the pointer goes.
-viewEl.addEventListener('scroll', () => preview.hide(), { passive: true })
-besideEl.addEventListener('scroll', () => preview.hide(), { passive: true })
+// The view scrolled: a preview shown no longer sits by its link.
+viewEl.addEventListener('scroll', () => preview.hideShown(), { passive: true })
+besideEl.addEventListener('scroll', () => preview.hideShown(), { passive: true })
 
 // A click or focus in a view puts its document in use.
 for (const [el, which] of [[viewEl, () => mainTab], [besideEl, () => beside]] as const) {
