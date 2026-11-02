@@ -212,6 +212,13 @@ export interface FolioBridge {
   wikiPanel(note: string, text: string): Promise<LinksData | null>
   /** The tags of the notes in a note's root (Shared without one), each with its notes. */
   tagIndex(note: string | null): Promise<{ tag: string; notes: { rel: string; path: string }[] }[]>
+  /** Today's daily note (made when missing), or the one before / after a daily note's day. */
+  dailyOpen(from: string | null, step: 0 | -1 | 1): Promise<OpenResult>
+  templates(): Promise<{ name: string; path: string }[]>
+  /** A template's text, its fields filled. */
+  fillTemplate(path: string, title: string): Promise<string | null>
+  folders(): Promise<{ daily: string; templates: string }>
+  chooseFolder(kind: 'daily' | 'templates'): Promise<string | null>
   /** The note a link reaches, read without opening it: for a preview. Null for no note. */
   peek(from: string | null, link: { wiki?: string; url?: string }): Promise<{ path: string; name: string; text: string; base: string; heading: string | null } | null>
   /** A mention made a link; false when the note's text has changed meanwhile. */

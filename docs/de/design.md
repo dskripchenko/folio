@@ -147,6 +147,18 @@ nennen; **Verlinken** macht aus einer solchen Erwähnung `[[Notiz]]` (die
 Schreibweise bleibt als Text). Ein Klick auf eine Zeile öffnet die Notiz dort.
 Das Panel folgt der sichtbaren Notiz und dem Getippten.
 
+### Tagesnotizen und Vorlagen
+
+`Cmd/Strg+Umschalt+D` (oder **Notiz des Tages** unter den Befehlen) öffnet die
+Notiz des Tages — `JJJJ-MM-TT.md` im Ordner der Tagesnotizen (`Daily` in
+„Gemeinsam“, sofern kein anderer gewählt ist) —, bei Bedarf angelegt, aus der
+Vorlage `Daily`, wenn es sie gibt. **Die Tagesnotiz davor / danach** führt zur
+nächsten vorhandenen. Eine Vorlage ist eine Notiz im Vorlagenordner
+(`Templates` in „Gemeinsam“): **Vorlage einfügen…** setzt sie an die
+Einfügemarke, **Neue Notiz aus Vorlage…** macht eine Schnellnotiz daraus;
+`{{title}}`, `{{date}}`, `{{time}}` und `{{date:DD.MM.YYYY}}` werden ausgefüllt.
+Beide Ordner werden im Einstellungsmenü gewählt.
+
 ### Vorschau
 
 Ruht der Zeiger auf einem `[[Link]]` oder einem Link zu einer Notiz, erscheint
@@ -329,6 +341,7 @@ Pfade.
 | `Cmd/Strg+B` | Seitenleiste |
 | `Cmd/Strg+T` | zu einer Datei nach Namen gehen |
 | `Cmd/Strg+K`, `F1` | die Befehle: jede Aktion nach ihrem Namen |
+| `Cmd/Strg+Umschalt+D` | die Notiz des Tages |
 | `Cmd/Strg+\` | das Dokument neben der Hauptansicht, oder die Seitenansicht schließen |
 | `Cmd/Strg+Umschalt+F` | in den Dateien suchen |
 | `Cmd/Strg+F` | im Dokument suchen |
