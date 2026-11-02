@@ -27,6 +27,9 @@ export interface WorkspaceData {
   /** Commit saved files of Shared to its history. */
   sharedAutoCommit?: boolean
   projects: Project[]
+  /** Where daily notes go, and where templates are; null — `Daily` and `Templates` in Shared. */
+  dailyFolder?: string | null
+  templatesFolder?: string | null
 }
 
 export class Workspace {
@@ -38,6 +41,8 @@ export class Workspace {
       version: 1,
       shared: loaded.shared ?? null,
       ...(loaded.sharedAutoCommit !== undefined ? { sharedAutoCommit: loaded.sharedAutoCommit } : {}),
+      ...(loaded.dailyFolder ? { dailyFolder: loaded.dailyFolder } : {}),
+      ...(loaded.templatesFolder ? { templatesFolder: loaded.templatesFolder } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
   }
@@ -60,6 +65,26 @@ export class Workspace {
 
   setShared(path: string | null): void {
     this.data.shared = path === null ? null : resolve(path)
+    this.save()
+  }
+
+  /** The daily notes' folder (not made here: a daily note makes it). */
+  dailyFolder(): string {
+    return this.data.dailyFolder ?? join(this.shared(), 'Daily')
+  }
+
+  setDailyFolder(path: string | null): void {
+    this.data.dailyFolder = path === null ? null : resolve(path)
+    this.save()
+  }
+
+  /** The templates' folder. */
+  templatesFolder(): string {
+    return this.data.templatesFolder ?? join(this.shared(), 'Templates')
+  }
+
+  setTemplatesFolder(path: string | null): void {
+    this.data.templatesFolder = path === null ? null : resolve(path)
     this.save()
   }
 

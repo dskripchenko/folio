@@ -135,6 +135,17 @@ makes it — and the notes that name it without a link; **Link** turns such a
 mention into `[[Note]]` (the spelling kept as its text). A line clicked opens
 its note there. The panel follows the note in view and what is typed.
 
+### Daily notes and templates
+
+`Cmd/Ctrl+Shift+D` (or **Today's note** among the commands) opens the note of
+the day — `YYYY-MM-DD.md` in the daily notes folder (`Daily` in Shared unless
+chosen otherwise) — made when missing, from the `Daily` template when there is
+one. **The daily note before / after** goes to the nearest one that exists. A
+template is a note in the templates folder (`Templates` in Shared):
+**Insert a template…** puts it at the caret, **New note from a template…** makes
+a quick note of it; `{{title}}`, `{{date}}`, `{{time}}` and `{{date:DD.MM.YYYY}}`
+are filled in. Both folders are chosen in the settings menu.
+
 ### Previews
 
 The pointer resting on a `[[link]]` or a link to a note shows the note in a
@@ -300,6 +311,7 @@ relative paths.
 | `Cmd/Ctrl+B` | the sidebar |
 | `Cmd/Ctrl+T` | go to a file by its name |
 | `Cmd/Ctrl+K`, `F1` | the commands: any action by its name |
+| `Cmd/Ctrl+Shift+D` | today's note |
 | `Cmd/Ctrl+\` | the document beside the main view, or the side view closed |
 | `Cmd/Ctrl+Shift+F` | search the files |
 | `Cmd/Ctrl+F` | find in the document |

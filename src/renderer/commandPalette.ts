@@ -34,6 +34,8 @@ export class CommandPalette {
   private shown: Command[] = []
   private selected = 0
   private returnFocus: Element | null = null
+  /** A list to choose from instead of the commands (a template, say), and its prompt. */
+  private choices: { items: Command[]; placeholder: string } | null = null
 
   constructor(
     private text: PaletteText,
@@ -91,8 +93,16 @@ export class CommandPalette {
     return !this.el.hidden
   }
 
+  /** The palette as a list to choose from: the items given, the prompt for them; Escape chooses nothing. */
+  pick(items: Command[], placeholder: string): void {
+    this.choices = { items, placeholder }
+    this.el.hidden = true
+    this.open()
+  }
+
   open(): void {
     if (!this.el.hidden) return this.input.select()
+    this.input.placeholder = this.choices?.placeholder ?? this.text.placeholder
     this.returnFocus = document.activeElement
     this.el.hidden = false
     this.pointer = null
@@ -104,10 +114,13 @@ export class CommandPalette {
   close(): void {
     if (this.el.hidden) return
     this.el.hidden = true
+    this.choices = null
+    this.input.placeholder = this.text.placeholder
     if (this.returnFocus instanceof HTMLElement) this.returnFocus.focus()
   }
 
   private available(): Command[] {
+    if (this.choices) return this.choices.items
     const all = this.commands().filter((c) => !c.when || c.when())
     const recent = recentIds()
     const order = (c: Command): number => {
@@ -186,7 +199,7 @@ export class CommandPalette {
   private choose(index: number): void {
     const command = this.shown[index]
     if (!command) return
-    remember(command.id)
+    if (!this.choices) remember(command.id)
     this.close()
     command.run()
   }

@@ -50,6 +50,7 @@ import { Watcher } from './watcher'
 import { backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { resolveInside } from './paths'
 import { tagIndex } from './tags'
+import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
 import { Workspace, type Project } from './workspace'
 
 // Before anything reads it: settings, caches and session data live beside the program.
@@ -646,6 +647,60 @@ ipcMain.handle('wiki:panel', async (_e, note: unknown, text: unknown) => {
     incoming: backlinksOf(rel, notes, files).map((b) => ({ ...b, path: abs(b.rel) })),
     mentions: mentionsOf(rel, notes).map((m) => ({ ...m, path: abs(m.rel) })),
   }
+})
+
+// Daily notes and templates.
+
+/**
+ * A daily note: today's (made when missing — from the `Daily` template when
+ * there is one), or the one before or after the day of a daily note (`step`).
+ */
+ipcMain.handle('daily:open', (_e, from: unknown, step: unknown) => {
+  const folder = workspace.dailyFolder()
+  if (step === -1 || step === 1) {
+    const day = (typeof from === 'string' ? dayOf(from) : null) ?? new Date()
+    const name = neighbourDaily(folder, day, step)
+    return name === null ? { error: 'none', path: '' } : open(join(folder, name))
+  }
+  const now = new Date()
+  const file = join(folder, dailyName(now))
+  if (!existsSync(file)) {
+    const title = dailyName(now).replace(/\.md$/, '')
+    const template = join(workspace.templatesFolder(), 'Daily.md')
+    const text = existsSync(template) ? fillTemplate(readFileSync(template, 'utf8'), { title, now }) : `# ${title}\n\n`
+    try {
+      mkdirSync(folder, { recursive: true })
+      writeFileSync(file, text, { flag: 'wx' })
+      if (workspace.autoCommits(file)) autoCommit.saved(file)
+    } catch {
+      // Made meanwhile (another window): opened as it is.
+    }
+  }
+  return open(file)
+})
+
+ipcMain.handle('templates:list', () => {
+  const folder = workspace.templatesFolder()
+  return templatesIn(folder).map((t) => ({ name: t.name, path: join(folder, t.file) }))
+})
+
+/** A template's text with its fields filled (the title given, the date and time now). */
+ipcMain.handle('templates:fill', (_e, path: unknown, title: unknown) => {
+  if (typeof path !== 'string' || !path.startsWith(workspace.templatesFolder() + sep) || !existsSync(path)) return null
+  return fillTemplate(readFileSync(path, 'utf8'), { title: typeof title === 'string' ? title : '', now: new Date() })
+})
+
+ipcMain.handle('folders:get', () => ({ daily: workspace.dailyFolder(), templates: workspace.templatesFolder() }))
+
+/** The daily notes' or the templates' folder chosen anew. */
+ipcMain.handle('folders:choose', async (_e, kind: unknown) => {
+  if ((kind !== 'daily' && kind !== 'templates') || !win) return null
+  const current = kind === 'daily' ? workspace.dailyFolder() : workspace.templatesFolder()
+  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], defaultPath: existsSync(current) ? current : workspace.shared() })
+  if (result.canceled || !result.filePaths[0]) return null
+  if (kind === 'daily') workspace.setDailyFolder(result.filePaths[0])
+  else workspace.setTemplatesFolder(result.filePaths[0])
+  return result.filePaths[0]
 })
 
 /** The tags of the notes in a note's root (Shared when no note is given), each with its notes. */
