@@ -49,6 +49,7 @@ import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
 import { backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { resolveInside } from './paths'
+import { tagIndex } from './tags'
 import { Workspace, type Project } from './workspace'
 
 // Before anything reads it: settings, caches and session data live beside the program.
@@ -615,6 +616,13 @@ ipcMain.handle('wiki:panel', async (_e, note: unknown, text: unknown) => {
     incoming: backlinksOf(rel, notes, files).map((b) => ({ ...b, path: abs(b.rel) })),
     mentions: mentionsOf(rel, notes).map((m) => ({ ...m, path: abs(m.rel) })),
   }
+})
+
+/** The tags of the notes in a note's root (Shared when no note is given), each with its notes. */
+ipcMain.handle('tags:index', async (_e, note: unknown) => {
+  const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()
+  const notes = await notesIn(dir, await filesOf(dir))
+  return tagIndex(notes).map((t) => ({ tag: t.tag, notes: t.notes.map((rel) => ({ rel, path: join(dir, ...rel.split('/')) })) }))
 })
 
 /** A mention made a link in the note that names it; false when its text has changed meanwhile. */

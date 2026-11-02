@@ -404,6 +404,23 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .links-make { flex: none; padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); font: inherit; font-size: 11px; cursor: pointer; }
 .links-make:disabled { opacity: 0.5; cursor: default; }
 @media print { .links-panel { display: none !important; } }
+.tags-panel { width: 280px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
+.tags-panel[hidden] { display: none; }
+.tags-panel header { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 6px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.tags-filter { margin: 0 10px 6px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; outline: none; }
+.tags-filter:focus { border-color: var(--accent); }
+.tags-list { flex: 1; min-height: 0; overflow: auto; padding: 0 4px 12px; }
+.tags-none { margin: 6px 10px; color: var(--muted); font-size: 12px; }
+.tags-row, .tags-note { display: flex; align-items: center; gap: 6px; width: 100%; padding: 3px 8px; border: 0; border-radius: 5px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.tags-row:hover, .tags-note:hover { background: color-mix(in srgb, var(--line) 60%, transparent); }
+.tags-row svg { flex: none; color: var(--muted); transition: transform 0.1s; }
+.tags-row[aria-expanded="true"] svg { transform: rotate(90deg); }
+.tags-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
+.tags-count { flex: none; padding: 0 6px; border-radius: 8px; background: color-mix(in srgb, var(--line) 80%, transparent); color: var(--muted); font-size: 11px; }
+.tags-notes { margin: 0; padding: 0; list-style: none; }
+.tags-note { color: var(--fg); font-size: 12px; }
+.tags-note svg { flex: none; color: var(--muted); }
+@media print { .tags-panel { display: none !important; } }
 
 .search-toggle { flex: none; display: grid; place-items: center; width: 20px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; }
 .search-toggle svg { transition: transform 0.1s; }
