@@ -712,6 +712,33 @@ ipcMain.handle('folders:choose', async (_e, kind: unknown) => {
   return result.filePaths[0]
 })
 
+/**
+ * The graph of a note's root (Shared without one): its notes, and the links
+ * between them (`[[…]]` and Markdown links to notes), each pair once.
+ */
+ipcMain.handle('graph:data', async (_e, note: unknown) => {
+  const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()
+  const files = await filesOf(dir)
+  const notes = await notesIn(dir, files)
+  const index = new Map(notes.map((n, i) => [n.rel, i]))
+  const pairs = new Set<string>()
+  const edges: [number, number][] = []
+  notes.forEach((n, i) => {
+    for (const link of linksOf(n.text, n.rel, files)) {
+      const j = link.target === null ? undefined : index.get(link.target)
+      if (j === undefined || j === i) continue
+      const key = i < j ? `${i}:${j}` : `${j}:${i}`
+      if (pairs.has(key)) continue
+      pairs.add(key)
+      edges.push([i, j])
+    }
+  })
+  return {
+    nodes: notes.map((n) => ({ rel: n.rel, path: join(dir, ...n.rel.split('/')), name: basename(n.rel).replace(/\.(md|markdown)$/i, '') })),
+    edges,
+  }
+})
+
 /** The tags of the notes in a note's root (Shared when no note is given), each with its notes. */
 ipcMain.handle('tags:index', async (_e, note: unknown) => {
   const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()

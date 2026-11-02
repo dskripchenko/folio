@@ -159,6 +159,16 @@ Einfügemarke, **Neue Notiz aus Vorlage…** macht eine Schnellnotiz daraus;
 `{{title}}`, `{{date}}`, `{{time}}` und `{{date:DD.MM.YYYY}}` werden ausgefüllt.
 Beide Ordner werden im Einstellungsmenü gewählt.
 
+### Der Graph
+
+Das Graph-Panel (auf der rechten Leiste oder unter den Befehlen) zeichnet die
+Notizen des sichtbaren Projekts als Punkte und ihre Links als Linien —
+**Diese Notiz**: die Notizen bis zu zwei Links von der sichtbaren entfernt,
+**Alle**: das ganze Projekt. Die Größe eines Punkts ist die Zahl seiner Links,
+die sichtbare Notiz ist farbig; der Zeiger auf einem Punkt hebt ihn und seine
+Nachbarn hervor, ein Klick öffnet ihn; das Mausrad zoomt, Ziehen verschiebt
+das Bild.
+
 ### Lesezeichen
 
 Eine Datei griffbereit: **Zu Lesezeichen** im Menü eines Tabs, im Menü einer

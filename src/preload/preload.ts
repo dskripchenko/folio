@@ -114,6 +114,7 @@ contextBridge.exposeInMainWorld('folio', {
   saveImage: (note: string, name: string, type: string, bytes: Uint8Array) => ipcRenderer.invoke('image:save', note, name, type, bytes),
   wikiPanel: (note: string, text: string) => ipcRenderer.invoke('wiki:panel', note, text),
   tagIndex: (note: string | null) => ipcRenderer.invoke('tags:index', note),
+  graph: (note: string | null) => ipcRenderer.invoke('graph:data', note),
   dailyOpen: (from: string | null, step: 0 | -1 | 1) => ipcRenderer.invoke('daily:open', from, step),
   templates: () => ipcRenderer.invoke('templates:list'),
   fillTemplate: (path: string, title: string) => ipcRenderer.invoke('templates:fill', path, title),

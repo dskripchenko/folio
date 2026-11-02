@@ -146,6 +146,15 @@ template is a note in the templates folder (`Templates` in Shared):
 a quick note of it; `{{title}}`, `{{date}}`, `{{time}}` and `{{date:DD.MM.YYYY}}`
 are filled in. Both folders are chosen in the settings menu.
 
+### The graph
+
+The graph panel (on the right rail, or among the commands) draws the notes of
+the project in view as points and their links as lines — **This note**: the
+notes up to two links from the one in view, **All**: the whole project. A
+point's size is its number of links, the note in view is coloured; the
+pointer on a point lights it and its neighbours, a click opens it; the wheel
+zooms and a drag moves the picture.
+
 ### Bookmarks
 
 A file kept at hand: **Add to bookmarks** in a tab's menu, a file's menu in the

@@ -421,6 +421,28 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .tags-note { color: var(--fg); font-size: 12px; }
 .tags-note svg { flex: none; color: var(--muted); }
 @media print { .tags-panel { display: none !important; } }
+.graph-panel { width: 440px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
+.graph-panel[hidden] { display: none; }
+.graph-panel header { display: flex; align-items: center; gap: 8px; padding: 10px 10px 6px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.graph-title { flex: 1; }
+.graph-modes { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.graph-mode { padding: 2px 8px; border: 0; background: var(--bg); color: var(--muted); font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; cursor: pointer; }
+.graph-mode[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); color: var(--fg); }
+.graph-status { padding: 0 14px; color: var(--muted); font-size: 12px; }
+.graph-svg { flex: 1; min-height: 0; width: 100%; cursor: grab; touch-action: none; }
+.graph-svg.dragging { cursor: grabbing; }
+.graph-edges line { stroke: var(--line); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.graph-node { cursor: pointer; }
+.graph-node circle { fill: var(--muted); }
+.graph-node.current circle { fill: var(--accent); }
+.graph-node text { fill: var(--fg); font-size: calc(11px / var(--graph-scale, 40)); text-anchor: middle; dominant-baseline: hanging; pointer-events: none; }
+.graph-node text.hidden { display: none; }
+.graph-svg.lighting .graph-node:not(.lit) { opacity: 0.25; }
+.graph-svg.lighting .graph-node.lit text.hidden { display: inline; }
+.graph-svg.lighting .graph-edges line:not(.lit) { opacity: 0.2; }
+.graph-edges line.lit { stroke: var(--accent); }
+.graph-node:hover circle { fill: var(--accent); }
+@media print { .graph-panel { display: none !important; } }
 
 .search-toggle { flex: none; display: grid; place-items: center; width: 20px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; }
 .search-toggle svg { transition: transform 0.1s; }
