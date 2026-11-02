@@ -135,6 +135,18 @@ makes it — and the notes that name it without a link; **Link** turns such a
 mention into `[[Note]]` (the spelling kept as its text). A line clicked opens
 its note there. The panel follows the note in view and what is typed.
 
+### Tags and properties
+
+`#todo`, `#work/urgent` in a note are tags (a letter is needed: `#123` is not
+one, nor is `C#`); the `tags:` of its properties too. A note's properties — a
+YAML front matter at its start, `---` lines around `key: value` — are shown as
+a table above it, and kept exactly as written in the editor. The tags panel
+(the tag icon on the right rail, or the command) lists the tags of the
+project in view with the number of their notes, nested ones under their
+parents; a tag opened shows its notes, a click opens one; the filter finds a
+tag by its name. A tag clicked in a note opens the panel on it (in the editor,
+with `Cmd/Ctrl`).
+
 ### Formulas and highlights
 
 TeX math is drawn as it is read: `$E = mc^2$` in a line, `$$ … $$` (or a

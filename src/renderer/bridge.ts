@@ -210,6 +210,8 @@ export interface FolioBridge {
   saveImage(note: string, name: string, type: string, bytes: Uint8Array): Promise<{ path: string } | { error: string }>
   /** A note's links panel: its links, the notes linking to it, the ones naming it without a link. */
   wikiPanel(note: string, text: string): Promise<LinksData | null>
+  /** The tags of the notes in a note's root (Shared without one), each with its notes. */
+  tagIndex(note: string | null): Promise<{ tag: string; notes: { rel: string; path: string }[] }[]>
   /** A mention made a link; false when the note's text has changed meanwhile. */
   linkMention(file: string, index: number, length: number, link: string): Promise<boolean>
   entryMenu(root: string, rel: string): void

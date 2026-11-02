@@ -25,7 +25,7 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@dskripchenko/embed": "1.16.0",
+    "@dskripchenko/embed": "1.17.0",
     "@eslint/js": "10.0.1",
     "@fontsource/stix-two-math": "5.3.0",
     "@playwright/test": "1.64.1",

@@ -147,6 +147,19 @@ nennen; **Verlinken** macht aus einer solchen Erwähnung `[[Notiz]]` (die
 Schreibweise bleibt als Text). Ein Klick auf eine Zeile öffnet die Notiz dort.
 Das Panel folgt der sichtbaren Notiz und dem Getippten.
 
+### Tags und Eigenschaften
+
+`#todo`, `#work/urgent` in einer Notiz sind Tags (ein Buchstabe ist nötig:
+`#123` ist keiner, `C#` auch nicht); die `tags:` ihrer Eigenschaften ebenso.
+Die Eigenschaften einer Notiz — ein YAML-Front-Matter an ihrem Anfang,
+`---`-Zeilen um `Schlüssel: Wert` — erscheinen als Tabelle über ihr und bleiben
+im Editor genau wie geschrieben. Das Tag-Panel (das Tag-Symbol auf der rechten
+Leiste oder der Befehl) zeigt die Tags des sichtbaren Projekts mit der Zahl
+ihrer Notizen, verschachtelte unter ihren Eltern; ein geöffneter Tag zeigt
+seine Notizen, ein Klick öffnet eine; der Filter findet einen Tag nach Namen.
+Ein Klick auf einen Tag in einer Notiz öffnet das Panel auf ihm (im Editor mit
+`Cmd/Strg`).
+
 ### Formeln und Hervorhebungen
 
 TeX-Formeln werden gezeichnet, wie sie gelesen werden: `$E = mc^2$` in einer

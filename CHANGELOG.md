@@ -20,6 +20,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Tags and properties (embed 1.17.0): `#tags` as chips, a note's front matter
+  as a table of properties (kept as written in the editor); the tags panel —
+  the project's tags, nested, with their notes and a filter; a tag in a note
+  opens it.
 - Formulas: TeX math (`$…$`, `$$…$$`, ` ```math `) drawn as MathML by the new
   `@dskripchenko/math` (embed 1.16.0); one piece in the visual editor, a double
   click edits its TeX; highlighted in the source. STIX Two Math (OFL) comes with

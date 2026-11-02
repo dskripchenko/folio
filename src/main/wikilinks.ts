@@ -59,7 +59,7 @@ export function linkName(rel: string, files: string[]): string {
 }
 
 /** The parts of a note that are code: links there are text, not links. */
-function codeRanges(text: string): [number, number][] {
+export function codeRanges(text: string): [number, number][] {
   const out: [number, number][] = []
   const fence = /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[ \t]*$|(?![\s\S]))/gm
   for (const m of text.matchAll(fence)) out.push([m.index, m.index + m[0].length])
