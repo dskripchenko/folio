@@ -17,6 +17,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Links between notes: `[[Note]]`, `[[Note#Heading|text]]`, `![[picture.png]]`
+  name a file of the project by its name (embed 1.14.0). A click opens it at the
+  heading, or makes a missing note (drawn faded) beside the linking one; in the
+  editor `Cmd/Ctrl`+click, and `[[` suggests the project's notes. Renaming or
+  moving a note or folder in the tree updates the links to it — `[[…]]` and
+  relative Markdown links — and the moved note's own relative links.
 - Consoles (`` Ctrl+` ``, **View → Console**, the rail; **Open a Console Here**
   in a project's or folder's menu): your shell in a panel under the page, in
   tabs, in Shared or the folder chosen; full-screen programs and the mouse
