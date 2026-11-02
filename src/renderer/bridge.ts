@@ -176,6 +176,14 @@ export interface FolioBridge {
   fsCreate(root: string, dir: string, name: string, kind: 'note' | 'folder'): Promise<{ path: string; rel: string } | { error: string }>
   fsRename(root: string, rel: string, name: string): Promise<{ from: string; to: string } | { error: string }>
   fsMove(fromRoot: string, fromRel: string, toRoot: string, toDir: string): Promise<{ from: string; to: string } | { error: string }>
+  /** Which of a note's `[[link]]` targets reach a file. */
+  wikiExists(from: string, targets: string[]): Promise<boolean[]>
+  /** Open the file a `[[link]]` names, making the note when it is not there yet; `heading` to scroll to. */
+  wikiOpen(from: string, target: string): Promise<OpenResult & { heading?: string | null; created?: boolean }>
+  /** The files a note can link to, by the name a link would use. */
+  wikiNames(from: string): Promise<{ name: string; path: string }[]>
+  /** After a move: links to it written anew in the root's notes; how many notes changed. */
+  wikiMoved(from: string, to: string, skip: string[]): Promise<number>
   entryMenu(root: string, rel: string): void
   onWorkspace: Listener
   onEdit: Listener

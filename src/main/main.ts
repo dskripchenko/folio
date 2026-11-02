@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session as electronSession, shell } from 'electron'
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path'
 import { userInfo } from 'node:os'
@@ -47,6 +47,8 @@ import { Consoles } from './pty'
 import { replaceInFiles, searchFiles, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
+import { filesOf, isNote, linkName, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
+import { resolveInside } from './paths'
 import { Workspace, type Project } from './workspace'
 
 // Before anything reads it: settings, caches and session data live beside the program.
@@ -475,6 +477,95 @@ ipcMain.handle('fs:move', (_e, fromRoot: unknown, fromRel: unknown, toRoot: unkn
     if (to !== path) moved(path, to)
     return { from: path, to }
   })
+})
+
+// Links between notes: `[[Name]]` names a file of the note's root, wherever it lies.
+
+/** The folder a note's links are resolved in: the root that holds it, or its own folder. */
+function linkRoot(file: string): string {
+  const holding = sources().filter((s) => file.startsWith(s.dir + sep)).sort((a, b) => b.dir.length - a.dir.length)[0]
+  return holding?.dir ?? dirname(file)
+}
+const relIn = (dir: string, file: string): string => relative(dir, file).split(sep).join('/')
+
+/** Which of a note's link targets reach a file: for showing the missing ones. */
+ipcMain.handle('wiki:exists', async (_e, from: unknown, targets: unknown) => {
+  if (typeof from !== 'string' || !Array.isArray(targets)) return []
+  const dir = linkRoot(from)
+  const files = await filesOf(dir)
+  return targets.map((t) => typeof t === 'string' && resolveWiki(wikiTarget(t).name, relIn(dir, from), files) !== null)
+})
+
+/** A link followed: the file it names opens; a note that is not there yet is made first. */
+ipcMain.handle('wiki:open', async (_e, from: unknown, target: unknown) => {
+  if (typeof from !== 'string' || typeof target !== 'string') return { error: 'invalid', path: '' }
+  const dir = linkRoot(from)
+  const { name, heading } = wikiTarget(target)
+  const found = resolveWiki(name, relIn(dir, from), await filesOf(dir))
+  if (found !== null) return { ...open(join(dir, ...found.split('/'))), heading }
+  // A new note: beside the linking one, or at the path the link names.
+  const folder = name.includes('/') ? resolveInside(dir, dirname(name)) : dirname(from)
+  if (folder === null) return { error: 'invalid', path: name }
+  const made = fileOp(() => {
+    mkdirSync(folder, { recursive: true })
+    return createEntry(folder, basename(name), 'note')
+  })
+  if (typeof made !== 'string') return { ...made, path: name }
+  if (workspace.autoCommits(made)) autoCommit.saved(made)
+  return { ...open(made), heading, created: true }
+})
+
+/** The files a note can link to, each by the name a link would use: for suggesting after `[[`. */
+ipcMain.handle('wiki:names', async (_e, from: unknown) => {
+  if (typeof from !== 'string') return []
+  const dir = linkRoot(from)
+  const files = await filesOf(dir)
+  const self = relIn(dir, from)
+  return files.filter((f) => f !== self && kindOfLink(f)).map((f) => ({ name: linkName(f, files), path: f }))
+})
+/** What a link suggests: notes, diagrams and pictures, not every file of a project. */
+function kindOfLink(rel: string): boolean {
+  return isNote(rel) || /\.(png|jpe?g|gif|svg|webp|avif|pdf|bpmn|dmn|drawio|dio|mmd|puml|excalidraw)$/i.test(rel)
+}
+
+/**
+ * A file or folder moved within a root: the links to it in the root's notes,
+ * and the moved notes' own relative links, are written anew. Notes open with
+ * unsaved changes (`skip`) are left as they are. The number of notes changed.
+ */
+ipcMain.handle('wiki:moved', async (_e, from: unknown, to: unknown, skip: unknown) => {
+  if (typeof from !== 'string' || typeof to !== 'string') return 0
+  const dir = linkRoot(to)
+  if (linkRoot(from) !== dir) return 0
+  const skipped = new Set(Array.isArray(skip) ? skip.filter((s): s is string => typeof s === 'string') : [])
+  const map = mover(relIn(dir, from), relIn(dir, to))
+  const after = await filesOf(dir)
+  const toRel = relIn(dir, to)
+  const back = mover(toRel, relIn(dir, from))
+  const before = after.map((f) => back(f) ?? f)
+  const name = basename(from).replace(/\.(md|markdown)$/i, '').toLowerCase()
+  let changed = 0
+  for (const rel of after) {
+    if (!isNote(rel)) continue
+    const file = join(dir, ...rel.split('/'))
+    if (skipped.has(file)) continue
+    const relBefore = back(rel) ?? rel
+    let text: string
+    try {
+      if (statSync(file).size > 4 * 1024 * 1024) continue
+      text = readFileSync(file, 'utf8')
+    } catch {
+      continue
+    }
+    // Only notes that may name it, or that moved themselves.
+    if (relBefore === rel && !text.toLowerCase().includes(name) && !text.toLowerCase().includes(encodeURIComponent(name).toLowerCase())) continue
+    const next = rewriteLinks(text, relBefore, rel, map, before, after)
+    if (next === text) continue
+    writeFileSync(file, next)
+    changed++
+    if (workspace.autoCommits(file)) autoCommit.saved(file)
+  }
+  return changed
 })
 
 ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {

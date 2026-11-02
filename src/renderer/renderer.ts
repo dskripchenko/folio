@@ -20,6 +20,7 @@ import { openCloneDialog, type CloneText } from './clone'
 import { openPdfDialog, type PdfTarget, type PdfText } from './pdfDialog'
 import { describeRefusal, HistoryPanel, type HistoryText } from './history'
 import { Sidebar, type SidebarText } from './sidebar'
+import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import type { GitRefusal, Version } from './bridge'
 
 const TEXT = {
@@ -30,6 +31,7 @@ const TEXT = {
     allowFile: 'Allow for this file',
     allowFolder: 'Allow for its folder',
     close: 'Close',
+    linksUpdated: 'Links updated in {n} notes.',
     edit: 'Edit',
     read: 'Read',
     untitled: 'Quick note',
@@ -70,6 +72,7 @@ const TEXT = {
     allowFile: 'Разрешить для файла',
     allowFolder: 'Разрешить для его папки',
     close: 'Закрыть',
+    linksUpdated: 'Ссылки обновлены в заметках: {n}.',
     edit: 'Править',
     read: 'Читать',
     untitled: 'Быстрая заметка',
@@ -333,7 +336,7 @@ function render(tab: Tab): void {
     bar.id = `doc-toolbar-${tab.id}`
     bar.dataset.testid = 'doc-toolbar'
     tab.pane.append(bar)
-    const ed = document.createElement('dsk-markdown-editor') as HTMLElement & { value: string; mode: string }
+    const ed = document.createElement('dsk-markdown-editor') as HTMLElement & { value: string; mode: string; linkSuggest: unknown }
     ed.setAttribute('toolbar-target', `#${bar.id}`)
     ed.setAttribute('mode-switch', 'false')
     if (base) {
@@ -342,6 +345,8 @@ function render(tab: Tab): void {
     }
     ed.setAttribute('mode', tab.mode)
     ed.setAttribute('min-height', 'calc(100vh - 140px)')
+    // After `[[`: the notes of the document's root.
+    ed.linkSuggest = linkSuggester(() => tab.path, folio.wikiNames)
     const source = document.createElement('script')
     source.type = 'text/plain'
     // textContent, not markup: a `</script>` in the text stays text.
@@ -556,9 +561,13 @@ function activate(tab: Tab | null): void {
   history.show(tab?.path ?? null)
   showBanners()
   if (tab) requestAnimationFrame(() => (viewEl.scrollTop = tab.scroll))
+  if (tab) recheckLinks.get(tab.pane)?.()
   findBar?.retarget()
   report()
 }
+
+/** Each pane's check of its `[[links]]`: run again when the tab is shown, as files may have come or gone. */
+const recheckLinks = new WeakMap<HTMLElement, () => void>()
 
 function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved: string | null }): Tab {
   const pane = document.createElement('article')
@@ -595,6 +604,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
     label,
   }
   pane.dataset.path = tab.path ?? ''
+  recheckLinks.set(pane, watchWikiLinks(pane, () => (formatOf(tab) === 'markdown' && !tab.version ? tab.path : null), folio.wikiExists))
   button.addEventListener('click', (event) => {
     if ((event.target as HTMLElement).classList.contains('close')) void close(tab)
     else activate(tab)
@@ -841,6 +851,10 @@ folio.onFsMoved(async (value) => {
   }
   if (active) sidebar.setActive(active.path)
   report()
+  // Links to it, in the notes of its root, follow; notes with unsaved changes are left alone.
+  const skip = tabs.filter((tab) => tab.path && isDirty(tab)).map((tab) => tab.path!)
+  const changed = await folio.wikiMoved(from, to, skip)
+  if (changed > 0) notify(t.linksUpdated.replace('{n}', String(changed)))
 })
 // Put in the trash: its clean tabs close; one with unsaved changes stays, as a note to save elsewhere.
 folio.onFsRemoved((value) => {
@@ -879,6 +893,14 @@ folio.onFsChanged(async (value) => {
   }
 })
 
+async function followWikiLink(from: string, target: string): Promise<void> {
+  const result = await folio.wikiOpen(from, target)
+  await add(result)
+  const tab = tabs.find((t) => t.path === result.path)
+  // After the frame that gives the tab back its own scroll.
+  if (tab && result.heading) requestAnimationFrame(() => revealHeading(tab.pane, result.heading!, viewEl))
+}
+
 async function openFiles(): Promise<void> {
   for (const result of await folio.openDialog()) await add(result)
 }
@@ -886,7 +908,16 @@ async function openFiles(): Promise<void> {
 // Links: a document of the folder opens in a tab, the web and mail leave folio; anchors stay.
 viewEl.addEventListener('click', (event) => {
   const a = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
-  if (!a || event.defaultPrevented || a.closest('[contenteditable="true"]')) return
+  if (!a || event.defaultPrevented) return
+  // `[[A note]]`: found by its name in the note's root (made when it is not there); in the editor, with ⌘ / Ctrl.
+  const from = tabs.find((tab) => tab.pane.contains(a))?.path
+  const editing = !!a.closest('[contenteditable="true"]')
+  if (a.dataset.wikilink !== undefined && from && (!editing || event.metaKey || event.ctrlKey)) {
+    event.preventDefault()
+    void followWikiLink(from, a.dataset.wikilink)
+    return
+  }
+  if (editing) return
   const href = a.href
   if (href.startsWith('folio://app/r/')) {
     event.preventDefault()

@@ -56,6 +56,10 @@ export class Sidebar {
   private expanded = new Set<string>(prefs.get<string[]>('expanded', []))
   private showHidden = prefs.get<boolean>('showHidden', false)
   private activeFile: string | null = null
+  /** Lists the disk changed while a name was typed in them: listed again once it is done. */
+  private readonly deferred = new Set<HTMLElement>()
+  /** Each list's latest listing asked for: an answer to an older one is dropped. */
+  private readonly fills = new WeakMap<HTMLElement, number>()
   private readonly sep: string
 
   constructor(private readonly o: Options) {
@@ -370,11 +374,24 @@ export class Sidebar {
     return ul
   }
 
-  private async fill(ul: HTMLElement): Promise<void> {
+  /**
+   * A folder listed again. While a name is typed in it, the disk's word (late
+   * on macOS) waits until the field is done — it would take the field away;
+   * `force` is the field's own commit.
+   */
+  private async fill(ul: HTMLElement, force = false): Promise<void> {
     const root = ul.dataset.root ?? ''
     const rel = ul.dataset.rel ?? ''
     const rootPath = ul.dataset.rootPath ?? ''
+    const seq = (this.fills.get(ul) ?? 0) + 1
+    this.fills.set(ul, seq)
     const entries = (await folio().list(root, rel, false)) ?? []
+    // A newer listing asked meanwhile: this one is out of date.
+    if (this.fills.get(ul) !== seq) return
+    if (!force && ul.querySelector(':scope > li .tree-input')) {
+      this.deferred.add(ul)
+      return
+    }
     ul.replaceChildren()
     if (entries.length === 0 && rel === '') {
       const li = document.createElement('li')
@@ -580,7 +597,7 @@ export class Sidebar {
       if ('error' in res) return this.text(res.error)
       // Listed again at once: the row's path is the new one before the disk's own word arrives.
       const ul = row.closest<HTMLElement>('ul.tree')
-      if (ul) await this.fill(ul)
+      if (ul) await this.fill(ul, true)
       return null
     }, () => input.replaceWith(name))
   }
@@ -602,11 +619,12 @@ export class Sidebar {
     const done = async (): Promise<void> => {
       if (busy) return
       const name = input.value.trim()
-      if (name === '') return cancel()
+      if (name === '') return this.endName(cancel)
       busy = true
       const error = await commit(name)
       busy = false
-      if (error) {
+      if (!error) this.endName()
+      else {
         input.classList.add('invalid')
         input.title = error
         input.setCustomValidity(error)
@@ -621,7 +639,7 @@ export class Sidebar {
         void done()
       } else if (e.key === 'Escape') {
         e.preventDefault()
-        cancel()
+        this.endName(cancel)
       }
     })
     input.addEventListener('input', () => {
@@ -631,6 +649,14 @@ export class Sidebar {
     input.addEventListener('blur', () => {
       if (!busy && input.isConnected && !input.classList.contains('invalid')) void done()
     })
+  }
+
+  /** A name field done with: the lists that changed meanwhile are listed now. */
+  private endName(then?: () => void): void {
+    then?.()
+    const lists = [...this.deferred]
+    this.deferred.clear()
+    for (const ul of lists) if (ul.isConnected) void this.fill(ul)
   }
 
   private text(error: string): string {

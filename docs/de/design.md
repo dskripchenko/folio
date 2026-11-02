@@ -114,6 +114,20 @@ Umbenennung oder Verschiebung; ein in den Papierkorb gelegtes schließt sich,
 außer es hat ungespeicherte Änderungen. Ein Name mit `/ \ : * ? " < > |` oder
 einer, den es schon gibt, wird an Ort und Stelle abgelehnt, mit dem Grund.
 
+### Links zwischen Notizen
+
+`[[Notiz]]` verlinkt eine Notiz über ihren Namen, wo immer sie im selben Projekt
+(oder in Gemeinsam) liegt: zuerst der Ordner der Notiz selbst, dann der kürzeste
+Pfad. `[[Notiz#Überschrift]]` öffnet sie an dieser Überschrift, `[[Notiz|Text]]`
+zeigt einen anderen Text, `![[bild.png]]` ein Bild. Ein Link auf keine Notiz
+erscheint blasser; ein Klick legt die Notiz neben der verlinkenden an und öffnet
+sie. Im Editor öffnet sich ein Link mit `Cmd/Ctrl`+Klick, und die Eingabe von `[[`
+schlägt die Notizen des Projekts vor. Eine im Baum umbenannte oder verschobene
+Notiz oder ein Ordner nimmt die Links mit: `[[…]]`-Links und relative Links
+(`[Text](notes/plan.md)`, Bilder) in den Notizen des Projekts werden neu
+geschrieben, ebenso die relativen Links der verschobenen Notiz selbst; Notizen,
+die mit ungespeicherten Änderungen offen sind, bleiben unverändert.
+
 ## Verlauf mit git
 
 Pro Ordner — „Gemeinsam“ und jedes Projekt — und nur, wenn Sie es wollen. Ein

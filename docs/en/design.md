@@ -106,6 +106,19 @@ a rename or a move; a document put in the trash closes, unless it has unsaved
 changes. A name with `/ \ : * ? " < > |` or one already there is refused in
 place, with the reason.
 
+### Links between notes
+
+`[[Note]]` links to a note by its name, wherever it lies in the same project
+(or Shared): the note's own folder first, then the shortest path. `[[Note#Heading]]`
+opens it at that heading, `[[Note|text]]` shows other text, `![[picture.png]]`
+shows a picture. A link to no note is drawn faded; a click makes the note beside
+the linking one and opens it. In the editor a link opens with `Cmd/Ctrl`+click,
+and typing `[[` suggests the project's notes. A note or folder renamed or moved
+in the tree takes its links along: `[[…]]` links and relative links
+(`[text](notes/plan.md)`, pictures) in the project's notes are written anew, and
+so are the moved note's own relative links; notes open with unsaved changes are
+left as they are.
+
 ## History with git
 
 Per folder — Shared and each project — and only if you want it. A folder that
