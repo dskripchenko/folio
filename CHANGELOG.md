@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Previews: the pointer resting on a link to a note shows it by the link, at
+  the heading it names; a click there opens it (in the editor, with Cmd/Ctrl).
 - Tags and properties (embed 1.17.0): `#tags` as chips, a note's front matter
   as a table of properties (kept as written in the editor); the tags panel —
   the project's tags, nested, with their notes and a filter; a tag in a note

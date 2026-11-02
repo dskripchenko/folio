@@ -23,6 +23,7 @@ import { Sidebar, type SidebarText } from './sidebar'
 import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
+import { HoverPreview } from './hoverPreview'
 import { CommandPalette, type Command, type PaletteText } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
@@ -1093,6 +1094,26 @@ function onLinkClick(event: MouseEvent): void {
 }
 viewEl.addEventListener('click', onLinkClick)
 besideEl.addEventListener('click', onLinkClick)
+
+// A note's preview while the pointer rests on a link to it.
+const preview = new HoverPreview({
+  peek: (from, link) => folio.peek(from, link),
+  draw: (note) => viewOf('markdown', note.text, { base: note.base, name: note.name }),
+  reveal: (container, heading, scroller) => revealHeading(container, heading, scroller),
+  open: (note) =>
+    void folio.open(note.path).then(async (result) => {
+      await add(result)
+      const tab = tabs.find((t) => t.path === note.path)
+      if (tab && note.heading) requestAnimationFrame(() => revealHeading(tab.pane, note.heading!, scrollerOf(tab)))
+    }),
+  fromOf: (a) => tabs.find((tab) => tab.pane.contains(a))?.path ?? null,
+})
+document.body.append(preview.el)
+preview.attach(viewEl)
+preview.attach(besideEl)
+// A tab switched or the view scrolled: the preview of what was under the pointer goes.
+viewEl.addEventListener('scroll', () => preview.hide(), { passive: true })
+besideEl.addEventListener('scroll', () => preview.hide(), { passive: true })
 
 // A click or focus in a view puts its document in use.
 for (const [el, which] of [[viewEl, () => mainTab], [besideEl, () => beside]] as const) {

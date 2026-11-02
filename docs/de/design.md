@@ -147,6 +147,14 @@ nennen; **Verlinken** macht aus einer solchen Erwähnung `[[Notiz]]` (die
 Schreibweise bleibt als Text). Ein Klick auf eine Zeile öffnet die Notiz dort.
 Das Panel folgt der sichtbaren Notiz und dem Getippten.
 
+### Vorschau
+
+Ruht der Zeiger auf einem `[[Link]]` oder einem Link zu einer Notiz, erscheint
+die Notiz in einem Fenster am Link — gezeichnet wie beim Lesen, an der
+Überschrift, die der Link nennt. Das Fenster scrollt; ein Klick darin öffnet
+die Notiz; Wegbewegen oder Escape schließt es. Im Editor wartet die Vorschau
+auf `Cmd/Strg`.
+
 ### Tags und Eigenschaften
 
 `#todo`, `#work/urgent` in einer Notiz sind Tags (ein Buchstabe ist nötig:
