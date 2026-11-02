@@ -8,6 +8,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Fixed
+- The tree no longer loses a name being typed, or shows a stale folder, when
+  the disk reports changes late (macOS).
 - The Markdown source is highlighted more fully (embed 1.13.1, syntax 0.3.3):
   links and badges in parts, quoted text, references, tables, inline HTML.
 - The Markdown source is in colour (embed 1.13.0, markdown-editor 0.4.0), and an
