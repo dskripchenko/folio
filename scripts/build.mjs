@@ -21,3 +21,8 @@ cpSync('build/icons/png/512.png', 'dist/icon.png')
 // embed's fat bundle, inside the app: every widget, nothing fetched at run time.
 mkdirSync('dist/renderer/vendor', { recursive: true })
 cpSync('node_modules/@dskripchenko/embed/dist/embed.bundle.js', 'dist/renderer/vendor/embed.bundle.js')
+// A math font (STIX Two Math, SIL Open Font License) for formulas where the system has none (Linux):
+// fences, roots and big operators stretch only in a font with a MATH table.
+mkdirSync('dist/renderer/fonts', { recursive: true })
+cpSync('node_modules/@fontsource/stix-two-math/files/stix-two-math-latin-400-normal.woff2', 'dist/renderer/fonts/stix-two-math.woff2')
+cpSync('node_modules/@fontsource/stix-two-math/LICENSE', 'dist/renderer/fonts/STIX-Two-Math-OFL.txt')

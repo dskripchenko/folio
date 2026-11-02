@@ -20,6 +20,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Formulas: TeX math (`$…$`, `$$…$$`, ` ```math `) drawn as MathML by the new
+  `@dskripchenko/math` (embed 1.16.0); one piece in the visual editor, a double
+  click edits its TeX; highlighted in the source. STIX Two Math (OFL) comes with
+  folio for systems without a math font. `==highlighted==` text.
 - Two documents side by side: **Open beside** in a tab's menu, `Cmd/Ctrl+\` or
   the command; each view with its own document and scroll, the divider dragged.
 - Commands (`Cmd/Ctrl+K`, `F1`, **View → Commands**): every action of the menus

@@ -135,6 +135,17 @@ makes it — and the notes that name it without a link; **Link** turns such a
 mention into `[[Note]]` (the spelling kept as its text). A line clicked opens
 its note there. The panel follows the note in view and what is typed.
 
+### Formulas and highlights
+
+TeX math is drawn as it is read: `$E = mc^2$` in a line, `$$ … $$` (or a
+` ```math ` block) on lines of its own — by folio's own `@dskripchenko/math`,
+as MathML. A price (`$5 or $10`) stays text. In the visual editor a formula is
+one piece: a double click edits its TeX, **Formula** in the `/` menu adds one,
+and the file keeps it exactly as written; the Markdown source colours its TeX.
+Fences and roots stretch in a math font: the system's (macOS, Windows), or
+STIX Two Math, which folio carries (SIL Open Font License). `==text==` is
+highlighted.
+
 ### Pictures
 
 A picture pasted into a note (a screenshot, an image copied) or dropped on the
