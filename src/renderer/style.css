@@ -486,3 +486,10 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .row.drop-target { background: color-mix(in srgb, var(--accent) 18%, transparent); outline: 1px dashed var(--accent); outline-offset: -1px; }
 .row.drop-refused { animation: drop-refused 0.4s; }
 @keyframes drop-refused { 25%, 75% { transform: translateX(-3px); } 50% { transform: translateX(3px); } }
+
+/* A note's preview by a link: a page of its own, above everything, scrolled inside. */
+.hover-preview { position: fixed; z-index: 60; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22); cursor: pointer; }
+.hover-preview[hidden] { display: none; }
+.hover-preview-body { padding: 14px 20px; font-size: 14px; }
+.hover-preview-body dsk-markdown { pointer-events: none; }
+@media print { .hover-preview { display: none !important; } }

@@ -135,6 +135,13 @@ makes it — and the notes that name it without a link; **Link** turns such a
 mention into `[[Note]]` (the spelling kept as its text). A line clicked opens
 its note there. The panel follows the note in view and what is typed.
 
+### Previews
+
+The pointer resting on a `[[link]]` or a link to a note shows the note in a
+panel by the link — drawn as when read, at the heading the link names. The
+panel scrolls; a click in it opens the note; moving away, or Escape, closes
+it. In the editor the preview waits for `Cmd/Ctrl`.
+
 ### Tags and properties
 
 `#todo`, `#work/urgent` in a note are tags (a letter is needed: `#123` is not

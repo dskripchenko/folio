@@ -114,6 +114,7 @@ contextBridge.exposeInMainWorld('folio', {
   saveImage: (note: string, name: string, type: string, bytes: Uint8Array) => ipcRenderer.invoke('image:save', note, name, type, bytes),
   wikiPanel: (note: string, text: string) => ipcRenderer.invoke('wiki:panel', note, text),
   tagIndex: (note: string | null) => ipcRenderer.invoke('tags:index', note),
+  peek: (from: string | null, link: { wiki?: string; url?: string }) => ipcRenderer.invoke('doc:peek', from, link),
   linkMention: (file: string, index: number, length: number, link: string) => ipcRenderer.invoke('wiki:link-mention', file, index, length, link),
   onWorkspace: listen('ws:changed'),
   onEdit: listen('ws:edit'),

@@ -212,6 +212,8 @@ export interface FolioBridge {
   wikiPanel(note: string, text: string): Promise<LinksData | null>
   /** The tags of the notes in a note's root (Shared without one), each with its notes. */
   tagIndex(note: string | null): Promise<{ tag: string; notes: { rel: string; path: string }[] }[]>
+  /** The note a link reaches, read without opening it: for a preview. Null for no note. */
+  peek(from: string | null, link: { wiki?: string; url?: string }): Promise<{ path: string; name: string; text: string; base: string; heading: string | null } | null>
   /** A mention made a link; false when the note's text has changed meanwhile. */
   linkMention(file: string, index: number, length: number, link: string): Promise<boolean>
   entryMenu(root: string, rel: string): void

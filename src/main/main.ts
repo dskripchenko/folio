@@ -502,6 +502,36 @@ ipcMain.handle('wiki:exists', async (_e, from: unknown, targets: unknown) => {
   return targets.map((t) => typeof t === 'string' && resolveWiki(wikiTarget(t).name, relIn(dir, from), files) !== null)
 })
 
+/**
+ * A link looked at, not followed (a preview while the pointer rests on it):
+ * the note it reaches, read — nothing opened, made or watched. Null for a
+ * link to no note, or to a file that is not Markdown.
+ */
+ipcMain.handle('doc:peek', async (_e, from: unknown, link: unknown) => {
+  if (typeof link !== 'object' || link === null) return null
+  const l = link as { wiki?: unknown; url?: unknown }
+  let file: string | null = null
+  let heading: string | null = null
+  if (typeof l.wiki === 'string' && typeof from === 'string') {
+    const dir = linkRoot(from)
+    const target = wikiTarget(l.wiki)
+    heading = target.heading
+    const found = resolveWiki(target.name, relIn(dir, from), await filesOf(dir))
+    file = found === null ? null : join(dir, ...found.split('/'))
+  } else if (typeof l.url === 'string') {
+    file = documentOfUrl(l.url, roots)
+    heading = decodeURIComponent(/#(.+)$/.exec(l.url)?.[1] ?? '') || null
+  }
+  if (file === null || !isNote(file) || !existsSync(file)) return null
+  try {
+    if (statSync(file).size > 2 * 1024 * 1024) return null
+    const doc = openDocument(file, workspace, roots)
+    return { path: file, name: doc.name, text: doc.text, base: doc.base, heading }
+  } catch {
+    return null
+  }
+})
+
 /** A link followed: the file it names opens; a note that is not there yet is made first. */
 ipcMain.handle('wiki:open', async (_e, from: unknown, target: unknown) => {
   if (typeof from !== 'string' || typeof target !== 'string') return { error: 'invalid', path: '' }
