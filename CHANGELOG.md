@@ -19,6 +19,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- The links panel (the link icon on the right rail): the notes linking to the
+  note in view, its own links (missing ones faded, made with a click), and the
+  notes naming it without a link — each made a `[[link]]` with **Link**.
 - Pictures pasted into a note or dropped on the editor (and chosen with its
   image button) are saved in `attachments/` beside the note and linked at the
   caret — by their name, or `Pasted image <time>` for a screenshot (embed 1.15.0).

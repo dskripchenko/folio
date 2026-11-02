@@ -47,7 +47,7 @@ import { Consoles } from './pty'
 import { replaceInFiles, searchFiles, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
-import { filesOf, isNote, linkName, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
+import { backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { resolveInside } from './paths'
 import { Workspace, type Project } from './workspace'
 
@@ -487,6 +487,10 @@ function linkRoot(file: string): string {
   return holding?.dir ?? dirname(file)
 }
 const relIn = (dir: string, file: string): string => relative(dir, file).split(sep).join('/')
+/** A file of a folder folio knows: a project, Shared, or the folder of a document it opened. */
+function knownFile(file: string): boolean {
+  return sources().some((s) => file.startsWith(s.dir + sep)) || roots.dir(Roots.idOf(dirname(file))) !== undefined
+}
 
 /** Which of a note's link targets reach a file: for showing the missing ones. */
 ipcMain.handle('wiki:exists', async (_e, from: unknown, targets: unknown) => {
@@ -568,12 +572,70 @@ ipcMain.handle('wiki:moved', async (_e, from: unknown, to: unknown, skip: unknow
   return changed
 })
 
+/** The notes of a root, read once and kept while unchanged on disk: for the links panel. */
+const noteTexts = new Map<string, { mtime: number; size: number; text: string }>()
+const MAX_NOTES = 5000
+async function notesIn(dir: string, files: string[]): Promise<{ rel: string; text: string }[]> {
+  const out: { rel: string; text: string }[] = []
+  for (const rel of files) {
+    if (!isNote(rel) || out.length >= MAX_NOTES) continue
+    const file = join(dir, ...rel.split('/'))
+    try {
+      const st = statSync(file)
+      if (st.size > 4 * 1024 * 1024) continue
+      let hit = noteTexts.get(file)
+      if (!hit || hit.mtime !== st.mtimeMs || hit.size !== st.size) {
+        hit = { mtime: st.mtimeMs, size: st.size, text: readFileSync(file, 'utf8') }
+        noteTexts.set(file, hit)
+      }
+      out.push({ rel, text: hit.text })
+    } catch {
+      // Gone meanwhile.
+    }
+  }
+  return out
+}
+
+/**
+ * The links panel of a note: its links (from `text`, the note as it is in
+ * its tab, saved or not), the notes linking to it, and the ones that name it
+ * without a link.
+ */
+ipcMain.handle('wiki:panel', async (_e, note: unknown, text: unknown) => {
+  if (typeof note !== 'string' || typeof text !== 'string') return null
+  const dir = linkRoot(note)
+  const files = await filesOf(dir)
+  const rel = relIn(dir, note)
+  const notes = await notesIn(dir, files)
+  const abs = (r: string): string => join(dir, ...r.split('/'))
+  return {
+    name: linkName(rel, files),
+    outgoing: linksOf(text, rel, files).map((l) => ({ ...l, path: l.target === null ? null : abs(l.target) })),
+    incoming: backlinksOf(rel, notes, files).map((b) => ({ ...b, path: abs(b.rel) })),
+    mentions: mentionsOf(rel, notes).map((m) => ({ ...m, path: abs(m.rel) })),
+  }
+})
+
+/** A mention made a link in the note that names it; false when its text has changed meanwhile. */
+ipcMain.handle('wiki:link-mention', (_e, file: unknown, index: unknown, length: unknown, link: unknown) => {
+  if (typeof file !== 'string' || typeof index !== 'number' || typeof length !== 'number' || typeof link !== 'string') return false
+  if (!isNote(file) || !knownFile(file)) return false
+  try {
+    const next = linkMention(readFileSync(file, 'utf8'), index, length, link)
+    if (next === null) return false
+    writeFileSync(file, next)
+    if (workspace.autoCommits(file)) autoCommit.saved(file)
+    return true
+  } catch {
+    return false
+  }
+})
+
 /** A picture pasted or dropped into a note: saved in `attachments/` beside it; its path for the Markdown. */
 ipcMain.handle('image:save', (_e, note: unknown, name: unknown, type: unknown, bytes: unknown) => {
   if (typeof note !== 'string' || typeof name !== 'string' || typeof type !== 'string' || !(bytes instanceof Uint8Array)) return { error: 'failed' }
   // Only beside a note folio has open from a folder it knows, and not a file of any size.
-  const known = sources().some((s) => note.startsWith(s.dir + sep)) || roots.dir(Roots.idOf(dirname(note))) !== undefined
-  if (!known || !MARKDOWN_EXT.includes(extname(note).toLowerCase()) || !existsSync(note)) return { error: 'failed' }
+  if (!knownFile(note) || !MARKDOWN_EXT.includes(extname(note).toLowerCase()) || !existsSync(note)) return { error: 'failed' }
   if (bytes.byteLength > 64 * 1024 * 1024) return { error: 'large' }
   return fileOp(() => {
     const path = saveAttachment(note, name, type, bytes)

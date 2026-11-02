@@ -128,6 +128,13 @@ Notiz oder ein Ordner nimmt die Links mit: `[[…]]`-Links und relative Links
 geschrieben, ebenso die relativen Links der verschobenen Notiz selbst; Notizen,
 die mit ungespeicherten Änderungen offen sind, bleiben unverändert.
 
+**Das Link-Panel** (das Link-Symbol auf der rechten Leiste) zeigt für die
+sichtbare Notiz die Notizen, die auf sie verlinken, ihre eigenen Links — ein
+fehlender blasser, ein Klick legt ihn an — und die Notizen, die sie ohne Link
+nennen; **Verlinken** macht aus einer solchen Erwähnung `[[Notiz]]` (die
+Schreibweise bleibt als Text). Ein Klick auf eine Zeile öffnet die Notiz dort.
+Das Panel folgt der sichtbaren Notiz und dem Getippten.
+
 ### Bilder
 
 Ein in eine Notiz eingefügtes Bild (ein Bildschirmfoto, ein kopiertes Bild) oder

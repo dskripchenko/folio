@@ -2,6 +2,26 @@
 /** How a document is drawn and edited (stage 5). */
 export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'text'
 
+/** A place in a note, as the links panel shows it. */
+export interface LinkPlace {
+  line: number
+  preview: string
+  start: number
+  end: number
+  index: number
+  length: number
+  display: string
+  nth: number
+}
+
+export interface LinksData {
+  /** How a link names this note. */
+  name: string
+  outgoing: (LinkPlace & { target: string | null; raw: string; wiki: boolean; path: string | null })[]
+  incoming: { rel: string; path: string; places: LinkPlace[] }[]
+  mentions: { rel: string; path: string; places: LinkPlace[] }[]
+}
+
 export interface Opened {
   path: string
   name: string
@@ -186,6 +206,10 @@ export interface FolioBridge {
   wikiMoved(from: string, to: string, skip: string[]): Promise<number>
   /** A picture pasted into a note, saved in `attachments/` beside it: its path for the Markdown. */
   saveImage(note: string, name: string, type: string, bytes: Uint8Array): Promise<{ path: string } | { error: string }>
+  /** A note's links panel: its links, the notes linking to it, the ones naming it without a link. */
+  wikiPanel(note: string, text: string): Promise<LinksData | null>
+  /** A mention made a link; false when the note's text has changed meanwhile. */
+  linkMention(file: string, index: number, length: number, link: string): Promise<boolean>
   entryMenu(root: string, rel: string): void
   onWorkspace: Listener
   onEdit: Listener
