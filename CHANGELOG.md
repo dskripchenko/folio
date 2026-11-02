@@ -20,6 +20,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Spelling checked as text is written (the system's on macOS and Windows;
+  on Linux when turned on), corrections in a field's menu; a status line with
+  the document's words, characters, reading time and the caret's place.
 - The graph of notes: the project's notes and their links, around the note in
   view or all of them; a point opens its note; zoom and pan.
 - Bookmarks: files kept at hand above Shared — added from a tab, the tree or

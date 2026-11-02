@@ -149,6 +149,42 @@ async function openDialog(): Promise<Opened[]> {
   return result.canceled ? [] : result.filePaths.map(open)
 }
 
+/** Spelling in the window: on or off, the languages folio speaks, and the menu of a field. */
+function spelling(w: BrowserWindow): void {
+  const ses = w.webContents.session
+  ses.setSpellCheckerEnabled(workspace.spellcheck())
+  // macOS and Windows check with the system's own languages; elsewhere these are fetched.
+  if (process.platform !== 'darwin') {
+    const wanted = ['ru', 'en-US'].filter((l) => ses.availableSpellCheckerLanguages.includes(l))
+    if (wanted.length > 0) ses.setSpellCheckerLanguages(wanted)
+  }
+  w.webContents.on('context-menu', (_e, params) => {
+    if (!params.isEditable) return
+    const items: Electron.MenuItemConstructorOptions[] = []
+    if (params.misspelledWord) {
+      for (const word of params.dictionarySuggestions.slice(0, 6)) items.push({ label: word, click: () => w.webContents.replaceMisspelling(word) })
+      if (params.dictionarySuggestions.length === 0) items.push({ label: L().noSuggestions, enabled: false })
+      items.push({ label: L().addToDictionary, click: () => ses.addWordToSpellCheckerDictionary(params.misspelledWord) }, { type: 'separator' })
+    }
+    items.push(
+      { role: 'cut', enabled: params.editFlags.canCut },
+      { role: 'copy', enabled: params.editFlags.canCopy },
+      { role: 'paste', enabled: params.editFlags.canPaste },
+      { type: 'separator' },
+      { role: 'selectAll' },
+    )
+    Menu.buildFromTemplate(items).popup({ window: w })
+  })
+}
+
+ipcMain.handle('spellcheck:get', () => workspace.spellcheck())
+ipcMain.handle('spellcheck:set', (_e, on: unknown) => {
+  if (typeof on !== 'boolean') return workspace.spellcheck()
+  workspace.setSpellcheck(on)
+  for (const w of BrowserWindow.getAllWindows()) w.webContents.session.setSpellCheckerEnabled(on)
+  return on
+})
+
 function createWindow(): BrowserWindow {
   const w = new BrowserWindow({
     width: 1200,
@@ -164,10 +200,11 @@ function createWindow(): BrowserWindow {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
-      spellcheck: false,
+      spellcheck: true,
     },
   })
   w.once('ready-to-show', () => w.show())
+  spelling(w)
   // A link: another document of a root opens in a tab; the web goes to the system browser.
   const follow = (url: string) => {
     const file = documentOfUrl(url, roots)

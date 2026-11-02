@@ -65,10 +65,10 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
         const p = preview?.getBoundingClientRect()
         const v = document.querySelector('[data-testid="view"]')!
         return {
-          left: Math.round(r.left - view.left),
-          right: Math.round((p ?? r).right - view.right),
-          top: Math.round(r.top - view.top),
-          bottom: Math.round(r.bottom - view.bottom),
+          left: Math.round(r.left - view.left) || 0,
+          right: Math.round((p ?? r).right - view.right) || 0,
+          top: Math.round(r.top - view.top) || 0,
+          bottom: Math.round(r.bottom - view.bottom) || 0,
           border: getComputedStyle(area).borderTopWidth,
           viewScrolls: v.scrollHeight > v.clientHeight + 1,
           seam: p ? { gap: Math.round(p.left - r.right), line: getComputedStyle(preview!).borderLeftWidth } : null,

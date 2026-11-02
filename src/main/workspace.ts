@@ -32,6 +32,8 @@ export interface WorkspaceData {
   templatesFolder?: string | null
   /** Files kept at hand, by their paths, in the order they were added. */
   bookmarks?: string[]
+  /** Spelling checked as text is written; unset — on where the system checks it (macOS, Windows). */
+  spellcheck?: boolean
 }
 
 export class Workspace {
@@ -45,6 +47,7 @@ export class Workspace {
       ...(loaded.sharedAutoCommit !== undefined ? { sharedAutoCommit: loaded.sharedAutoCommit } : {}),
       ...(loaded.dailyFolder ? { dailyFolder: loaded.dailyFolder } : {}),
       ...(loaded.templatesFolder ? { templatesFolder: loaded.templatesFolder } : {}),
+      ...(typeof loaded.spellcheck === 'boolean' ? { spellcheck: loaded.spellcheck } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
@@ -78,6 +81,20 @@ export class Workspace {
 
   setDailyFolder(path: string | null): void {
     this.data.dailyFolder = path === null ? null : resolve(path)
+    this.save()
+  }
+
+  /**
+   * Whether spelling is checked. The system checks it on macOS and Windows,
+   * offline; elsewhere Chromium fetches dictionaries from the web, so it is off
+   * until it is turned on.
+   */
+  spellcheck(platform = process.platform): boolean {
+    return this.data.spellcheck ?? (platform === 'darwin' || platform === 'win32')
+  }
+
+  setSpellcheck(on: boolean): void {
+    this.data.spellcheck = on
     this.save()
   }
 

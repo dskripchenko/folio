@@ -25,6 +25,7 @@ import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
 import { HoverPreview } from './hoverPreview'
 import { GraphPanel, type GraphText } from './graphPanel'
+import { StatusBar, type StatusText } from './statusBar'
 import { CommandPalette, type Command, type PaletteText } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
@@ -75,6 +76,9 @@ const TEXT = {
     links: { title: 'Links', close: 'Close', incoming: 'Linked here', outgoing: 'Links from this note', mentions: 'Named without a link', noNote: 'Open a note to see its links.', none: 'None', missing: 'No such note yet: a click makes it.', link: 'Link', linked: 'Made a link.', changed: 'The note has changed meanwhile: look again.' } as LinksText,
     tags: { title: 'Tags', close: 'Close', filter: 'Filter tags', none: 'No such tag', noTags: 'No tags in this project yet: write #tag in a note, or tags: in its properties.' } as TagsText,
     graph: { title: 'Graph', close: 'Close', local: 'This note', all: 'All', empty: 'No notes here yet.' } as GraphText,
+    status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}' } as StatusText,
+    spellcheck: 'Check spelling',
+    spellcheckFetch: 'Check spelling (fetches dictionaries)',
     commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
@@ -124,6 +128,9 @@ const TEXT = {
     links: { title: 'Ссылки', close: 'Закрыть', incoming: 'Ссылаются сюда', outgoing: 'Ссылки из заметки', mentions: 'Упоминания без ссылки', noNote: 'Откройте заметку, чтобы увидеть её ссылки.', none: 'Нет', missing: 'Такой заметки ещё нет: щелчок создаст её.', link: 'Связать', linked: 'Ссылка добавлена.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as LinksText,
     tags: { title: 'Теги', close: 'Закрыть', filter: 'Найти тег', none: 'Нет такого тега', noTags: 'В этом проекте пока нет тегов: напишите #тег в заметке или tags: в её свойствах.' } as TagsText,
     graph: { title: 'Граф', close: 'Закрыть', local: 'Эта заметка', all: 'Все', empty: 'Заметок здесь пока нет.' } as GraphText,
+    status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}' } as StatusText,
+    spellcheck: 'Проверять орфографию',
+    spellcheckFetch: 'Проверять орфографию (скачает словари)',
     commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
@@ -139,6 +146,10 @@ let linksPanel: LinksPanel | null = null
 let tagsPanel: TagsPanel | null = null
 /** The graph of notes: made with the rest of the window, drawn around the note in view. */
 let graphPanel: GraphPanel | null = null
+/** The status line under the page. */
+let statusBar: StatusBar | null = null
+/** Spelling checked as text is written (folio's setting). */
+let spellOn = false
 /** The modifier key as the system writes it in shortcuts. */
 const mod = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl+'
 document.documentElement.dataset.platform = folio.platform
@@ -202,6 +213,8 @@ function applyText(): void {
   linksPanel?.setText(t.links)
   tagsPanel?.setText(t.tags)
   graphPanel?.setText(t.graph)
+  statusBar?.setText(t.status)
+  syncStatus()
   palette.setText(t.commands)
   consolePanel.setText(t.console)
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
@@ -584,6 +597,8 @@ function openSettings(anchor: HTMLElement): void {
   popMenu(anchor, [
     ...(['system', 'light', 'dark'] as const).map((value) => ({ label: t.themes[value], checked: theme === value, testid: `theme-${value}`, action: () => applyTheme(value) })),
     { separator: true, label: '', action: () => undefined },
+    { label: folio.platform === 'linux' ? t.spellcheckFetch : t.spellcheck, checked: spellOn, testid: 'spellcheck', action: () => void folio.setSpellcheck(!spellOn).then((on) => (spellOn = on)) },
+    { separator: true, label: '', action: () => undefined },
     { label: t.commands.dailyFolder, icon: 'calendar', testid: 'daily-folder', action: () => void folio.chooseFolder('daily') },
     { label: t.commands.templatesFolder, icon: 'note', testid: 'templates-folder', action: () => void folio.chooseFolder('templates') },
   ], 'end')
@@ -608,9 +623,19 @@ function linksSoon(): void {
   }, 600)
 }
 
+/** The status line for the document in view: its length, and the caret in its source. */
+function syncStatus(): void {
+  const tab = active
+  if (!statusBar) return
+  if (!tab || tab.version || (formatOf(tab) !== 'markdown' && formatOf(tab) !== 'text')) return statusBar.show(null)
+  const field = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility()) ?? null
+  statusBar.show({ text: tab.text, field: field && document.activeElement === field ? field : null })
+}
+
 /** The text changed: mark it, and write the buffer once typing settles. */
 function edited(tab: Tab): void {
   syncLabel(tab)
+  if (tab === active) syncStatus()
   if (tab === active) linksSoon()
   if (tab.timer) clearTimeout(tab.timer)
   tab.timer = setTimeout(() => flush(tab), BUFFER_DELAY)
@@ -663,6 +688,7 @@ function activate(tab: Tab | null): void {
   linksPanel?.show(noteOf(tab))
   tagsPanel?.show(tab?.path ?? null)
   graphPanel?.show(tab?.path ?? null)
+  syncStatus()
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
   if (tab && !wasShown) requestAnimationFrame(() => (scrollerOf(tab).scrollTop = tab.scroll))
@@ -1356,6 +1382,14 @@ graphPanel = new GraphPanel(
 )
 document.querySelector('.content')!.insertBefore(graphPanel.el, document.querySelector('.history'))
 graphPanel.show(null)
+
+statusBar = new StatusBar(document.querySelector<HTMLElement>('.status')!, t.status)
+// The caret moved in a source field: its line and column.
+document.addEventListener('selectionchange', () => {
+  if (document.activeElement instanceof HTMLTextAreaElement) syncStatus()
+})
+document.addEventListener('focusin', () => syncStatus())
+void folio.spellcheck().then((on) => (spellOn = on))
 linksPanel.show(noteOf(active))
 
 const consolePanel = new ConsolePanel(

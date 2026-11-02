@@ -428,6 +428,8 @@ export class Sidebar {
       this.deferred.add(ul)
       return
     }
+    // A row in focus keeps it when the list is drawn again (the disk's word coming late).
+    const focused = document.activeElement instanceof HTMLElement && ul.contains(document.activeElement) ? document.activeElement.dataset.rel : undefined
     ul.replaceChildren()
     if (entries.length === 0 && rel === '') {
       const li = document.createElement('li')
@@ -436,6 +438,7 @@ export class Sidebar {
       ul.append(li)
     }
     for (const entry of entries) ul.append(this.entry(root, rootPath, entry))
+    if (focused !== undefined) ul.querySelector<HTMLElement>(`:scope > li > .row[data-rel="${CSS.escape(focused)}"]`)?.focus()
     this.setActive(this.activeFile)
     void this.decorate(ul)
   }
