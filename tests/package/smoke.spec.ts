@@ -47,7 +47,9 @@ test('the packaged program: widgets offline, a console, a PDF, its data beside i
     await win.keyboard.type(process.platform === 'win32' ? 'echo "folio-$(6*7)"\n' : 'echo folio-$((6*7))\n')
     await expect(win.locator('.console-panel')).toContainText('folio-42', { timeout: 30_000 })
 
-    // A PDF.
+    // A PDF — from the page: off a Mac, Ctrl with a letter in a console is the shell's.
+    await win.keyboard.press('Control+`')
+    await doc.locator('h1', { hasText: 'Everything' }).click()
     const file = join(f.root, 'everything.pdf')
     await electronApp.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog

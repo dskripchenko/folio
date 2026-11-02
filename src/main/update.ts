@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { chmodSync, createWriteStream, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -231,7 +231,7 @@ export class Updater {
   /**
    * Leaving: the staged version takes the program's place. macOS and Linux
    * rename while running; Windows does not let a running `.exe` be replaced,
-   * so a detached PowerShell waits for folio to exit and copies it over (the
+   * so a PowerShell started apart from folio waits for it to exit and copies it over (the
    * `folio-data` beside it untouched). Returns whether folio should start
    * again by `app.relaunch` (Windows starts it from that script).
    */
@@ -264,7 +264,11 @@ export class Updater {
         `if ($LASTEXITCODE -lt 8) { Remove-Item -LiteralPath ${q(join(this.o.dir, 'ready.json'))} -Force -ErrorAction SilentlyContinue }`,
         ...(this.restart ? [`Start-Process -FilePath ${q(join(place, 'folio.exe'))}`] : []),
       ].join('; ')
-      spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', script], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+      // Started through WMI: outside folio's process tree and job object, which a terminal or a CI
+      // runner closes with folio, killing a plain detached child before it copies anything.
+      const encoded = Buffer.from(script, 'utf16le').toString('base64')
+      const create = `Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand ${encoded}' } | Out-Null`
+      spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', create], { stdio: 'ignore', windowsHide: true, timeout: 20_000 })
     } catch {
       // Left as it was: the next start runs the version it had.
     }
