@@ -59,7 +59,7 @@ describe('shell integration on real shells', () => {
       ])
       // The output is between its marks: `ok` on the row after the command.
       const echo = done[1]!
-      expect(term.buffer.lines[echo.output! - term.trimmed + (name === 'powershell' ? 1 : 0)]!.text()).toContain('ok')
+      expect(term.buffer.lines[echo.output! - term.trimmed]!.text()).toContain('ok')
       expect(term.cwd?.replace(/^\/([A-Za-z]:)/, '$1').toLowerCase().replace(/\\/g, '/')).toContain(target.split(/[\\/]/).pop()!.toLowerCase())
     }, 30_000)
   }

@@ -984,7 +984,8 @@ window.addEventListener(
       return
     }
     // Ctrl with a letter in a console is the shell's (^W, ^E, ^P…), not folio's: off a Mac the shortcuts stay out.
-    if (folio.platform !== 'darwin' && (event.target as HTMLElement | null)?.closest?.('.dsk-term')) return
+    // Except Ctrl+F: the find bar over the output (as in VS Code's terminal).
+    if (folio.platform !== 'darwin' && (event.target as HTMLElement | null)?.closest?.('.dsk-term') && !(event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'f')) return
     const mod = folio.platform === 'darwin' ? event.metaKey : event.ctrlKey
     if (!mod || event.altKey) return
     const key = event.key.toLowerCase()
