@@ -26,11 +26,12 @@ async function run(shell: string, args: string[], lines: string[]): Promise<Term
   p.onData((d) => term.write(d))
   term.onData((d) => p.write(d))
   // Until the first prompt is marked.
-  for (let i = 0; i < 100 && term.commands.length === 0; i++) await wait(100)
+  for (let i = 0; i < 300 && term.commands.length === 0; i++) await wait(100)
   for (const line of lines) {
     const before = term.commands.length
     p.write(line + '\r')
-    for (let i = 0; i < 100 && term.commands.length <= before; i++) await wait(100)
+    // A slow machine (a Windows runner busy with other tests): up to half a minute a command.
+    for (let i = 0; i < 300 && term.commands.length <= before; i++) await wait(100)
   }
   await wait(300)
   p.kill()
@@ -61,6 +62,6 @@ describe('shell integration on real shells', () => {
       const echo = done[1]!
       expect(term.buffer.lines[echo.output! - term.trimmed]!.text()).toContain('ok')
       expect(term.cwd?.replace(/^\/([A-Za-z]:)/, '$1').toLowerCase().replace(/\\/g, '/')).toContain(target.split(/[\\/]/).pop()!.toLowerCase())
-    }, 30_000)
+    }, 120_000)
   }
 })

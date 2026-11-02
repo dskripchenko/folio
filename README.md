@@ -1,4 +1,4 @@
-<img src="build/icons/png/128.png" width="96" height="96" alt="">
+![folio](build/icons/png/128.png)
 
 # folio
 

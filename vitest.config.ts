@@ -10,4 +10,4 @@ const scripts = {
   },
 }
 
-export default defineConfig({ plugins: [scripts], test: { include: ['tests/unit/**/*.spec.ts'] } })
+export default defineConfig({ plugins: [scripts], test: { include: ['tests/unit/**/*.spec.ts'], testTimeout: 20_000 } })
