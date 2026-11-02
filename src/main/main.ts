@@ -47,7 +47,7 @@ import { Consoles } from './pty'
 import { replaceInFiles, searchFiles, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
-import { backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
+import { aliasIndex, aliasesOf, backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { resolveInside } from './paths'
 import { tagIndex } from './tags'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
@@ -546,7 +546,8 @@ ipcMain.handle('wiki:exists', async (_e, from: unknown, targets: unknown) => {
   if (typeof from !== 'string' || !Array.isArray(targets)) return []
   const dir = linkRoot(from)
   const files = await filesOf(dir)
-  return targets.map((t) => typeof t === 'string' && resolveWiki(wikiTarget(t).name, relIn(dir, from), files) !== null)
+  const aliases = aliasIndex(await notesIn(dir, files))
+  return targets.map((t) => typeof t === 'string' && resolveWiki(wikiTarget(t).name, relIn(dir, from), files, aliases) !== null)
 })
 
 /**
@@ -563,7 +564,8 @@ ipcMain.handle('doc:peek', async (_e, from: unknown, link: unknown) => {
     const dir = linkRoot(from)
     const target = wikiTarget(l.wiki)
     heading = target.heading
-    const found = resolveWiki(target.name, relIn(dir, from), await filesOf(dir))
+    const files = await filesOf(dir)
+    const found = resolveWiki(target.name, relIn(dir, from), files, aliasIndex(await notesIn(dir, files)))
     file = found === null ? null : join(dir, ...found.split('/'))
   } else if (typeof l.url === 'string') {
     file = documentOfUrl(l.url, roots)
@@ -584,7 +586,8 @@ ipcMain.handle('wiki:open', async (_e, from: unknown, target: unknown) => {
   if (typeof from !== 'string' || typeof target !== 'string') return { error: 'invalid', path: '' }
   const dir = linkRoot(from)
   const { name, heading } = wikiTarget(target)
-  const found = resolveWiki(name, relIn(dir, from), await filesOf(dir))
+  const files = await filesOf(dir)
+  const found = resolveWiki(name, relIn(dir, from), files, aliasIndex(await notesIn(dir, files)))
   if (found !== null) return { ...open(join(dir, ...found.split('/'))), heading }
   // A new note: beside the linking one, or at the path the link names.
   const folder = name.includes('/') ? resolveInside(dir, dirname(name)) : dirname(from)
@@ -604,7 +607,13 @@ ipcMain.handle('wiki:names', async (_e, from: unknown) => {
   const dir = linkRoot(from)
   const files = await filesOf(dir)
   const self = relIn(dir, from)
-  return files.filter((f) => f !== self && kindOfLink(f)).map((f) => ({ name: linkName(f, files), path: f }))
+  const names = files.filter((f) => f !== self && kindOfLink(f)).map((f) => ({ name: linkName(f, files), path: f, label: undefined as string | undefined }))
+  // A note's aliases too: chosen, the link names the note and shows the alias.
+  for (const n of await notesIn(dir, files)) {
+    if (n.rel === self) continue
+    for (const alias of aliasesOf(n.text)) names.push({ name: `${linkName(n.rel, files)}|${alias}`, path: n.rel, label: alias })
+  }
+  return names
 })
 /** What a link suggests: notes, diagrams and pictures, not every file of a project. */
 function kindOfLink(rel: string): boolean {
@@ -686,11 +695,12 @@ ipcMain.handle('wiki:panel', async (_e, note: unknown, text: unknown) => {
   const files = await filesOf(dir)
   const rel = relIn(dir, note)
   const notes = await notesIn(dir, files)
+  const aliases = aliasIndex(notes)
   const abs = (r: string): string => join(dir, ...r.split('/'))
   return {
     name: linkName(rel, files),
-    outgoing: linksOf(text, rel, files).map((l) => ({ ...l, path: l.target === null ? null : abs(l.target) })),
-    incoming: backlinksOf(rel, notes, files).map((b) => ({ ...b, path: abs(b.rel) })),
+    outgoing: linksOf(text, rel, files, aliases).map((l) => ({ ...l, path: l.target === null ? null : abs(l.target) })),
+    incoming: backlinksOf(rel, notes, files, aliases).map((b) => ({ ...b, path: abs(b.rel) })),
     mentions: mentionsOf(rel, notes).map((m) => ({ ...m, path: abs(m.rel) })),
   }
 })
@@ -757,11 +767,12 @@ ipcMain.handle('graph:data', async (_e, note: unknown) => {
   const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()
   const files = await filesOf(dir)
   const notes = await notesIn(dir, files)
+  const aliases = aliasIndex(notes)
   const index = new Map(notes.map((n, i) => [n.rel, i]))
   const pairs = new Set<string>()
   const edges: [number, number][] = []
   notes.forEach((n, i) => {
-    for (const link of linksOf(n.text, n.rel, files)) {
+    for (const link of linksOf(n.text, n.rel, files, aliases)) {
       const j = link.target === null ? undefined : index.get(link.target)
       if (j === undefined || j === i) continue
       const key = i < j ? `${i}:${j}` : `${j}:${i}`

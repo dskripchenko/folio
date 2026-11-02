@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { backlinksOf, filesOf, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiLinksIn, wikiTarget } from '../../src/main/wikilinks'
+import { aliasIndex, aliasesOf, backlinksOf, filesOf, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiLinksIn, wikiTarget } from '../../src/main/wikilinks'
 
 const FILES = ['Index.md', 'notes/Plan.md', 'notes/Ideas.md', 'archive/Plan.md', 'archive/old/Ideas.md', 'media/pic.png']
 
@@ -143,5 +143,28 @@ describe('the links panel', () => {
     expect(linkMention(text, 4, 4, 'Plan')).toBe('The [[Plan|plan]] is late.')
     expect(linkMention('The Plan is late.', 4, 4, 'Plan')).toBe('The [[Plan]] is late.')
     expect(linkMention('The X is late.', 4, 4, 'Plan')).toBeNull()
+  })
+})
+
+describe('aliases', () => {
+  it('read from the properties: a list, - lines, words with commas', () => {
+    expect(aliasesOf('---\naliases: [Road map, "Plan B"]\n---\n')).toEqual(['Road map', 'Plan B'])
+    expect(aliasesOf('---\naliases:\n  - One\n  - Two\n---\n')).toEqual(['One', 'Two'])
+    expect(aliasesOf('---\nalias: Solo\n---\n')).toEqual(['Solo'])
+    expect(aliasesOf('# No properties')).toEqual([])
+  })
+
+  it('a link by an alias reaches its note when no file has the name; the first note keeps an alias', () => {
+    const notes = [
+      { rel: 'notes/Roadmap.md', text: '---\naliases: [Road map, Plan]\n---\n' },
+      { rel: 'Other.md', text: '---\naliases: [road map]\n---\n' },
+      { rel: 'Plan.md', text: '' },
+    ]
+    const files = notes.map((n) => n.rel)
+    const aliases = aliasIndex(notes)
+    expect(resolveWiki('road map', 'x.md', files, aliases)).toBe('notes/Roadmap.md')
+    expect(resolveWiki('Plan', 'x.md', files, aliases)).toBe('Plan.md')
+    expect(resolveWiki('Nothing', 'x.md', files, aliases)).toBeNull()
+    expect(linksOf('See [[Road map]].', 'x.md', files, aliases)[0]!.target).toBe('notes/Roadmap.md')
   })
 })

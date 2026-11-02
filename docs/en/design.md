@@ -146,6 +146,10 @@ template is a note in the templates folder (`Templates` in Shared):
 a quick note of it; `{{title}}`, `{{date}}`, `{{time}}` and `{{date:DD.MM.YYYY}}`
 are filled in. Both folders are chosen in the settings menu.
 
+A note's other names — `aliases:` in its properties (`aliases: [Road map]`) —
+work as its name in links: `[[Road map]]` reaches it when no file is named so,
+and `[[` offers them, writing `[[Roadmap|Road map]]`.
+
 ### Spelling and the status line
 
 Spelling is checked as text is written — by the system on macOS and Windows,

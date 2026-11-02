@@ -159,6 +159,10 @@ Einfügemarke, **Neue Notiz aus Vorlage…** macht eine Schnellnotiz daraus;
 `{{title}}`, `{{date}}`, `{{time}}` und `{{date:DD.MM.YYYY}}` werden ausgefüllt.
 Beide Ordner werden im Einstellungsmenü gewählt.
 
+Andere Namen einer Notiz — `aliases:` in ihren Eigenschaften (`aliases: [Fahrplan]`)
+— gelten in Links als ihr Name: `[[Fahrplan]]` erreicht sie, wenn keine Datei so
+heißt, und `[[` bietet sie an und schreibt `[[Roadmap|Fahrplan]]`.
+
 ### Rechtschreibung und Statuszeile
 
 Die Rechtschreibung wird beim Schreiben geprüft — auf macOS und Windows vom

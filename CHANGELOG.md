@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Aliases: `aliases:` in a note's properties work as its name in `[[links]]`
+  (previews, the links panel and the graph too), and `[[` offers them.
 - Spelling checked as text is written (the system's on macOS and Windows;
   on Linux when turned on), corrections in a field's menu; a status line with
   the document's words, characters, reading time and the caret's place.

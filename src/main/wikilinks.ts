@@ -41,14 +41,42 @@ function matches(rel: string, name: string): boolean {
  * The file a link names, seen from a note (`fromRel`, both paths from the
  * root, `/`-separated): the same folder first, then the shortest path.
  */
-export function resolveWiki(name: string, fromRel: string, files: string[]): string | null {
+export function resolveWiki(name: string, fromRel: string, files: string[], aliases?: Aliases): string | null {
   if (name === '') return fromRel
   const found = files.filter((f) => matches(f, name))
-  if (found.length === 0) return null
+  // No file of that name: a note that has it among its aliases.
+  if (found.length === 0) return aliases?.get(name.trim().toLowerCase()) ?? null
   const dir = posix.dirname(fromRel)
   const here = found.find((f) => posix.dirname(f) === dir)
   if (here) return here
   return found.sort((a, b) => a.split('/').length - b.split('/').length || a.length - b.length || a.localeCompare(b))[0]!
+}
+
+/** Notes' other names (`aliases:` in their properties), lower-cased, to the note's path. */
+export type Aliases = Map<string, string>
+
+/** A note's aliases: `aliases:` (or `alias:`) of its front matter — a list, `- ` lines, or names with commas. */
+export function aliasesOf(text: string): string[] {
+  const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(text)
+  if (!m) return []
+  const lines = (m[1] ?? '').split(/\r?\n/)
+  const out: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const a = /^alias(?:es)?:\s*(.*)$/i.exec(lines[i] ?? '')
+    if (!a) continue
+    const value = (a[1] ?? '').trim()
+    if (value.startsWith('[')) out.push(...value.replace(/^\[|\]$/g, '').split(','))
+    else if (value !== '') out.push(...value.split(','))
+    else for (let j = i + 1; j < lines.length && /^\s*-\s+/.test(lines[j] ?? ''); j++) out.push((lines[j] ?? '').replace(/^\s*-\s+/, ''))
+  }
+  return out.map((v) => v.trim().replace(/^["']|["']$/g, '')).filter((v) => v !== '')
+}
+
+/** The aliases of a root's notes; the first note to claim one keeps it. */
+export function aliasIndex(notes: { rel: string; text: string }[]): Aliases {
+  const out: Aliases = new Map()
+  for (const n of notes) for (const a of aliasesOf(n.text)) if (!out.has(a.toLowerCase())) out.set(a.toLowerCase(), n.rel)
+  return out
 }
 
 /** How a link names a file: its name alone when no other file has it, its path otherwise. */
@@ -247,12 +275,12 @@ function placeOf(text: string, index: number, length: number, display: string): 
 }
 
 /** Every link of a note, `[[…]]` and relative Markdown links, with what it reaches. */
-export function linksOf(text: string, rel: string, files: string[]): NoteLink[] {
+export function linksOf(text: string, rel: string, files: string[], aliases?: Aliases): NoteLink[] {
   const out: NoteLink[] = []
   for (const link of wikiLinksIn(text)) {
     const { name, heading } = wikiTarget(link.target)
     const display = link.alias ?? (heading ? `${name} › ${heading}` : name)
-    const target = name === '' ? rel : resolveWiki(name, rel, files)
+    const target = name === '' ? rel : resolveWiki(name, rel, files, aliases)
     out.push({ ...placeOf(text, link.index, link.length, link.embed ? '' : display), target, raw: link.target, wiki: true })
   }
   const code = codeRanges(text)
@@ -272,11 +300,11 @@ export function linksOf(text: string, rel: string, files: string[]): NoteLink[] 
 }
 
 /** The notes that link to a note, each with its links' places. */
-export function backlinksOf(noteRel: string, notes: { rel: string; text: string }[], files: string[]): { rel: string; places: LinkPlace[] }[] {
+export function backlinksOf(noteRel: string, notes: { rel: string; text: string }[], files: string[], aliases?: Aliases): { rel: string; places: LinkPlace[] }[] {
   const out = []
   for (const n of notes) {
     if (n.rel === noteRel) continue
-    const places = linksOf(n.text, n.rel, files).filter((l) => l.target === noteRel)
+    const places = linksOf(n.text, n.rel, files, aliases).filter((l) => l.target === noteRel)
     if (places.length > 0) out.push({ rel: n.rel, places })
   }
   return byName(out)

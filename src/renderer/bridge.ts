@@ -205,7 +205,7 @@ export interface FolioBridge {
   /** Open the file a `[[link]]` names, making the note when it is not there yet; `heading` to scroll to. */
   wikiOpen(from: string, target: string): Promise<OpenResult & { heading?: string | null; created?: boolean }>
   /** The files a note can link to, by the name a link would use. */
-  wikiNames(from: string): Promise<{ name: string; path: string }[]>
+  wikiNames(from: string): Promise<{ name: string; path: string; label?: string }[]>
   /** After a move: links to it written anew in the root's notes; how many notes changed. */
   wikiMoved(from: string, to: string, skip: string[]): Promise<number>
   /** A picture pasted into a note, saved in `attachments/` beside it: its path for the Markdown. */
