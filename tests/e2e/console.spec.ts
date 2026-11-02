@@ -88,9 +88,9 @@ test('a console: the shell, its commands marked, a path opened at its line; anot
     await expect(panel).toHaveClass(/right/)
     expect(await panel.evaluate((el) => el.parentElement!.className)).toContain('content')
     await panel.getByTestId('console-maximize').click()
-    await expect(win.locator('main.view')).toBeHidden()
+    await expect(win.getByTestId('view')).toBeHidden()
     await panel.getByTestId('console-maximize').click()
-    await expect(win.locator('main.view')).toBeVisible()
+    await expect(win.getByTestId('view')).toBeVisible()
     await panel.getByTestId('console-position').click()
     await expect(panel).not.toHaveClass(/right/)
 

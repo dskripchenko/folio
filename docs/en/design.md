@@ -106,6 +106,16 @@ a rename or a move; a document put in the trash closes, unless it has unsaved
 changes. A name with `/ \ : * ? " < > |` or one already there is refused in
 place, with the reason.
 
+### Two documents side by side
+
+**Open beside** in a tab's menu (or `Cmd/Ctrl+\`, or the command) shows that
+document in a second view to the right; the main view keeps another tab. Each
+view keeps its own document and scroll; a click in a view puts its document in
+use, and the panels, find and the history follow it. The divider between the
+views is dragged, and the share is kept. **Back to the main view** (or
+`Cmd/Ctrl+\` again) closes the side view, the document staying open in a tab;
+closing its tab closes the view too. Printing prints the document in use only.
+
 ### Links between notes
 
 `[[Note]]` links to a note by its name, wherever it lies in the same project
@@ -260,6 +270,7 @@ relative paths.
 | `Cmd/Ctrl+B` | the sidebar |
 | `Cmd/Ctrl+T` | go to a file by its name |
 | `Cmd/Ctrl+K`, `F1` | the commands: any action by its name |
+| `Cmd/Ctrl+\` | the document beside the main view, or the side view closed |
 | `Cmd/Ctrl+Shift+F` | search the files |
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |

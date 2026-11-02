@@ -114,6 +114,18 @@ Umbenennung oder Verschiebung; ein in den Papierkorb gelegtes schließt sich,
 außer es hat ungespeicherte Änderungen. Ein Name mit `/ \ : * ? " < > |` oder
 einer, den es schon gibt, wird an Ort und Stelle abgelehnt, mit dem Grund.
 
+### Zwei Dokumente nebeneinander
+
+**Daneben öffnen** im Menü eines Tabs (oder `Cmd/Strg+\`, oder der Befehl)
+zeigt das Dokument in einer zweiten Ansicht rechts; die Hauptansicht behält
+einen anderen Tab. Jede Ansicht hat ihr eigenes Dokument und ihren Bildlauf;
+ein Klick in eine Ansicht macht ihr Dokument zum aktuellen, Panels, Suche und
+Verlauf folgen ihm. Der Teiler zwischen den Ansichten lässt sich ziehen, der
+Anteil bleibt erhalten. **Zurück in die Hauptansicht** (oder erneut
+`Cmd/Strg+\`) schließt die Seitenansicht, das Dokument bleibt in einem Tab
+offen; das Schließen seines Tabs schließt die Ansicht ebenfalls. Gedruckt wird
+nur das aktuelle Dokument.
+
 ### Links zwischen Notizen
 
 `[[Notiz]]` verlinkt eine Notiz über ihren Namen, wo immer sie im selben Projekt
@@ -284,6 +296,7 @@ Pfade.
 | `Cmd/Strg+B` | Seitenleiste |
 | `Cmd/Strg+T` | zu einer Datei nach Namen gehen |
 | `Cmd/Strg+K`, `F1` | die Befehle: jede Aktion nach ihrem Namen |
+| `Cmd/Strg+\` | das Dokument neben der Hauptansicht, oder die Seitenansicht schließen |
 | `Cmd/Strg+Umschalt+F` | in den Dateien suchen |
 | `Cmd/Strg+F` | im Dokument suchen |
 | `Cmd/Strg+G`, `Cmd/Strg+Umschalt+G` | der nächste Treffer, der vorige |

@@ -93,6 +93,9 @@ body.sidebar-collapsed .rail-left { display: flex; }
 .tabs { display: flex; flex: 1; overflow-x: auto; }
 .tab { display: flex; align-items: center; gap: 6px; padding: 0 10px 0 14px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .tab[aria-selected="true"] { background: var(--bg); color: var(--fg); }
+/* Shown in a view but not the one in use; the one beside marked by its edge. */
+.tab.shown { color: var(--fg); }
+.tab.beside { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--accent) 70%, transparent); }
 .tab .close { border: 0; background: transparent; color: inherit; font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
 .tab .close:hover { background: var(--line); }
 .tab.error { color: #cf222e; }
@@ -111,6 +114,13 @@ body.sidebar-collapsed .rail-left { display: flex; }
 
 .content { position: relative; flex: 1; display: flex; min-height: 0; }
 .view { flex: 1; overflow: auto; min-width: 0; }
+.view[hidden], .split[hidden] { display: none; }
+/* A document beside the main one: two views, a divider dragged between them. */
+.content.two-views > .view:not(.view-beside) { flex: var(--main-grow, 1) 1 0; }
+.content.two-views > .view-beside { flex: var(--side-grow, 1) 1 0; border-left: 1px solid var(--line); }
+.split { flex: none; width: 6px; margin: 0 -3px; z-index: 2; cursor: col-resize; }
+.split:hover, .split.dragging { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+.content.two-views .view .doc { padding-left: 28px; padding-right: 28px; }
 
 .history { width: 300px; flex: none; overflow: auto; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
 .history[hidden] { display: none; }
@@ -233,7 +243,10 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
   :root { color-scheme: light; --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --tab: #f6f8fa; --accent: #0969da; }
   html, body { height: auto; }
   body { display: block; overflow: visible; background: #fff; }
-  .sidebar, .resizer, .bar, .banner, .notice, .history, .welcome, .rail, .flyout, .doc-toolbar, .pop-menu { display: none !important; }
+  .sidebar, .resizer, .bar, .banner, .notice, .history, .welcome, .rail, .flyout, .doc-toolbar, .pop-menu, .split { display: none !important; }
+  /* Two documents on screen: only the one printed goes on paper. */
+  body[data-printing] .doc:not([data-printing]) { display: none !important; }
+  .view-beside { border: 0; }
   .main, .content, .view { display: block; height: auto; overflow: visible; }
   .doc { max-width: none; margin: 0; padding: 0; }
   .version-bar { display: none !important; }
