@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_PDF, folderDocuments, pdfName, pdfOptions, printToPdfOptions } from '../../src/main/pdf'
+import { DEFAULT_PDF, folderDocuments, pdfName, pdfOptions, printToPdfOptions, SLIDES_PDF } from '../../src/main/pdf'
 
 let dir: string
 beforeEach(() => {
@@ -34,6 +34,14 @@ describe('PDF options', () => {
     expect(bare.displayHeaderFooter).toBe(false)
     expect(bare.margins).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
     expect(bare.generateDocumentOutline).toBe(false)
+  })
+
+  it('slides: 16:9 pages, edge to edge, no header or footer', () => {
+    const p = printToPdfOptions(SLIDES_PDF, 'Talk')
+    expect(p.pageSize).toEqual({ width: 13.333, height: 7.5 })
+    expect(p.landscape).toBe(false)
+    expect(p.margins).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
+    expect(p.displayHeaderFooter).toBe(false)
   })
 
   it("names the PDF after the document or the folder", () => {

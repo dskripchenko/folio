@@ -7,11 +7,12 @@
  */
 import type { Format } from './bridge'
 import { viewOf } from './formats'
+import { slidesOf } from './slides'
 
 interface PdfJob {
   title: string
   lang: string
-  options: { toc: boolean }
+  options: { toc: boolean; slides?: boolean }
   docs: { name: string; text: string; base: string | null; format: Format; urls: string[] }[]
 }
 
@@ -127,7 +128,16 @@ async function main(): Promise<void> {
       h.textContent = d.name
       s.append(h)
     }
-    s.append(viewOf(d.format, d.text, { base: d.base ?? undefined, name: d.name }))
+    if (job.options.slides && d.format === 'markdown') {
+      // A note as slides: each one a page of its own.
+      s.classList.add('pdf-slides')
+      for (const text of slidesOf(d.text)) {
+        const slide = document.createElement('div')
+        slide.className = 'pdf-slide'
+        slide.append(viewOf('markdown', text, { base: d.base ?? undefined, name: d.name }))
+        s.append(slide)
+      }
+    } else s.append(viewOf(d.format, d.text, { base: d.base ?? undefined, name: d.name }))
     root.append(s)
     return s
   })

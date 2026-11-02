@@ -224,6 +224,16 @@ Tag wird `📅 2026-11-10`, `@2026-11-10` oder `due:2026-11-10` geschrieben. Ein
 Aufgabe wird im Panel abgehakt oder wieder geöffnet, in ihrer Notiz (nicht in
 einer mit ungespeicherten Änderungen); ihr Text öffnet die Notiz dort.
 
+### Folien
+
+**Als Folien zeigen** (`F5` oder unter den Befehlen) zeigt die Notiz bildschirmfüllend,
+Folie für Folie: Folien sind ihre Teile zwischen `---`-Zeilen mit einer
+Leerzeile davor (außerhalb von Code und Eigenschaften, wie in Marp und
+reveal.js). Pfeiltasten, Leertaste, Bild auf/ab, Pos1 und Ende oder ein Klick
+auf die linke oder rechte Hälfte blättern; Escape beendet die Vorführung.
+**Folien als PDF exportieren** (unter den Befehlen oder in der Leiste der
+Vorführung) schreibt eine 16:9-Seite pro Folie.
+
 ### Vorschau
 
 Ruht der Zeiger auf einem `[[Link]]` oder einem Link zu einer Notiz, erscheint

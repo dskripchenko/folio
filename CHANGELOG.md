@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Slides: a note shown over the whole screen a slide at a time, split on its
+  `---` lines (`F5`), and exported as PDF with one 16:9 page per slide.
 - Boards and calendars: `*.kanban.md` and `*.calendar.md` files drawn and
   edited as a kanban board and a calendar, kept as markup; new ones from the
   commands.

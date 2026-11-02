@@ -26,6 +26,8 @@ export interface PdfOptions {
   outline: boolean
   /** Colours and backgrounds of the drawings. */
   background: boolean
+  /** A note as slides: one to a 16:9 page, split on its `---` lines. */
+  slides?: boolean
 }
 
 export const DEFAULT_PDF: PdfOptions = {
@@ -38,6 +40,20 @@ export const DEFAULT_PDF: PdfOptions = {
   outline: true,
   background: true,
 }
+
+/** Slides: 16:9 pages (13.33 × 7.5 in, a presentation's), edge to edge, no lines, no contents. */
+export const SLIDES_PDF: PdfOptions = {
+  pageSize: 'A4',
+  landscape: false,
+  margins: { top: 0, right: 0, bottom: 0, left: 0 },
+  header: false,
+  footer: false,
+  toc: false,
+  outline: true,
+  background: true,
+  slides: true,
+}
+const SLIDE_PAGE = { width: 13.333, height: 7.5 }
 
 /** The room a header or footer line needs: less, and Chromium draws it over the text. */
 const LINE_ROOM = 12
@@ -72,7 +88,7 @@ function line(o: PdfOptions, content: string, align: 'left' | 'center' | 'right'
 }
 
 export interface PrintToPdf {
-  pageSize: PageSize
+  pageSize: PageSize | { width: number; height: number }
   landscape: boolean
   printBackground: boolean
   margins: { top: number; right: number; bottom: number; left: number }
@@ -88,8 +104,8 @@ export function printToPdfOptions(o: PdfOptions, title: string): PrintToPdf {
   const top = o.header ? Math.max(o.margins.top, LINE_ROOM) : o.margins.top
   const bottom = o.footer ? Math.max(o.margins.bottom, LINE_ROOM) : o.margins.bottom
   return {
-    pageSize: o.pageSize,
-    landscape: o.landscape,
+    pageSize: o.slides ? SLIDE_PAGE : o.pageSize,
+    landscape: o.slides ? false : o.landscape,
     printBackground: o.background,
     margins: { top: inches(top), right: inches(o.margins.right), bottom: inches(bottom), left: inches(o.margins.left) },
     displayHeaderFooter: o.header || o.footer,

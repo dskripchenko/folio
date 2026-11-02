@@ -206,6 +206,16 @@ tasks of the project in view by when they are due — **Overdue**, **Today**,
 unchecked from the panel, in its note (not one open with unsaved changes); its
 text opens the note there.
 
+### Slides
+
+**Show as slides** (`F5`, or among the commands) shows the note in view over
+the whole screen, a slide at a time: the slides are its parts between `---`
+lines with an empty line before them (outside code and the properties, as in
+Marp and reveal.js). The arrows, Space, Page Up/Down, Home and End, or a click
+on the left or right half go through them; Escape ends the show. **Export the
+slides as PDF** (among the commands, or on the show's bar) writes one 16:9
+page per slide.
+
 ### Previews
 
 The pointer resting on a `[[link]]` or a link to a note shows the note in a

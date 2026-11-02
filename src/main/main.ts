@@ -28,7 +28,7 @@ import {
   textAt,
 } from './git'
 import { Logins } from './logins'
-import { folderDocuments, pdfName, pdfOptions, printToPdfOptions } from './pdf'
+import { folderDocuments, pdfName, pdfOptions, printToPdfOptions, SLIDES_PDF } from './pdf'
 import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, systemTransport, type Transport } from './sync'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
@@ -1170,8 +1170,9 @@ async function renderPdf(job: PdfJob, file: string): Promise<void> {
  */
 ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) => {
   if (!win || !target || typeof target !== 'object') return { error: 'invalid' }
-  const t = target as { kind?: string; path?: unknown; text?: unknown; name?: unknown; dir?: unknown }
-  const options = pdfOptions(rawOptions)
+  const t = target as { kind?: string; path?: unknown; text?: unknown; name?: unknown; dir?: unknown; slides?: unknown }
+  // A note as slides: pages of its own shape, whatever the dialog last chose.
+  const options = t.slides === true && t.kind === 'doc' ? SLIDES_PDF : pdfOptions(rawOptions)
   const opened = (files: string[]) => {
     const list = files.map(open).filter((o): o is OpenedDocument => !('error' in o))
     const ids = [...new Set(list.map((o) => o.root))]
