@@ -1,3 +1,5 @@
+<img src="build/icons/png/128.png" width="96" height="96" alt="">
+
 # folio
 
 [![tests](https://img.shields.io/github/actions/workflow/status/dskripchenko/folio/tests.yml?branch=main&label=tests)](https://github.com/dskripchenko/folio/actions/workflows/tests.yml)

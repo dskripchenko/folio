@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- folio at 16 and 32 pixels: the letter alone, bold, on the square. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f7cff"/>
+      <stop offset="1" stop-color="#6a3fe0"/>
+    </linearGradient>
+  </defs>
+  <rect x="40" y="40" width="944" height="944" rx="200" fill="url(#bg)"/>
+  <path d="M470 820 V420 Q470 280 610 280 H680" fill="none" stroke="#ffffff" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M330 500 H640" fill="none" stroke="#ffffff" stroke-width="130" stroke-linecap="round"/>
+</svg>

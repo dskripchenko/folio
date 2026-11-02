@@ -149,6 +149,8 @@ function createWindow(): BrowserWindow {
     width: 1200,
     height: 800,
     title: 'folio',
+    // The window's own icon (Windows, Linux); a packaged Mac app takes it from the bundle.
+    icon: join(__dirname, 'icon.png'),
     show: false,
     webPreferences: {
       preload: join(__dirname, 'preload.cjs'),
@@ -886,6 +888,8 @@ app.on('activate', () => {
 })
 
 void app.whenReady().then(() => {
+  // Run from the source on a Mac: the Dock shows folio's icon, not Electron's.
+  if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(join(__dirname, 'icon.png'))
   const docs = electronSession.fromPartition(PARTITION)
   handleScheme(docs, join(__dirname, 'renderer'), roots)
   gate = gateNetwork(docs, (file) => consent.allows(file), (document, hosts) => send('net:blocked', { document, hosts }))
