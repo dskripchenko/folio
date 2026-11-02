@@ -21,6 +21,7 @@ import { openPdfDialog, type PdfTarget, type PdfText } from './pdfDialog'
 import { describeRefusal, HistoryPanel, type HistoryText } from './history'
 import { Sidebar, type SidebarText } from './sidebar'
 import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
+import { LinksPanel, type LinksText } from './linksPanel'
 import type { GitRefusal, Version } from './bridge'
 
 const TEXT = {
@@ -62,6 +63,7 @@ const TEXT = {
     pdf: { title: 'Export as PDF', folderTitle: 'Export the folder as one PDF', pageSize: 'Page size', orientation: 'Orientation', portrait: 'Portrait', landscape: 'Landscape', margins: 'Margins', marginNames: ['None', 'Narrow', 'Normal', 'Wide'], header: 'Title at the top of each page', footer: 'Page numbers at the bottom', toc: 'Table of contents', outline: 'Bookmarks from the headings', background: 'Colours and backgrounds', export: 'Export…', exporting: 'Exporting…', cancel: 'Cancel', saved: 'Saved: {file}', failed: 'Not exported: {error}' } as PdfText,
     console: { title: 'Console', newConsole: 'New console', close: 'Close the console', hide: 'Hide the consoles (Ctrl+`)', ended: '[the shell ended, code {code}]', failed: 'The console did not start: {error}', split: 'Split: a console beside', toRight: 'Beside the page', toBottom: 'Under the page', maximize: 'The whole window', restore: 'Back to the panel', copy: 'Copy', paste: 'Paste', selectAll: 'Select all', clear: 'Clear', find: 'Find…', closePane: 'Close this console', running: 'Running: {command}' } as ConsoleText,
     search: { title: 'Search', placeholder: 'Search the files', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', close: 'Close', everywhere: 'Everywhere', shared: 'Shared', searching: 'Searching…', summary: '{matches} in {files}', truncated: '(the first ones)', none: 'Nothing found', invalid: 'Invalid expression', matches: ['match', 'matches'], files: ['file', 'files'], toggleReplace: 'Replace', replacePlaceholder: 'Replace with', replaceAll: 'Replace all', confirm: 'Replace {matches} in {files}?', replaced: 'Replaced {matches} in {files}.', committed: 'Committed to the history.', skipped: 'Left out, open with unsaved changes: {n}.', include: 'Replace in this file' } as SearchText,
+    links: { title: 'Links', close: 'Close', incoming: 'Linked here', outgoing: 'Links from this note', mentions: 'Named without a link', noNote: 'Open a note to see its links.', none: 'None', missing: 'No such note yet: a click makes it.', link: 'Link', linked: 'Made a link.', changed: 'The note has changed meanwhile: look again.' } as LinksText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
@@ -105,6 +107,7 @@ const TEXT = {
     pdf: { title: 'Экспорт в PDF', folderTitle: 'Экспорт папки одним PDF', pageSize: 'Размер страницы', orientation: 'Ориентация', portrait: 'Книжная', landscape: 'Альбомная', margins: 'Поля', marginNames: ['Без полей', 'Узкие', 'Обычные', 'Широкие'], header: 'Название вверху каждой страницы', footer: 'Номера страниц внизу', toc: 'Оглавление', outline: 'Закладки по заголовкам', background: 'Цвета и фоны', export: 'Экспортировать…', exporting: 'Экспорт…', cancel: 'Отмена', saved: 'Сохранено: {file}', failed: 'Не экспортировано: {error}' } as PdfText,
     console: { title: 'Консоль', newConsole: 'Новая консоль', close: 'Закрыть консоль', hide: 'Скрыть консоли (Ctrl+`)', ended: '[оболочка завершилась, код {code}]', failed: 'Консоль не запустилась: {error}', split: 'Разделить: консоль рядом', toRight: 'Справа от страницы', toBottom: 'Под страницей', maximize: 'На всё окно', restore: 'Вернуть в панель', copy: 'Копировать', paste: 'Вставить', selectAll: 'Выделить всё', clear: 'Очистить', find: 'Найти…', closePane: 'Закрыть эту консоль', running: 'Выполняется: {command}' } as ConsoleText,
     search: { title: 'Поиск', placeholder: 'Искать в файлах', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', close: 'Закрыть', everywhere: 'Везде', shared: 'Общие', searching: 'Поиск…', summary: '{matches} в {files}', truncated: '(первые)', none: 'Ничего не найдено', invalid: 'Неверное выражение', matches: ['совпадение', 'совпадения', 'совпадений'], files: ['файле', 'файлах', 'файлах'], toggleReplace: 'Заменить', replacePlaceholder: 'Заменить на', replaceAll: 'Заменить всё', confirm: 'Заменить {matches} в {files}?', replaced: 'Заменено: {matches} в {files}.', committed: 'Зафиксировано в истории.', skipped: 'Пропущены открытые с несохранёнными правками: {n}.', include: 'Заменять в этом файле' } as SearchText,
+    links: { title: 'Ссылки', close: 'Закрыть', incoming: 'Ссылаются сюда', outgoing: 'Ссылки из заметки', mentions: 'Упоминания без ссылки', noNote: 'Откройте заметку, чтобы увидеть её ссылки.', none: 'Нет', missing: 'Такой заметки ещё нет: щелчок создаст её.', link: 'Связать', linked: 'Ссылка добавлена.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as LinksText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
@@ -113,6 +116,8 @@ const TEXT = {
 }
 
 const folio = bridge()
+/** The links panel: made with the rest of the window, below; activating a tab tells it the note in view. */
+let linksPanel: LinksPanel | null = null
 /** The modifier key as the system writes it in shortcuts. */
 const mod = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl+'
 document.documentElement.dataset.platform = folio.platform
@@ -167,6 +172,7 @@ function applyText(): void {
   findBar.setText(t.find)
   goToFile.setText(t.goToFile)
   searchPanel.setText(t.search)
+  linksPanel?.setText(t.links)
   consolePanel.setText(t.console)
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const value = t[el.dataset.i18n as keyof typeof t]
@@ -466,6 +472,7 @@ function buildRail(): void {
   tools.append(
     iconButton('console', `${t.console.title} (Ctrl+\`)`, () => consolePanel.toggle(null), 'toggle-console'),
     iconButton('search', `${t.search.title} (${mod}⇧F)`, () => (searchPanel.visible ? searchPanel.setVisible(false) : void searchPanel.open()), 'toggle-search'),
+    iconButton('links', t.links.title, () => linksPanel?.setVisible(!linksPanel.visible), 'toggle-links'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
     iconButton('pdf', `${t.exportPdf} (${mod}⇧P)`, () => exportActive(), 'rail-pdf'),
@@ -502,6 +509,11 @@ function syncRail(): void {
     cp.setAttribute('aria-pressed', String(consolePanel.visible))
     cp.classList.toggle('on', consolePanel.visible)
   }
+  const lp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-links"]')
+  if (lp) {
+    lp.setAttribute('aria-pressed', String(!!linksPanel?.visible))
+    lp.classList.toggle('on', !!linksPanel?.visible)
+  }
   const sp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-search"]')
   if (sp) {
     sp.setAttribute('aria-pressed', String(searchPanel.visible))
@@ -535,8 +547,22 @@ function openSettings(anchor: HTMLElement): void {
 // Buffers -------------------------------------------------------------------------
 
 /** The text changed: mark it, and write the buffer once typing settles. */
+/** The note a tab shows, for the links panel: a Markdown file, its text as in the tab. */
+function noteOf(tab: Tab | null): { path: string; text: () => string } | null {
+  return tab?.path && formatOf(tab) === 'markdown' && !tab.version ? { path: tab.path, text: () => tab.text } : null
+}
+
+let linksTimer: ReturnType<typeof setTimeout> | null = null
+/** The links panel drawn again once typing or the disk is quiet. */
+function linksSoon(): void {
+  if (!linksPanel?.visible) return
+  if (linksTimer) clearTimeout(linksTimer)
+  linksTimer = setTimeout(() => void linksPanel?.refresh(), 600)
+}
+
 function edited(tab: Tab): void {
   syncLabel(tab)
+  if (tab === active) linksSoon()
   if (tab.timer) clearTimeout(tab.timer)
   tab.timer = setTimeout(() => flush(tab), BUFFER_DELAY)
 }
@@ -576,6 +602,7 @@ function activate(tab: Tab | null): void {
   welcomeEl.hidden = tab !== null
   sidebar.setActive(tab?.path ?? null)
   history.show(tab?.path ?? null)
+  linksPanel?.show(noteOf(tab))
   showBanners()
   if (tab) requestAnimationFrame(() => (viewEl.scrollTop = tab.scroll))
   if (tab) recheckLinks.get(tab.pane)?.()
@@ -885,6 +912,7 @@ folio.onFsRemoved((value) => {
 
 // A file changed on disk: a clean tab takes it, an edited one is told (nothing is overwritten).
 folio.onFsChanged(async (value) => {
+  linksSoon()
   const files = new Set((value as Changes[]).flatMap((c) => c.files))
   for (const tab of tabs) {
     if (!tab.path || !files.has(tab.path)) continue
@@ -1005,6 +1033,22 @@ const searchPanel = new SearchPanel(
   () => syncRail(),
 )
 document.querySelector('.content')!.insertBefore(searchPanel.el, document.querySelector('.history'))
+
+linksPanel = new LinksPanel(
+  t.links,
+  { panel: (note, text) => folio.wikiPanel(note, text), linkMention: (file, index, length, link) => folio.linkMention(file, index, length, link), isDirty: (file) => tabs.some((tab) => tab.path === file && isDirty(tab)) },
+  {
+    openAt: (path, place) =>
+      void folio.open(path).then(async (result) => {
+        await add(result)
+        if (place.display) requestAnimationFrame(() => requestAnimationFrame(() => findBar.openWith(place.display, { caseSensitive: false, wholeWord: false, regex: false }, place.nth)))
+      }),
+    follow: (from, raw) => void followWikiLink(from, raw),
+  },
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(linksPanel.el, document.querySelector('.history'))
+linksPanel.show(noteOf(active))
 
 const consolePanel = new ConsolePanel(
   t.console,

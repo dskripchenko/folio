@@ -111,6 +111,8 @@ contextBridge.exposeInMainWorld('folio', {
   wikiNames: (from: string) => ipcRenderer.invoke('wiki:names', from),
   wikiMoved: (from: string, to: string, skip: string[]) => ipcRenderer.invoke('wiki:moved', from, to, skip),
   saveImage: (note: string, name: string, type: string, bytes: Uint8Array) => ipcRenderer.invoke('image:save', note, name, type, bytes),
+  wikiPanel: (note: string, text: string) => ipcRenderer.invoke('wiki:panel', note, text),
+  linkMention: (file: string, index: number, length: number, link: string) => ipcRenderer.invoke('wiki:link-mention', file, index, length, link),
   onWorkspace: listen('ws:changed'),
   onEdit: listen('ws:edit'),
   onFsChanged: listen('fs:changed'),

@@ -199,3 +199,125 @@ export function mover(from: string, to: string): (rel: string) => string | null 
 export function isNote(rel: string): boolean {
   return MD.test(rel)
 }
+
+/** A place in a note: its line (from 1), the line as shown, the match within it and in the whole text. */
+export interface LinkPlace {
+  line: number
+  preview: string
+  start: number
+  end: number
+  /** In the whole text. */
+  index: number
+  length: number
+  /** What a reader sees of it in the drawn note, and which of its kind it is there (for finding it). */
+  display: string
+  nth: number
+}
+
+/** A note's link: where, to what (a path from the root, or null when it reaches no file). */
+export interface NoteLink extends LinkPlace {
+  target: string | null
+  raw: string
+  /** `[[…]]`, not a Markdown link. */
+  wiki: boolean
+}
+
+const PREVIEW = 160
+
+function placeOf(text: string, index: number, length: number, display: string): LinkPlace {
+  const lineStart = text.lastIndexOf('\n', index - 1) + 1
+  const lineEnd = text.indexOf('\n', index)
+  const whole = text.slice(lineStart, lineEnd < 0 ? text.length : lineEnd)
+  let start = index - lineStart
+  let preview = whole
+  // A long line: the part around the match, so it is seen.
+  if (whole.length > PREVIEW) {
+    const from = Math.max(0, start - 40)
+    preview = (from > 0 ? '…' : '') + whole.slice(from, from + PREVIEW) + (from + PREVIEW < whole.length ? '…' : '')
+    start = start - from + (from > 0 ? 1 : 0)
+  }
+  const lead = preview.length - preview.trimStart().length
+  preview = preview.trim()
+  start -= lead
+  const line = text.slice(0, index).split('\n').length
+  const before = text.slice(0, index).toLowerCase()
+  let nth = 0
+  for (let i = before.indexOf(display.toLowerCase()); i >= 0 && display !== ''; i = before.indexOf(display.toLowerCase(), i + 1)) nth++
+  return { line, preview, start: Math.max(0, start), end: Math.min(preview.length, start + length), index, length, display, nth }
+}
+
+/** Every link of a note, `[[…]]` and relative Markdown links, with what it reaches. */
+export function linksOf(text: string, rel: string, files: string[]): NoteLink[] {
+  const out: NoteLink[] = []
+  for (const link of wikiLinksIn(text)) {
+    const { name, heading } = wikiTarget(link.target)
+    const display = link.alias ?? (heading ? `${name} › ${heading}` : name)
+    const target = name === '' ? rel : resolveWiki(name, rel, files)
+    out.push({ ...placeOf(text, link.index, link.length, link.embed ? '' : display), target, raw: link.target, wiki: true })
+  }
+  const code = codeRanges(text)
+  const dir = posix.dirname(rel)
+  const known = new Set(files)
+  for (const m of text.matchAll(/(!?)\[((?:[^\]\n]|\][^(\n])*)\]\((<[^>\n]+>|[^)\s]+)[^)\n]*\)/g)) {
+    if (code.some(([a, b]) => m.index >= a && m.index < b)) continue
+    const href = m[3]!.replace(/^<|>$/g, '')
+    if (!relativeTarget(href)) continue
+    const path = decode(href.split(/[?#]/)[0] ?? '')
+    if (path === '') continue
+    const resolved = posix.normalize(posix.join(dir, path))
+    const target = known.has(resolved) ? resolved : known.has(resolved + '.md') ? resolved + '.md' : null
+    out.push({ ...placeOf(text, m.index, m[0].length, m[1] ? '' : m[2]!), target, raw: href, wiki: false })
+  }
+  return out.sort((a, b) => a.index - b.index)
+}
+
+/** The notes that link to a note, each with its links' places. */
+export function backlinksOf(noteRel: string, notes: { rel: string; text: string }[], files: string[]): { rel: string; places: LinkPlace[] }[] {
+  const out = []
+  for (const n of notes) {
+    if (n.rel === noteRel) continue
+    const places = linksOf(n.text, n.rel, files).filter((l) => l.target === noteRel)
+    if (places.length > 0) out.push({ rel: n.rel, places })
+  }
+  return byName(out)
+}
+
+/** Notes in the order of their names, then of their paths. */
+function byName<T extends { rel: string }>(list: T[]): T[] {
+  return list.sort((a, b) => posix.basename(a.rel).localeCompare(posix.basename(b.rel)) || a.rel.localeCompare(b.rel))
+}
+
+/**
+ * The notes that name a note without linking to it: its name as a whole word,
+ * outside links and code — candidates for a link.
+ */
+export function mentionsOf(noteRel: string, notes: { rel: string; text: string }[], limit = 200): { rel: string; places: LinkPlace[] }[] {
+  const name = posix.basename(nameOf(noteRel))
+  if (name.length < 3) return []
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'giu')
+  const out = []
+  let total = 0
+  for (const n of notes) {
+    if (n.rel === noteRel || total >= limit) continue
+    // Links and code are not mentions.
+    const taken = codeRanges(n.text)
+    for (const m of n.text.matchAll(/!?\[\[[^\]\n]*\]\]|!?\[(?:[^\]\n]|\][^(\n])*\]\([^)\n]*\)|<https?:[^>\n]*>|https?:\/\/\S+/g)) taken.push([m.index, m.index + m[0].length])
+    const places = []
+    for (const m of n.text.matchAll(pattern)) {
+      if (taken.some(([a, b]) => m.index >= a && m.index < b)) continue
+      places.push(placeOf(n.text, m.index, m[0].length, m[0]))
+      if (++total >= limit) break
+    }
+    if (places.length > 0) out.push({ rel: n.rel, places })
+  }
+  return byName(out)
+}
+
+/** A mention made a link: `[[Name]]`, or `[[Name|as written]]` when written otherwise. Null when the text has moved on. */
+export function linkMention(text: string, index: number, length: number, link: string): string | null {
+  const written = text.slice(index, index + length)
+  if (written.toLowerCase() !== posix.basename(link).toLowerCase() && written.toLowerCase() !== link.toLowerCase()) return null
+  const label = written === posix.basename(link) || written === link ? `[[${link}]]` : `[[${link}|${written}]]`
+  return text.slice(0, index) + label + text.slice(index + length)
+}

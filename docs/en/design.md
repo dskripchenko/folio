@@ -119,6 +119,12 @@ in the tree takes its links along: `[[…]]` links and relative links
 so are the moved note's own relative links; notes open with unsaved changes are
 left as they are.
 
+**The links panel** (the link icon on the right rail) shows, for the note in
+view, the notes linking to it, its own links — a missing one faded, a click
+makes it — and the notes that name it without a link; **Link** turns such a
+mention into `[[Note]]` (the spelling kept as its text). A line clicked opens
+its note there. The panel follows the note in view and what is typed.
+
 ### Pictures
 
 A picture pasted into a note (a screenshot, an image copied) or dropped on the

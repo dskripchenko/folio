@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { filesOf, linkName, mover, resolveWiki, rewriteLinks, wikiLinksIn, wikiTarget } from '../../src/main/wikilinks'
+import { backlinksOf, filesOf, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiLinksIn, wikiTarget } from '../../src/main/wikilinks'
 
 const FILES = ['Index.md', 'notes/Plan.md', 'notes/Ideas.md', 'archive/Plan.md', 'archive/old/Ideas.md', 'media/pic.png']
 
@@ -99,5 +99,49 @@ describe('the files links are resolved against', () => {
     writeFileSync(join(d, 'node_modules', 'y.md'), '')
     writeFileSync(join(d, '.git', 'z.md'), '')
     expect((await filesOf(d)).sort()).toEqual(['a/x.md', 'p.png'])
+  })
+})
+
+describe('the links panel', () => {
+  const notes = [
+    { rel: 'Index.md', text: '# Index\n\nSee [[Plan#Goals|the plan]] and [ideas](notes/Ideas.md).\nThe plan is late; `Plan` in code.\n' },
+    { rel: 'notes/Ideas.md', text: 'About [[Plan]] and [[Nowhere]].\n\nA plan, the Plan, planning, [[Plan|a plan]].\n' },
+    { rel: 'notes/Plan.md', text: '# Plan\n\n![pic](../media/pic.png) back to [[Index]].\n' },
+  ]
+  const files = [...notes.map((n) => n.rel), 'media/pic.png']
+
+  it('a note’s links, each with its target or none, its line and what a reader sees', () => {
+    const out = linksOf(notes[1]!.text, 'notes/Ideas.md', files)
+    expect(out.map((l) => [l.target, l.line, l.display])).toEqual([
+      ['notes/Plan.md', 1, 'Plan'],
+      [null, 1, 'Nowhere'],
+      ['notes/Plan.md', 3, 'a plan'],
+    ])
+    expect(linksOf(notes[2]!.text, 'notes/Plan.md', files).map((l) => l.target)).toEqual(['media/pic.png', 'Index.md'])
+    const first = out[0]!
+    expect(first.preview.slice(first.start, first.end)).toBe('[[Plan]]')
+  })
+
+  it('the notes linking to a note, in the order of their names', () => {
+    expect(backlinksOf('notes/Plan.md', notes, files).map((b) => [b.rel, b.places.length])).toEqual([
+      ['notes/Ideas.md', 2],
+      ['Index.md', 1],
+    ])
+    expect(backlinksOf('notes/Ideas.md', notes, files).map((b) => b.rel)).toEqual(['Index.md'])
+  })
+
+  it('the notes naming it without a link: whole words, outside links and code', () => {
+    const found = mentionsOf('notes/Plan.md', notes)
+    expect(found.map((m) => [m.rel, m.places.map((p) => p.preview.slice(p.start, p.end))])).toEqual([
+      ['notes/Ideas.md', ['plan', 'Plan']],
+      ['Index.md', ['plan']],
+    ])
+  })
+
+  it('a mention made a link, its spelling kept; nothing when the text has moved on', () => {
+    const text = 'The plan is late.'
+    expect(linkMention(text, 4, 4, 'Plan')).toBe('The [[Plan|plan]] is late.')
+    expect(linkMention('The Plan is late.', 4, 4, 'Plan')).toBe('The [[Plan]] is late.')
+    expect(linkMention('The X is late.', 4, 4, 'Plan')).toBeNull()
   })
 })
