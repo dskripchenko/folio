@@ -99,6 +99,8 @@ export async function searchFiles(
   pattern: RegExp,
   onBatch: (batch: FileHits[]) => void,
   canceled: () => boolean,
+  /** A file's text it must have besides a match (its tags, say), and how many matches a file shows at most. */
+  options: { accept?: (text: string) => boolean; perFile?: number } = {},
 ): Promise<{ files: number; matches: number; truncated: boolean; canceled: boolean }> {
   let matches = 0
   let withHits = 0
@@ -118,9 +120,10 @@ export async function searchFiles(
       const f = group[k]!
       const text = texts[k]
       if (text == null) continue
+      if (options.accept && !options.accept(text)) continue
       pattern.lastIndex = 0
       if (!pattern.test(text)) continue
-      const { hits, more } = hitsIn(text, pattern, Math.min(PER_FILE, TOTAL - matches))
+      const { hits, more } = hitsIn(text, pattern, Math.min(options.perFile ?? PER_FILE, TOTAL - matches))
       if (hits.length === 0) continue
       matches += hits.length
       withHits++
@@ -157,3 +160,5 @@ export async function replaceInFiles(files: string[], pattern: RegExp, replaceme
   }
   return { changed, replacements }
 }
+
+export { parseQuery, pathPasses, tagsPass, type SearchQuery } from '../common/query'

@@ -163,6 +163,14 @@ Andere Namen einer Notiz — `aliases:` in ihren Eigenschaften (`aliases: [Fahrp
 — gelten in Links als ihr Name: `[[Fahrplan]]` erreicht sie, wenn keine Datei so
 heißt, und `[[` bietet sie an und schreibt `[[Roadmap|Fahrplan]]`.
 
+### Die Gliederung
+
+Das Gliederungs-Panel (auf der rechten Leiste oder unter den Befehlen) zeigt
+die Überschriften der sichtbaren Notiz, nach Ebene eingerückt, während sie
+geschrieben wird; ein Klick führt zur Überschrift — in der Quelle setzt er die
+Einfügemarke auf ihre Zeile —, und der sichtbare Abschnitt wird beim Scrollen
+markiert.
+
 ### Rechtschreibung und Statuszeile
 
 Die Rechtschreibung wird beim Schreiben geprüft — auf macOS und Windows vom
@@ -388,6 +396,10 @@ Treffer; ein Klick öffnet die Datei und setzt die Suchleiste auf diesen
 Treffer. Binärdateien, Dateien über 8 MB und die vom Gehe-zu-Datei
 ausgelassenen Ordner werden nicht durchsucht; höchstens 200 Treffer je Datei
 und 5 000 insgesamt werden gelistet.
+
+Filter grenzen die durchsuchten Dateien ein: `tag:arbeit` (auch verschachtelte
+Tags), `path:notes/`, `file:plan` (ein Wert in Anführungszeichen darf Leerzeichen
+enthalten); ohne Text listet ein Filter allein seine Dateien.
 
 Der Pfeil vor der Suchanfrage öffnet **Ersetzen**: jeder Treffer zeigt, was aus
 ihm wird, Häkchen bestimmen die beteiligten Dateien, und **Alle ersetzen**

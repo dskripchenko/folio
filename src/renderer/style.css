@@ -443,6 +443,15 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .graph-edges line.lit { stroke: var(--accent); }
 .graph-node:hover circle { fill: var(--accent); }
 @media print { .graph-panel { display: none !important; } }
+.outline-panel { width: 260px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
+.outline-panel[hidden] { display: none; }
+.outline-panel header { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 6px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.outline-list { flex: 1; min-height: 0; overflow: auto; padding: 0 4px 12px; }
+.outline-none { margin: 6px 10px; color: var(--muted); font-size: 12px; }
+.outline-item { display: block; width: 100%; padding: 3px 8px; border: 0; border-left: 2px solid transparent; border-radius: 0 5px 5px 0; background: none; color: var(--fg); font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.outline-item:hover { background: color-mix(in srgb, var(--line) 60%, transparent); }
+.outline-item.on { border-left-color: var(--accent); color: var(--accent); }
+@media print { .outline-panel { display: none !important; } }
 
 .search-toggle { flex: none; display: grid; place-items: center; width: 20px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; }
 .search-toggle svg { transition: transform 0.1s; }

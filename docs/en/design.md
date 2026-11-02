@@ -150,6 +150,13 @@ A note's other names — `aliases:` in its properties (`aliases: [Road map]`) �
 work as its name in links: `[[Road map]]` reaches it when no file is named so,
 and `[[` offers them, writing `[[Roadmap|Road map]]`.
 
+### The outline
+
+The outline panel (on the right rail, or among the commands) lists the
+headings of the note in view, indented by level, as it is written; a click
+goes to one — the caret on its line in the source — and the section in view
+is marked as the page scrolls.
+
 ### Spelling and the status line
 
 Spelling is checked as text is written — by the system on macOS and Windows,
@@ -345,6 +352,10 @@ relative paths.
 | `Cmd/Ctrl+Shift+F` | search the files |
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |
+
+Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
+`file:plan` (a value in quotes may have spaces); with no text left, a filter
+alone lists its files.
 
 ## Finding
 

@@ -44,12 +44,12 @@ import { listDir } from './tree'
 import { FileIndex } from './fileIndex'
 import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry, saveAttachment } from './fileOps'
 import { Consoles } from './pty'
-import { replaceInFiles, searchFiles, type SearchFile } from './search'
+import { parseQuery, pathPasses, replaceInFiles, searchFiles, tagsPass, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
 import { aliasIndex, aliasesOf, backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { resolveInside } from './paths'
-import { tagIndex } from './tags'
+import { tagIndex, tagsOf } from './tags'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
 import { Workspace, type Project } from './workspace'
 
@@ -376,20 +376,34 @@ ipcMain.handle('search:run', async (e, id: unknown, query: unknown, options: unk
   if (typeof id !== 'number' || typeof query !== 'string' || typeof options !== 'object' || options === null) return { error: 'invalid' }
   searchId = id
   const o = options as Record<string, unknown>
-  const pattern = patternOf(query, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+  const q = parseQuery(query)
+  const filtered = q.tags.length + q.paths.length + q.files.length > 0
+  // Filters alone: a tag's places, or each file's first line.
+  const pattern =
+    q.text !== '' || !filtered
+      ? patternOf(q.text, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+      : q.tags.length > 0
+        ? new RegExp(`(?<![\\p{L}\\p{N}_])#${q.tags[0]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}_])`, 'giu')
+        : /^.*\S.*$/m
   if (!pattern) return { error: 'invalid' }
   const files: SearchFile[] = []
   for (const s of sources()) {
     if (scope !== 'all' && scope !== s.root) continue
-    for (const f of await fileIndex.files(s.root, s.dir)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
+    for (const f of await fileIndex.files(s.root, s.dir)) if (pathPasses(q, f.path)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
   }
-  return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id)
+  return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id, {
+    ...(q.tags.length > 0 ? { accept: (text: string) => tagsPass(q, tagsOf(text)) } : {}),
+    ...(q.text === '' && filtered && q.tags.length === 0 ? { perFile: 1 } : {}),
+  })
 })
 /** Replace the matches in the files chosen; a folder that keeps a history gets one commit for it. */
 ipcMain.handle('search:replace', async (_e, query: unknown, options: unknown, replacement: unknown, files: unknown) => {
   if (typeof query !== 'string' || typeof replacement !== 'string' || typeof options !== 'object' || options === null || !Array.isArray(files)) return { error: 'invalid' }
   const o = options as Record<string, unknown>
-  const pattern = patternOf(query, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+  // The filters chose the files; what is replaced is the text of the query.
+  const text = parseQuery(query).text
+  if (text === '') return { error: 'invalid' }
+  const pattern = patternOf(text, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
   if (!pattern) return { error: 'invalid' }
   // Only files of the roots folio knows: the window names them, the main process checks.
   const known = new Set(sources().map((s) => s.dir))

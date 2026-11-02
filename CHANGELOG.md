@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- The outline panel: the note's headings, live, a click going to one, the
+  section in view marked. Search filters `tag:`, `path:`, `file:`.
 - Aliases: `aliases:` in a note's properties work as its name in `[[links]]`
   (previews, the links panel and the graph too), and `[[` offers them.
 - Spelling checked as text is written (the system's on macOS and Windows;
