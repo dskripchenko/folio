@@ -111,6 +111,8 @@ export interface ProjectView {
 export interface WorkspaceView {
   shared: { root: string; path: string }
   projects: ProjectView[]
+  /** Files kept at hand; `missing` when moved away outside folio or deleted. */
+  bookmarks: { path: string; name: string; missing: boolean }[]
 }
 
 export interface Changes {
@@ -225,6 +227,8 @@ export interface FolioBridge {
   linkMention(file: string, index: number, length: number, link: string): Promise<boolean>
   entryMenu(root: string, rel: string): void
   onWorkspace: Listener
+  /** A file kept at hand in the bookmarks, or let go: the workspace as it is now. */
+  bookmark(path: string, on: boolean): Promise<WorkspaceView>
   onEdit: Listener
   onFsChanged: Listener
   onAddProject: Listener

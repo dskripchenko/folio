@@ -493,3 +493,8 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .hover-preview-body { padding: 14px 20px; font-size: 14px; }
 .hover-preview-body dsk-markdown { pointer-events: none; }
 @media print { .hover-preview { display: none !important; } }
+
+/* Bookmarks: files kept at hand, above Shared. */
+.bookmark-list { margin: 0; padding: 0 0 4px; list-style: none; }
+.row.bookmark svg { flex: none; color: #d4a72c; }
+.row.bookmark.missing { opacity: 0.5; cursor: default; }

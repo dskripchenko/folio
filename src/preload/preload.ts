@@ -122,6 +122,7 @@ contextBridge.exposeInMainWorld('folio', {
   peek: (from: string | null, link: { wiki?: string; url?: string }) => ipcRenderer.invoke('doc:peek', from, link),
   linkMention: (file: string, index: number, length: number, link: string) => ipcRenderer.invoke('wiki:link-mention', file, index, length, link),
   onWorkspace: listen('ws:changed'),
+  bookmark: (path: string, on: boolean) => ipcRenderer.invoke('ws:bookmark', path, on),
   onEdit: listen('ws:edit'),
   onFsChanged: listen('fs:changed'),
   onAddProject: listen('menu:add-project'),

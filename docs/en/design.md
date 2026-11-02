@@ -146,6 +146,13 @@ template is a note in the templates folder (`Templates` in Shared):
 a quick note of it; `{{title}}`, `{{date}}`, `{{time}}` and `{{date:DD.MM.YYYY}}`
 are filled in. Both folders are chosen in the settings menu.
 
+### Bookmarks
+
+A file kept at hand: **Add to bookmarks** in a tab's menu, a file's menu in the
+tree, or among the commands. The bookmarks are listed above Shared; a click
+opens one, its menu lets it go. A bookmark follows its file renamed or moved
+in folio; one whose file is gone elsewhere stays, faded.
+
 ### Previews
 
 The pointer resting on a `[[link]]` or a link to a note shows the note in a

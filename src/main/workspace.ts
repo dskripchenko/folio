@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs'
-import { basename, join, resolve } from 'node:path'
+import { basename, join, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { readJson, writeJson } from './jsonFile'
 import { isInside, realish } from './paths'
@@ -30,6 +30,8 @@ export interface WorkspaceData {
   /** Where daily notes go, and where templates are; null — `Daily` and `Templates` in Shared. */
   dailyFolder?: string | null
   templatesFolder?: string | null
+  /** Files kept at hand, by their paths, in the order they were added. */
+  bookmarks?: string[]
 }
 
 export class Workspace {
@@ -43,6 +45,7 @@ export class Workspace {
       ...(loaded.sharedAutoCommit !== undefined ? { sharedAutoCommit: loaded.sharedAutoCommit } : {}),
       ...(loaded.dailyFolder ? { dailyFolder: loaded.dailyFolder } : {}),
       ...(loaded.templatesFolder ? { templatesFolder: loaded.templatesFolder } : {}),
+      ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
   }
@@ -76,6 +79,27 @@ export class Workspace {
   setDailyFolder(path: string | null): void {
     this.data.dailyFolder = path === null ? null : resolve(path)
     this.save()
+  }
+
+  bookmarks(): string[] {
+    return [...(this.data.bookmarks ?? [])]
+  }
+
+  /** A file kept at hand, or let go. */
+  setBookmark(path: string, on: boolean): void {
+    const list = (this.data.bookmarks ?? []).filter((b) => b !== resolve(path))
+    if (on) list.push(resolve(path))
+    this.data.bookmarks = list
+    this.save()
+  }
+
+  /** A file or folder moved: the bookmarks of it and of what is in it follow; whether any did. */
+  moveBookmarks(from: string, to: string): boolean {
+    const list = this.data.bookmarks ?? []
+    if (!list.some((b) => b === from || b.startsWith(from + sep))) return false
+    this.data.bookmarks = list.map((b) => (b === from ? to : b.startsWith(from + sep) ? to + b.slice(from.length) : b))
+    this.save()
+    return true
   }
 
   /** The templates' folder. */

@@ -9,7 +9,7 @@
  */
 import { folio, prefs, type Changes, type Entry, type ProjectView, type WorkspaceView } from './bridge'
 import { icon, iconButton, type IconName } from './icons'
-import { closeMenu, popMenu } from './menu'
+import { closeMenu, popMenu, popMenuAt } from './menu'
 
 export interface SidebarText {
   shared: string
@@ -32,6 +32,8 @@ export interface SidebarText {
   newName: string
   newNoteInShared: string
   newFolderInShared: string
+  bookmarks: string
+  unbookmark: string
   errors: Record<'exists' | 'characters' | 'empty' | 'long' | 'inside' | 'failed', string>
 }
 
@@ -42,6 +44,8 @@ interface Options {
   flyout: HTMLElement
   text: () => SidebarText
   open: (root: string, rel: string) => void
+  /** A bookmark followed: its file opened. */
+  openPath: (path: string) => void
   clone: () => void
   openFile: () => void
   newNote: () => void
@@ -148,6 +152,38 @@ export class Sidebar {
     )
     head.append(title, tools)
     el.append(head)
+
+    // Bookmarks: files kept at hand, when there are any.
+    if (ws.bookmarks.length > 0) {
+      const marks = this.section('bookmarks', t.bookmarks, [])
+      marks.dataset.testid = 'bookmarks'
+      const ul = document.createElement('ul')
+      ul.className = 'bookmark-list'
+      for (const b of ws.bookmarks) {
+        const li = document.createElement('li')
+        const row = document.createElement('div')
+        row.className = `row file bookmark${b.missing ? ' missing' : ''}`
+        row.dataset.abs = b.path
+        row.dataset.testid = 'bookmark'
+        row.tabIndex = 0
+        row.title = b.missing ? `${b.path} — ${t.missing}` : b.path
+        const name = document.createElement('span')
+        name.className = 'name'
+        name.textContent = b.name.replace(/\.(md|markdown)$/i, '')
+        row.append(icon('star', 15), name)
+        row.addEventListener('click', () => {
+          if (!b.missing) this.o.openPath(b.path)
+        })
+        row.addEventListener('contextmenu', (e) => {
+          e.preventDefault()
+          popMenuAt(e.clientX, e.clientY, [{ label: t.unbookmark, testid: 'unbookmark', action: () => void folio().bookmark(b.path, false) }])
+        })
+        li.append(row)
+        ul.append(li)
+      }
+      marks.append(ul)
+      el.append(marks)
+    }
 
     // Shared
     const shared = this.section('shared', t.shared, [
