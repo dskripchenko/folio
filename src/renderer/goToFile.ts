@@ -96,6 +96,7 @@ export class GoToFile {
     if (!this.el.hidden) return this.input.select()
     this.returnFocus = document.activeElement
     this.el.hidden = false
+    this.pointer = null
     this.input.value = ''
     this.input.focus()
     this.list.replaceChildren(this.note(this.text.loading))
@@ -147,8 +148,9 @@ export class GoToFile {
           e.preventDefault()
           this.choose(i)
         })
-        li.addEventListener('mousemove', () => {
-          if (this.selected === i) return
+        li.addEventListener('mousemove', (e) => {
+          // Only a pointer that moves chooses: one resting where the list opens does not.
+          if (!this.pointerMoved(e) || this.selected === i) return
           this.selected = i
           this.mark()
         })
@@ -156,6 +158,15 @@ export class GoToFile {
       }),
     )
     this.mark()
+  }
+
+  private pointer: { x: number; y: number } | null = null
+
+  /** Whether the pointer has moved since the palette opened (a list drawn under it sends a move too). */
+  private pointerMoved(e: MouseEvent): boolean {
+    const was = this.pointer
+    this.pointer = { x: e.screenX, y: e.screenY }
+    return was !== null && (was.x !== e.screenX || was.y !== e.screenY)
   }
 
   private mark(): void {

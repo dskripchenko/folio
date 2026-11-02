@@ -283,6 +283,7 @@ Pfade.
 | `Cmd/Strg+W` | Tab schließen |
 | `Cmd/Strg+B` | Seitenleiste |
 | `Cmd/Strg+T` | zu einer Datei nach Namen gehen |
+| `Cmd/Strg+K`, `F1` | die Befehle: jede Aktion nach ihrem Namen |
 | `Cmd/Strg+Umschalt+F` | in den Dateien suchen |
 | `Cmd/Strg+F` | im Dokument suchen |
 | `Cmd/Strg+G`, `Cmd/Strg+Umschalt+G` | der nächste Treffer, der vorige |
@@ -306,6 +307,12 @@ Text genommen, wie er ist. Eine mit ungespeicherten Änderungen geöffnete Datei
 wird ausgelassen (das wird gesagt), damit keine Seite verloren geht; eine
 geöffnete ohne Änderungen zeigt den neuen Text. Ein Ordner mit Verlauf erhält
 einen Commit für die Ersetzung — `Replace "a" with "b"` —, nicht einen je Datei.
+
+`Cmd/Strg+K` oder `F1` (**Ansicht → Befehle**) öffnet eine Palette der Aktionen
+von folio — die der Menüs und Leisten —, ebenso nach ihrem Namen gefunden, jede
+mit ihren Tasten; die zuletzt benutzten kommen zuerst, und was gerade nicht
+laufen kann (Speichern ohne offenes Dokument, ein schon aktiver Modus), wird
+nicht angeboten.
 
 `Cmd/Strg+T` (**Datei → Gehe zu Datei**) öffnet eine Palette aller Dateien,
 die folio öffnet, in „Gemeinsam“ und den sichtbaren Projekten, geordnet, während

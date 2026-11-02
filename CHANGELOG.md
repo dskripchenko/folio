@@ -8,6 +8,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Fixed
+- A palette opened under a resting pointer no longer chooses the row under it.
 - The tree no longer loses a name being typed, or shows a stale folder, when
   the disk reports changes late (macOS).
 - The Markdown source is highlighted more fully (embed 1.13.1, syntax 0.3.3):
@@ -19,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Commands (`Cmd/Ctrl+K`, `F1`, **View → Commands**): every action of the menus
+  and rails by its name, with its keys; the last used first.
 - The links panel (the link icon on the right rail): the notes linking to the
   note in view, its own links (missing ones faded, made with a click), and the
   notes naming it without a link — each made a `[[link]]` with **Link**.

@@ -158,6 +158,8 @@ export interface FolioBridge {
   onSave: Listener
   onSaveAs: Listener
   onToggleEdit: Listener
+  /** View → Commands (Cmd+K). */
+  onPalette: Listener
   onFind: Listener
   onGoToFile: Listener
   onToggleConsole: Listener

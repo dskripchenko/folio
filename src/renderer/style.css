@@ -323,7 +323,7 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .find-frame { position: fixed; z-index: 25; pointer-events: none; border-radius: 2px; background: rgba(255, 140, 0, 0.35); outline: 1px solid rgba(255, 140, 0, 0.9); }
 @media print { .find-bar, .find-frame { display: none !important; } }
 
-/* Going to a file: a palette over the window. */
+/* Going to a file and the commands: a palette over the window. */
 .palette-backdrop { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; background: rgba(0, 0, 0, 0.18); }
 .palette-backdrop[hidden] { display: none; }
 .palette { width: min(640px, 92vw); max-height: 60vh; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25); overflow: hidden; }
@@ -333,6 +333,10 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .palette-item svg { color: var(--muted); }
 .palette-item[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .palette-name { color: var(--fg); }
+.command-item { grid-template-columns: 18px auto 1fr auto; }
+.command-group { color: var(--muted); }
+.command-group::after { content: ':'; }
+.command-keys { padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--tab); color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .palette-where { overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 12px; }
 .palette-item b { color: var(--accent); font-weight: 600; }
 .palette-note { padding: 10px 12px; color: var(--muted); }
