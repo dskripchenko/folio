@@ -24,6 +24,7 @@ import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
 import { HoverPreview } from './hoverPreview'
+import { GraphPanel, type GraphText } from './graphPanel'
 import { CommandPalette, type Command, type PaletteText } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
@@ -73,6 +74,7 @@ const TEXT = {
     search: { title: 'Search', placeholder: 'Search the files', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', close: 'Close', everywhere: 'Everywhere', shared: 'Shared', searching: 'Searching…', summary: '{matches} in {files}', truncated: '(the first ones)', none: 'Nothing found', invalid: 'Invalid expression', matches: ['match', 'matches'], files: ['file', 'files'], toggleReplace: 'Replace', replacePlaceholder: 'Replace with', replaceAll: 'Replace all', confirm: 'Replace {matches} in {files}?', replaced: 'Replaced {matches} in {files}.', committed: 'Committed to the history.', skipped: 'Left out, open with unsaved changes: {n}.', include: 'Replace in this file' } as SearchText,
     links: { title: 'Links', close: 'Close', incoming: 'Linked here', outgoing: 'Links from this note', mentions: 'Named without a link', noNote: 'Open a note to see its links.', none: 'None', missing: 'No such note yet: a click makes it.', link: 'Link', linked: 'Made a link.', changed: 'The note has changed meanwhile: look again.' } as LinksText,
     tags: { title: 'Tags', close: 'Close', filter: 'Filter tags', none: 'No such tag', noTags: 'No tags in this project yet: write #tag in a note, or tags: in its properties.' } as TagsText,
+    graph: { title: 'Graph', close: 'Close', local: 'This note', all: 'All', empty: 'No notes here yet.' } as GraphText,
     commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
@@ -121,6 +123,7 @@ const TEXT = {
     search: { title: 'Поиск', placeholder: 'Искать в файлах', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', close: 'Закрыть', everywhere: 'Везде', shared: 'Общие', searching: 'Поиск…', summary: '{matches} в {files}', truncated: '(первые)', none: 'Ничего не найдено', invalid: 'Неверное выражение', matches: ['совпадение', 'совпадения', 'совпадений'], files: ['файле', 'файлах', 'файлах'], toggleReplace: 'Заменить', replacePlaceholder: 'Заменить на', replaceAll: 'Заменить всё', confirm: 'Заменить {matches} в {files}?', replaced: 'Заменено: {matches} в {files}.', committed: 'Зафиксировано в истории.', skipped: 'Пропущены открытые с несохранёнными правками: {n}.', include: 'Заменять в этом файле' } as SearchText,
     links: { title: 'Ссылки', close: 'Закрыть', incoming: 'Ссылаются сюда', outgoing: 'Ссылки из заметки', mentions: 'Упоминания без ссылки', noNote: 'Откройте заметку, чтобы увидеть её ссылки.', none: 'Нет', missing: 'Такой заметки ещё нет: щелчок создаст её.', link: 'Связать', linked: 'Ссылка добавлена.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as LinksText,
     tags: { title: 'Теги', close: 'Закрыть', filter: 'Найти тег', none: 'Нет такого тега', noTags: 'В этом проекте пока нет тегов: напишите #тег в заметке или tags: в её свойствах.' } as TagsText,
+    graph: { title: 'Граф', close: 'Закрыть', local: 'Эта заметка', all: 'Все', empty: 'Заметок здесь пока нет.' } as GraphText,
     commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
@@ -134,6 +137,8 @@ const folio = bridge()
 let linksPanel: LinksPanel | null = null
 /** The tags panel: made with the rest of the window; it lists the tags of the project in view. */
 let tagsPanel: TagsPanel | null = null
+/** The graph of notes: made with the rest of the window, drawn around the note in view. */
+let graphPanel: GraphPanel | null = null
 /** The modifier key as the system writes it in shortcuts. */
 const mod = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl+'
 document.documentElement.dataset.platform = folio.platform
@@ -196,6 +201,7 @@ function applyText(): void {
   searchPanel.setText(t.search)
   linksPanel?.setText(t.links)
   tagsPanel?.setText(t.tags)
+  graphPanel?.setText(t.graph)
   palette.setText(t.commands)
   consolePanel.setText(t.console)
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
@@ -498,6 +504,7 @@ function buildRail(): void {
     iconButton('search', `${t.search.title} (${mod}⇧F)`, () => (searchPanel.visible ? searchPanel.setVisible(false) : void searchPanel.open()), 'toggle-search'),
     iconButton('links', t.links.title, () => linksPanel?.setVisible(!linksPanel.visible), 'toggle-links'),
     iconButton('tag', t.tags.title, () => tagsPanel?.setVisible(!tagsPanel.visible), 'toggle-tags'),
+    iconButton('graph', t.graph.title, () => graphPanel?.setVisible(!graphPanel.visible), 'toggle-graph'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
     iconButton('pdf', `${t.exportPdf} (${mod}⇧P)`, () => exportActive(), 'rail-pdf'),
@@ -533,6 +540,11 @@ function syncRail(): void {
   if (cp) {
     cp.setAttribute('aria-pressed', String(consolePanel.visible))
     cp.classList.toggle('on', consolePanel.visible)
+  }
+  const gp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-graph"]')
+  if (gp) {
+    gp.setAttribute('aria-pressed', String(!!graphPanel?.visible))
+    gp.classList.toggle('on', !!graphPanel?.visible)
   }
   const tp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-tags"]')
   if (tp) {
@@ -587,11 +599,12 @@ function noteOf(tab: Tab | null): { path: string; text: () => string } | null {
 let linksTimer: ReturnType<typeof setTimeout> | null = null
 /** The links panel drawn again once typing or the disk is quiet. */
 function linksSoon(): void {
-  if (!linksPanel?.visible && !tagsPanel?.visible) return
+  if (!linksPanel?.visible && !tagsPanel?.visible && !graphPanel?.visible) return
   if (linksTimer) clearTimeout(linksTimer)
   linksTimer = setTimeout(() => {
     void linksPanel?.refresh()
     void tagsPanel?.refresh()
+    void graphPanel?.refresh()
   }, 600)
 }
 
@@ -649,6 +662,7 @@ function activate(tab: Tab | null): void {
   history.show(tab?.path ?? null)
   linksPanel?.show(noteOf(tab))
   tagsPanel?.show(tab?.path ?? null)
+  graphPanel?.show(tab?.path ?? null)
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
   if (tab && !wasShown) requestAnimationFrame(() => (scrollerOf(tab).scrollTop = tab.scroll))
@@ -1287,6 +1301,7 @@ function commands(): Command[] {
     { id: 'history', group: view, title: t.history, keys: `${mod}⇧H`, icon: 'history', when: () => !!active?.path, run: () => toggleHistory() },
     { id: 'links', group: view, title: t.links.title, icon: 'links', run: () => linksPanel?.setVisible(!linksPanel.visible) },
     { id: 'tags', group: view, title: t.tags.title, icon: 'tag', run: () => tagsPanel?.setVisible(!tagsPanel.visible) },
+    { id: 'graph', group: view, title: t.graph.title, icon: 'graph', run: () => graphPanel?.setVisible(!graphPanel.visible) },
     ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),
   ]
   return list
@@ -1332,6 +1347,15 @@ tagsPanel = new TagsPanel(
 )
 document.querySelector('.content')!.insertBefore(tagsPanel.el, document.querySelector('.history'))
 tagsPanel.show(null)
+
+graphPanel = new GraphPanel(
+  t.graph,
+  (note) => folio.graph(note),
+  (path) => void folio.open(path).then((result) => add(result)),
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(graphPanel.el, document.querySelector('.history'))
+graphPanel.show(null)
 linksPanel.show(noteOf(active))
 
 const consolePanel = new ConsolePanel(
