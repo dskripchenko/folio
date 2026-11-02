@@ -216,6 +216,9 @@ export interface FolioBridge {
   tagIndex(note: string | null): Promise<{ tag: string; notes: { rel: string; path: string }[] }[]>
   /** The notes of a note's root and the links between them (indexes into `nodes`). */
   graph(note: string | null): Promise<{ nodes: { rel: string; path: string; name: string }[]; edges: [number, number][] }>
+  /** Whether spelling is checked as text is written; turned on or off. */
+  spellcheck(): Promise<boolean>
+  setSpellcheck(on: boolean): Promise<boolean>
   /** Today's daily note (made when missing), or the one before / after a daily note's day. */
   dailyOpen(from: string | null, step: 0 | -1 | 1): Promise<OpenResult>
   templates(): Promise<{ name: string; path: string }[]>

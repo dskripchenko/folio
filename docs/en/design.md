@@ -146,6 +146,15 @@ template is a note in the templates folder (`Templates` in Shared):
 a quick note of it; `{{title}}`, `{{date}}`, `{{time}}` and `{{date:DD.MM.YYYY}}`
 are filled in. Both folders are chosen in the settings menu.
 
+### Spelling and the status line
+
+Spelling is checked as text is written — by the system on macOS and Windows,
+offline; on Linux Chromium fetches the dictionaries, so it is off until
+turned on in the settings menu. A field's menu offers corrections, **Add to
+the dictionary**, and cut, copy and paste. Under the page the status line
+shows the document's words, characters and minutes to read it, and in the
+Markdown source the caret's line and column.
+
 ### The graph
 
 The graph panel (on the right rail, or among the commands) draws the notes of

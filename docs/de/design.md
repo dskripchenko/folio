@@ -159,6 +159,15 @@ Einfügemarke, **Neue Notiz aus Vorlage…** macht eine Schnellnotiz daraus;
 `{{title}}`, `{{date}}`, `{{time}}` und `{{date:DD.MM.YYYY}}` werden ausgefüllt.
 Beide Ordner werden im Einstellungsmenü gewählt.
 
+### Rechtschreibung und Statuszeile
+
+Die Rechtschreibung wird beim Schreiben geprüft — auf macOS und Windows vom
+System, offline; unter Linux lädt Chromium die Wörterbücher, daher ist sie dort
+aus, bis sie im Einstellungsmenü eingeschaltet wird. Das Menü eines Felds bietet
+Korrekturen, **Zum Wörterbuch hinzufügen** sowie Ausschneiden, Kopieren und
+Einfügen. Unter der Seite zeigt die Statuszeile Wörter, Zeichen und Lesezeit
+des Dokuments, in der Markdown-Quelle Zeile und Spalte der Einfügemarke.
+
 ### Der Graph
 
 Das Graph-Panel (auf der rechten Leiste oder unter den Befehlen) zeichnet die

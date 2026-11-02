@@ -401,7 +401,7 @@ export class SearchPanel {
 }
 
 /** `3 matches`, `3 совпадения`: the form for the number, from two (en) or three (ru) forms. */
-function plural(n: number, forms: readonly string[]): string {
+export function plural(n: number, forms: readonly string[]): string {
   if (forms.length === 2) return `${n.toLocaleString('en')} ${n === 1 ? forms[0] : forms[1]}`
   const m10 = n % 10
   const m100 = n % 100
