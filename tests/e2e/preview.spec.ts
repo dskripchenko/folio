@@ -48,6 +48,14 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
     await pane.locator('a[data-wikilink="Nowhere"]').hover()
     await win.waitForTimeout(900)
     await expect(preview).toBeHidden()
+
+    // A small window: the preview shorter, never over its link.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(640, 480))
+    const link = pane.locator('a[data-wikilink="Plan#Goals"]')
+    await link.hover()
+    await expect(preview).toBeVisible()
+    const [l, p] = await Promise.all([link.boundingBox(), preview.boundingBox()])
+    expect(p!.y >= l!.y + l!.height || p!.y + p!.height <= l!.y).toBe(true)
   } finally {
     await app.close()
   }

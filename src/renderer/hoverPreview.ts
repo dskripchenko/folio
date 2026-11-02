@@ -123,16 +123,20 @@ export class HoverPreview {
     if (note.heading) this.deps.reveal(body, note.heading, this.el)
   }
 
-  /** Below the link, or above it when there is no room; within the window. */
+  /**
+   * Below the link, or above it when there is more room there; never over the
+   * link itself — a small window makes the panel shorter instead.
+   */
   private place(a: HTMLElement): void {
     const r = a.getBoundingClientRect()
     const width = Math.min(560, window.innerWidth - 24)
-    const height = Math.min(380, window.innerHeight - 24)
-    const below = window.innerHeight - r.bottom - 8 >= height || r.top < height + 8
+    const below = window.innerHeight - r.bottom - 6 - 12
+    const above = r.top - 6 - 12
+    const downward = below >= 380 || below >= above
     this.el.style.width = `${width}px`
-    this.el.style.maxHeight = `${height}px`
     this.el.style.left = `${Math.max(12, Math.min(r.left, window.innerWidth - width - 12))}px`
-    this.el.style.top = below ? `${Math.min(r.bottom + 6, window.innerHeight - height - 12)}px` : `${Math.max(12, r.top - 6 - Math.min(height, this.el.scrollHeight))}px`
+    this.el.style.maxHeight = `${Math.max(80, Math.min(380, downward ? below : above))}px`
+    this.el.style.top = downward ? `${r.bottom + 6}px` : `${r.top - 6 - this.el.offsetHeight}px`
   }
 
   private stay(): void {
