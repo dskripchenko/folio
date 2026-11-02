@@ -168,6 +168,14 @@ export interface FolioBridge {
   projectMenu(id: string): void
   list(root: string, rel: string, all: boolean): Promise<Entry[] | null>
   openEntry(root: string, rel: string): Promise<OpenResult>
+  onTreeCreate: Listener
+  onTreeRename: Listener
+  onFsMoved: Listener
+  onFsRemoved: Listener
+  fsTrash(root: string, rel: string): Promise<void>
+  fsCreate(root: string, dir: string, name: string, kind: 'note' | 'folder'): Promise<{ path: string; rel: string } | { error: string }>
+  fsRename(root: string, rel: string, name: string): Promise<{ from: string; to: string } | { error: string }>
+  fsMove(fromRoot: string, fromRel: string, toRoot: string, toDir: string): Promise<{ from: string; to: string } | { error: string }>
   entryMenu(root: string, rel: string): void
   onWorkspace: Listener
   onEdit: Listener

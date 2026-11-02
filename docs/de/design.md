@@ -99,6 +99,21 @@ Dateien, die folio öffnet, Ordner zuerst, und folgen der Festplatte: eine
 anderswo hinzugefügte, geänderte oder gelöschte Datei erscheint sofort, ein
 offenes Dokument wird neu gezeichnet. `Cmd/Strg+B` blendet die Leiste aus.
 
+### Dateien und Ordner
+
+Der Baum legt Dateien auch an und ändert sie: **Neue Notiz** und **Neuer
+Ordner** im Rechtsklick-Menü eines Ordners oder Projekts (und im **…**-Menü von
+„Gemeinsam“) — der Name wird an Ort und Stelle getippt, eine Notiz öffnet sich
+sofort mit ihrem Titel als Überschrift; **Umbenennen…** (oder `F2`) bearbeitet
+den Namen in seiner Zeile, die Endung bleibt; eine auf einen Ordner (oder ein
+Projekt) gezogene Datei oder ein Ordner wird dorthin verschoben;
+**Duplizieren** legt daneben eine Kopie an; **In den Papierkorb** (oder
+`Entf`, `Cmd+Rücktaste`) fragt nach und legt sie in den Papierkorb des Systems,
+aus dem sie sich zurückholen lässt. Geöffnete Dokumente folgen einer
+Umbenennung oder Verschiebung; ein in den Papierkorb gelegtes schließt sich,
+außer es hat ungespeicherte Änderungen. Ein Name mit `/ \ : * ? " < > |` oder
+einer, den es schon gibt, wird an Ort und Stelle abgelehnt, mit dem Grund.
+
 ## Verlauf mit git
 
 Pro Ordner — „Gemeinsam“ und jedes Projekt — und nur, wenn Sie es wollen. Ein

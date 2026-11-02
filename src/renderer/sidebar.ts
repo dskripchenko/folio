@@ -29,6 +29,10 @@ export interface SidebarText {
   newNote: string
   collapse: string
   expand: string
+  newName: string
+  newNoteInShared: string
+  newFolderInShared: string
+  errors: Record<'exists' | 'characters' | 'empty' | 'long' | 'inside' | 'failed', string>
 }
 
 interface Options {
@@ -59,6 +63,8 @@ export class Sidebar {
     folio().onWorkspace((value) => this.render(value as WorkspaceView))
     folio().onFsChanged((value) => void this.changed(value as Changes[]))
     folio().onEdit((value) => this.edit(value as { id: string; field: 'name' | 'group' }))
+    folio().onTreeCreate((value) => void this.startCreate(value as { root: string; dir: string; kind: 'note' | 'folder' }))
+    folio().onTreeRename((value) => this.startRename(value as { root: string; rel: string }))
     document.body.classList.toggle('sidebar-collapsed', prefs.get('sidebarCollapsed', false))
     // The flyout goes when the click is elsewhere, or with Escape.
     document.addEventListener('mousedown', (e) => {
@@ -143,6 +149,9 @@ export class Sidebar {
     const shared = this.section('shared', t.shared, [
       iconButton('more', t.sharedMenu, (e) =>
         popMenu(e.currentTarget as HTMLElement, [
+          { label: t.newNoteInShared, icon: 'note', action: () => void this.startCreate({ root: ws.shared.root, dir: '', kind: 'note' }) },
+          { label: t.newFolderInShared, icon: 'folder', action: () => void this.startCreate({ root: ws.shared.root, dir: '', kind: 'folder' }) },
+          { separator: true, label: '', action: () => undefined },
           { label: t.chooseShared, icon: 'folder', action: () => void folio().setShared(false).then((v) => this.render(v)) },
           { label: t.resetShared, icon: 'shared', action: () => void folio().setShared(true).then((v) => this.render(v)) },
         ], 'end'),
@@ -344,6 +353,7 @@ export class Sidebar {
       e.preventDefault()
       folio().projectMenu(p.id)
     })
+    this.dropTarget(row, p.root, '')
     if (open && !p.missing) children.append(this.tree(p.root, p.path, ''))
     wrap.append(row, children)
     return wrap
@@ -439,8 +449,20 @@ export class Sidebar {
     row.draggable = true
     row.addEventListener('dragstart', (e) => {
       e.dataTransfer?.setData('application/x-folio-path', this.abs(rootPath, entry.path))
+      e.dataTransfer?.setData('application/x-folio-entry', JSON.stringify({ root, rel: entry.path }))
       e.dataTransfer?.setData('text/plain', this.abs(rootPath, entry.path))
-      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copyMove'
+    })
+    if (entry.type === 'dir') this.dropTarget(row, root, entry.path)
+    // F2 renames (as in Explorer and the editors); Delete, or Cmd+Backspace, puts it in the trash.
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'F2') {
+        e.preventDefault()
+        this.startRename({ root, rel: entry.path })
+      } else if (e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) {
+        e.preventDefault()
+        void folio().fsTrash(root, entry.path)
+      }
     })
 
     if (entry.type === 'dir') {
@@ -481,6 +503,175 @@ export class Sidebar {
       folio().entryMenu(root, entry.path)
     })
     return li
+  }
+
+  // Making, renaming and moving files ------------------------------------------------------
+
+  /** A folder's list, opened if it is folded; null when it is not shown. */
+  private async listOf(root: string, dir: string): Promise<HTMLElement | null> {
+    const box = this.flown ? this.o.flyout : this.o.el
+    const find = (): HTMLElement | null => box.querySelector<HTMLElement>(`ul.tree[data-root="${root}"][data-rel="${CSS.escape(dir)}"]`)
+    let ul = find()
+    if (ul) return ul
+    // Folded: unfold it (its parent first), then wait for the list.
+    const project = this.ws?.projects.find((p) => p.root === root)
+    const row =
+      dir === ''
+        ? project
+          ? box.querySelector<HTMLElement>(`[data-project="${project.id}"] > .project-row`)
+          : null
+        : box.querySelector<HTMLElement>(`ul.tree[data-root="${root}"] .row.dir[data-rel="${CSS.escape(dir)}"]`)
+    if (!row && dir.includes('/')) {
+      await this.listOf(root, dir.split('/').slice(0, -1).join('/'))
+      return this.listOf(root, dir)
+    }
+    if (!row) return null
+    if (!row.classList.contains('open')) row.click()
+    for (let i = 0; i < 20 && !(ul = find()); i++) await new Promise((r) => setTimeout(r, 25))
+    return ul
+  }
+
+  /** A new note or folder: its name typed in place, at the top of its folder. */
+  private async startCreate(o: { root: string; dir: string; kind: 'note' | 'folder' }): Promise<void> {
+    const ul = await this.listOf(o.root, o.dir)
+    if (!ul) return
+    const li = document.createElement('li')
+    li.className = 'creating'
+    const row = document.createElement('div')
+    row.className = `row ${o.kind === 'folder' ? 'dir' : 'file'}`
+    const twisty = document.createElement('span')
+    twisty.className = 'twisty'
+    const input = this.nameInput('')
+    input.dataset.testid = 'tree-name'
+    row.append(twisty, icon(o.kind === 'folder' ? 'folder' : 'file', 15), input)
+    li.append(row)
+    ul.querySelector(':scope > li.hint')?.remove()
+    ul.prepend(li)
+    input.focus()
+    this.onName(input, async (name) => {
+      const res = await folio().fsCreate(o.root, o.dir, name, o.kind)
+      if ('error' in res) return this.text(res.error)
+      li.remove()
+      await this.fill(ul)
+      if (o.kind === 'note') this.o.open(o.root, res.rel)
+      return null
+    }, () => li.remove())
+  }
+
+  /** A rename: the name edited in its row (a file's extension left out of the selection). */
+  startRename(o: { root: string; rel: string }): void {
+    const box = this.flown ? this.o.flyout : this.o.el
+    const row = box.querySelector<HTMLElement>(`ul.tree[data-root="${o.root}"] .row[data-rel="${CSS.escape(o.rel)}"]`)
+    const name = row?.querySelector<HTMLElement>(':scope > .name')
+    if (!row || !name) return
+    const old = name.textContent ?? ''
+    const input = this.nameInput(old)
+    input.dataset.testid = 'tree-name'
+    name.replaceWith(input)
+    input.focus()
+    const dot = row.classList.contains('file') ? old.lastIndexOf('.') : -1
+    input.setSelectionRange(0, dot > 0 ? dot : old.length)
+    this.onName(input, async (value) => {
+      if (value === old) {
+        input.replaceWith(name)
+        return null
+      }
+      const res = await folio().fsRename(o.root, o.rel, value)
+      if ('error' in res) return this.text(res.error)
+      // Listed again at once: the row's path is the new one before the disk's own word arrives.
+      const ul = row.closest<HTMLElement>('ul.tree')
+      if (ul) await this.fill(ul)
+      return null
+    }, () => input.replaceWith(name))
+  }
+
+  private nameInput(value: string): HTMLInputElement {
+    const input = document.createElement('input')
+    input.className = 'tree-input'
+    input.value = value
+    input.spellcheck = false
+    input.placeholder = this.o.text().newName
+    // Clicks and keys in the field stay in it (the row would open or fold).
+    for (const type of ['click', 'mousedown', 'dblclick'] as const) input.addEventListener(type, (e) => e.stopPropagation())
+    return input
+  }
+
+  /** Enter commits (an error keeps the field, with the reason); Escape, or leaving it empty, cancels. */
+  private onName(input: HTMLInputElement, commit: (name: string) => Promise<string | null>, cancel: () => void): void {
+    let busy = false
+    const done = async (): Promise<void> => {
+      if (busy) return
+      const name = input.value.trim()
+      if (name === '') return cancel()
+      busy = true
+      const error = await commit(name)
+      busy = false
+      if (error) {
+        input.classList.add('invalid')
+        input.title = error
+        input.setCustomValidity(error)
+        input.reportValidity()
+        input.focus()
+      }
+    }
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        void done()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        cancel()
+      }
+    })
+    input.addEventListener('input', () => {
+      input.classList.remove('invalid')
+      input.setCustomValidity('')
+    })
+    input.addEventListener('blur', () => {
+      if (!busy && input.isConnected && !input.classList.contains('invalid')) void done()
+    })
+  }
+
+  private text(error: string): string {
+    const e = this.o.text().errors
+    return e[error as keyof typeof e] ?? e.failed
+  }
+
+  /** A folder's row (or a project's) takes files and folders dragged onto it: moved there. */
+  private dropTarget(row: HTMLElement, root: string, dir: string): void {
+    row.addEventListener('dragover', (e) => {
+      if (!e.dataTransfer?.types.includes('application/x-folio-entry')) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      row.classList.add('drop-target')
+    })
+    row.addEventListener('dragleave', () => row.classList.remove('drop-target'))
+    row.addEventListener('drop', (e) => {
+      row.classList.remove('drop-target')
+      const data = e.dataTransfer?.getData('application/x-folio-entry')
+      if (!data) return
+      e.preventDefault()
+      e.stopPropagation()
+      const from = JSON.parse(data) as { root: string; rel: string }
+      void folio()
+        .fsMove(from.root, from.rel, root, dir)
+        .then(async (res) => {
+          if (!('error' in res)) {
+            // Both folders listed again at once.
+            const box = this.flown ? this.o.flyout : this.o.el
+            const parent = from.rel.split('/').slice(0, -1).join('/')
+            for (const [r, d] of [[from.root, parent], [root, dir]]) {
+              const ul = box.querySelector<HTMLElement>(`ul.tree[data-root="${r}"][data-rel="${CSS.escape(d!)}"]`)
+              if (ul) await this.fill(ul)
+            }
+            return
+          }
+          row.classList.add('drop-refused')
+          row.title = this.text(res.error)
+          setTimeout(() => row.classList.remove('drop-refused'), 1200)
+        })
+    })
   }
 
   /** Changes on disk: list the affected folders again, where they are shown. */
