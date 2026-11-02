@@ -3,6 +3,7 @@
 # folio
 
 [![tests](https://img.shields.io/github/actions/workflow/status/dskripchenko/folio/tests.yml?branch=main&label=tests)](https://github.com/dskripchenko/folio/actions/workflows/tests.yml)
+[![release](https://img.shields.io/github/v/release/dskripchenko/folio?label=release)](https://github.com/dskripchenko/folio/releases/latest)
 [![license](https://img.shields.io/github/license/dskripchenko/folio?label=license)](https://github.com/dskripchenko/folio/blob/main/LICENSE)
 
 A desktop app to read, edit and print Markdown — with live diagrams of every
@@ -10,19 +11,31 @@ notation, OpenAPI and AsyncAPI references, BPMN and DMN, draw.io, process
 flows, kanban boards, calendars and whiteboards, slides — on macOS, Windows and Linux, without
 installing anything.
 
-> Status: **in development, nothing to download yet.** It reads: a Markdown file
-> opens with every block live, offline, its pictures by relative path, the web
-> only with consent; Shared and the projects are in the sidebar, their trees
-> follow the disk; it edits — visually or as Markdown, every block live — and
-> quick notes and unsaved edits survive closing and restarts; a folder can keep
-> a git history — versions, their differences, commits on save, branches, sync,
-> a commit graph; diagram and API files open on their own, in their editors.
-> It prints and exports PDF — page settings, headers and footers, contents
-> and bookmarks, a folder as one PDF. Portable builds come in the stages
-> listed under [Plan](#plan).
+> Status: **1.0.** It reads a Markdown file with every block live, offline;
+> edits it visually or as Markdown, keeping quick notes and unsaved edits
+> through restarts; keeps a git history per folder; links notes with
+> `[[links]]`, tags, aliases, embeds, a graph and a tasks panel; opens diagram,
+> API, kanban, calendar and whiteboard files in their editors; shows a note as
+> slides; prints and exports PDF; runs consoles; and updates itself.
 
 Documentation: [English](docs/en/) · [Русский](docs/ru/) · [Deutsch](docs/de/) ·
 [中文](docs/zh/)
+
+## Download
+
+From the [latest release](https://github.com/dskripchenko/folio/releases/latest):
+
+| System | Archive | How to run |
+|---|---|---|
+| macOS, Apple Silicon | `folio-<version>-mac-arm64.zip` | unpack, open `folio.app` (the first time: context menu → Open) |
+| macOS, Intel | `folio-<version>-mac-x64.zip` | the same |
+| Windows x64 | `folio-<version>-win-x64.zip` | unpack into a folder you can write to, run `folio.exe` |
+| Linux x64 | `folio-<version>-linux-x64.AppImage` | `chmod +x` it and run it |
+
+Each archive has a `.sha256` beside it, and its build provenance can be
+checked with `gh attestation verify <archive> --repo dskripchenko/folio`.
+folio updates itself afterwards; see [Honest limits](#honest-limits) for
+what the systems say about an unsigned program.
 
 ## What it is for
 
@@ -98,7 +111,7 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 6 | A printed form for every widget (in embed) — **done**: File → Print |
 | 7 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF — **done** |
 | 8 | Portable builds and updating itself — **done** |
-| 9 | Releases: checksums, provenance, a virus scan report — 1.0 |
+| 9 | Releases: checksums, provenance, a virus scan report — **1.0** |
 
 ## Development
 
