@@ -294,7 +294,7 @@ eines Tabs beendet seine Shell. Vollbildprogramme — `vim`, `htop`, `less`, `mc
 — funktionieren wie in einer Terminal-App, mit der Maus, wo sie danach fragen;
 die Höhe des Felds zieht man an seiner Oberkante, es folgt dem hellen oder
 dunklen Thema des Fensters. Außerhalb des Mac gehört Strg mit einem Buchstaben
-in einer Konsole der Shell (^W, ^E, ^P …), nicht den Kürzeln von folio. Die
+in einer Konsole der Shell (^W, ^E, ^P …), nicht den Kürzeln von folio — außer Strg+F, das in der Ausgabe sucht. Die
 Konsolen enden mit dem Fenster.
 
 Bei zsh, bash und PowerShell ergänzt folio den Start der Shell ein wenig (nach

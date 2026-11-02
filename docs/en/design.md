@@ -269,7 +269,7 @@ another in the same folder, a tab's × ends its shell. Full-screen programs —
 `vim`, `htop`, `less`, `mc` — work as in a terminal app, with the mouse where
 they ask for it; the panel's height is dragged by its top edge, and it follows
 the window's light or dark theme. Off a Mac, Ctrl with a letter in a console
-is the shell's (^W, ^E, ^P…), not folio's shortcut. The consoles end with the
+is the shell's (^W, ^E, ^P…), not folio's shortcut — except Ctrl+F, which finds in the output. The consoles end with the
 window.
 
 With zsh, bash and PowerShell, folio adds a little to the shell's start (after
