@@ -1,6 +1,6 @@
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
-export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'text'
+export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'text'
 
 /** A place in a note, as the links panel shows it. */
 export interface LinkPlace {
@@ -229,6 +229,8 @@ export interface FolioBridge {
   graph(note: string | null): Promise<{ nodes: { rel: string; path: string; name: string }[]; edges: [number, number][] }>
   /** The tasks of a note's root. */
   tasks(note: string | null): Promise<TaskEntry[]>
+  /** A new board or calendar file beside a note (in Shared without one), opened. */
+  newKind(kind: 'kanban' | 'calendar', near: string | null): Promise<OpenResult>
   /** A task checked or unchecked in its note; false when the note changed meanwhile. */
   toggleTask(path: string, line: number, raw: string, done: boolean): Promise<boolean>
   /** Whether spelling is checked as text is written; turned on or off. */

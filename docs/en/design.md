@@ -187,6 +187,16 @@ tree, or among the commands. The bookmarks are listed above Shared; a click
 opens one, its menu lets it go. A bookmark follows its file renamed or moved
 in folio; one whose file is gone elsewhere stays, faded.
 
+### Boards and calendars
+
+A `*.kanban.md` file opens as a kanban board, a `*.calendar.md` file as a
+calendar — both written as markup any editor can read (columns `## …` and
+cards `- …`; events `2026-11-03 10:00 …`, repeats `every mon …`). **Edit**
+makes them editable on themselves: cards dragged and added, events moved, the
+source in a tab of their own; the file keeps the markup, changed only where
+the edit was. **New kanban board** and **New calendar** among the commands
+make one beside the note in view.
+
 ### Tasks
 
 The tasks panel (on the right rail, or among the commands) lists the `- [ ]`

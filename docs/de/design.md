@@ -204,6 +204,17 @@ Datei im Baum oder unter den Befehlen. Die Lesezeichen stehen über
 folgt seiner Datei, wenn sie in folio umbenannt oder verschoben wird; eines,
 dessen Datei anderswo verschwunden ist, bleibt blass stehen.
 
+### Boards und Kalender
+
+Eine `*.kanban.md`-Datei öffnet sich als Kanban-Board, eine `*.calendar.md`-Datei
+als Kalender — beide als Markup geschrieben, das jeder Editor lesen kann
+(Spalten `## …` und Karten `- …`; Termine `2026-11-03 10:00 …`, Wiederholungen
+`every mon …`). **Bearbeiten** macht sie auf sich selbst bearbeitbar: Karten
+gezogen und hinzugefügt, Termine verschoben, die Quelle in einem eigenen Tab;
+die Datei behält das Markup und ändert sich nur, wo bearbeitet wurde. **Neues
+Kanban-Board** und **Neuer Kalender** unter den Befehlen legen eines neben der
+sichtbaren Notiz an.
+
 ### Aufgaben
 
 Das Aufgaben-Panel (auf der rechten Leiste oder unter den Befehlen) listet die

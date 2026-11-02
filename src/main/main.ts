@@ -824,6 +824,28 @@ ipcMain.handle('tasks:toggle', (_e, path: unknown, line: unknown, raw: unknown, 
   }
 })
 
+/** A new board or calendar, beside the note in view (in Shared without one), from a starting markup. */
+ipcMain.handle('fs:new-kind', (_e, kind: unknown, near: unknown) => {
+  if (kind !== 'kanban' && kind !== 'calendar') return { error: 'invalid', path: '' }
+  const folder = typeof near === 'string' && knownFile(near) ? dirname(near) : workspace.shared()
+  const day = new Date().toISOString().slice(0, 10)
+  const base = kind === 'kanban' ? L().newBoardName : L().newCalendarName
+  const text =
+    kind === 'kanban'
+      ? `# ${base}\n\n## ${L().boardTodo}\n- ${L().boardFirst}\n\n## ${L().boardDoing} {wip: 3}\n\n## ${L().boardDone} {done}\n`
+      : `# ${base}\n\n${day} ${L().calendarFirst}\n`
+  for (let i = 0; ; i++) {
+    const file = join(folder, `${base}${i === 0 ? '' : ` ${i}`}.${kind}.md`)
+    try {
+      writeFileSync(file, text, { flag: 'wx' })
+      if (workspace.autoCommits(file)) autoCommit.saved(file)
+      return open(file)
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') return { error: 'failed', path: file }
+    }
+  }
+})
+
 /** The tags of the notes in a note's root (Shared when no note is given), each with its notes. */
 ipcMain.handle('tags:index', async (_e, note: unknown) => {
   const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()

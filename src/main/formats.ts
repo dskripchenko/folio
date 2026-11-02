@@ -9,7 +9,7 @@ import { languageOf } from '@dskripchenko/syntax'
  * text notation (`<dsk-diagram>`, edited as source beside a preview); or any
  * other text.
  */
-export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'text'
+export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'text'
 
 /** The text notations, by extension, with the syntax `<dsk-diagram>` reads them in. */
 export const DIAGRAM_SYNTAX: Readonly<Record<string, string>> = {
@@ -47,6 +47,9 @@ export function sniffData(text: string): 'openapi' | 'asyncapi' | 'text' {
 export function formatByName(name: string): Format | 'data' {
   const lower = basename(name).toLowerCase()
   if (lower.endsWith('.drawio.svg') || lower.endsWith('.drawio.xml')) return 'drawio'
+  // A board or a calendar written as markup: Markdown to anything else, drawn as itself here.
+  if (lower.endsWith('.kanban.md')) return 'kanban'
+  if (lower.endsWith('.calendar.md')) return 'calendar'
   const ext = extname(lower)
   if (MARKDOWN_EXT.includes(ext)) return 'markdown'
   if (ext === '.bpmn') return 'bpmn'

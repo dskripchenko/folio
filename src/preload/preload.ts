@@ -116,6 +116,7 @@ contextBridge.exposeInMainWorld('folio', {
   tagIndex: (note: string | null) => ipcRenderer.invoke('tags:index', note),
   graph: (note: string | null) => ipcRenderer.invoke('graph:data', note),
   tasks: (note: string | null) => ipcRenderer.invoke('tasks:index', note),
+  newKind: (kind: 'kanban' | 'calendar', near: string | null) => ipcRenderer.invoke('fs:new-kind', kind, near),
   toggleTask: (path: string, line: number, raw: string, done: boolean) => ipcRenderer.invoke('tasks:toggle', path, line, raw, done),
   spellcheck: () => ipcRenderer.invoke('spellcheck:get'),
   setSpellcheck: (on: boolean) => ipcRenderer.invoke('spellcheck:set', on),

@@ -20,6 +20,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Boards and calendars: `*.kanban.md` and `*.calendar.md` files drawn and
+  edited as a kanban board and a calendar, kept as markup; new ones from the
+  commands.
 - The tasks panel: the project's `- [ ]` tasks by when they are due, checked
   from the panel into their notes.
 - Embedded notes: `![[Note]]` and `![[Note#Heading]]` drawn in the note
