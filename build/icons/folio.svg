@@ -1,24 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- folio: a leaf of a book with its letter, on the platform's rounded square. -->
+  <!-- folio: an open book — text on one page, a diagram on the other — and its ribbon. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4f7cff"/>
-      <stop offset="1" stop-color="#6a3fe0"/>
+      <stop offset="0" stop-color="#17a08a"/>
+      <stop offset="1" stop-color="#0b5566"/>
     </linearGradient>
-    <!-- In the canvas' units: a gradient by the shape's box would draw nothing on a horizontal bar. -->
-    <linearGradient id="ink" gradientUnits="userSpaceOnUse" x1="0" y1="350" x2="0" y2="730">
-      <stop offset="0" stop-color="#4f6cf5"/>
-      <stop offset="1" stop-color="#5a3ad6"/>
+    <linearGradient id="left" gradientUnits="userSpaceOnUse" x1="236" y1="0" x2="512" y2="0">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#efe5d0"/>
+    </linearGradient>
+    <linearGradient id="right" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="788" y2="0">
+      <stop offset="0" stop-color="#e9dfc8"/>
+      <stop offset="1" stop-color="#fdf7ea"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#1b0f5c" flood-opacity="0.35"/>
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#06303a" flood-opacity="0.45"/>
     </filter>
   </defs>
   <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
-  <!-- The page, its top right corner folded. -->
-  <path d="M302 236 H612 L724 348 V786 Q724 806 704 806 H322 Q302 806 302 786 Z" fill="#ffffff" filter="url(#shadow)"/>
-  <path d="M612 236 V328 Q612 348 632 348 H724 Z" fill="#d9defb"/>
-  <!-- The letter: a stem hooked at the top, a bar across. -->
-  <path d="M454 712 V444 Q454 360 538 360 H566" fill="none" stroke="url(#ink)" stroke-width="66" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M384 490 H560" fill="none" stroke="url(#ink)" stroke-width="58" stroke-linecap="round"/>
+  <g filter="url(#shadow)">
+    <!-- The pages beneath: the book's thickness. -->
+    <path d="M512 356 C440 316 320 314 236 344 V752 C320 724 440 726 512 768 C584 726 704 724 788 752 V344 C704 314 584 316 512 356 Z" fill="#d8c7a2"/>
+    <path d="M512 332 C440 292 320 290 236 320 V728 C320 700 440 702 512 744 Z" fill="url(#left)"/>
+    <path d="M512 332 C584 292 704 290 788 320 V728 C704 700 584 702 512 744 Z" fill="url(#right)"/>
+  </g>
+  <!-- Text on the left page. -->
+  <g stroke="#8fb3ad" stroke-width="22" stroke-linecap="round" fill="none">
+    <path d="M290 410 C350 396 410 398 462 416"/>
+    <path d="M290 470 C350 456 410 458 462 476"/>
+    <path d="M290 530 C350 516 410 518 462 536"/>
+    <path d="M290 590 C330 581 370 581 400 588"/>
+  </g>
+  <!-- A diagram on the right page. -->
+  <g stroke="#14806f" stroke-width="16" stroke-linecap="round" fill="none">
+    <path d="M628 440 L726 440"/>
+    <path d="M628 440 L677 560"/>
+    <path d="M726 440 L677 560"/>
+  </g>
+  <circle cx="628" cy="440" r="30" fill="#14806f"/>
+  <circle cx="726" cy="440" r="30" fill="#ff7a59"/>
+  <circle cx="677" cy="560" r="30" fill="#14806f"/>
+  <!-- The ribbon. -->
+  <path d="M530 300 H570 V486 L550 466 L530 486 Z" fill="#ff7a59"/>
 </svg>
