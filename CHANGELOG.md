@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+- The Markdown source is in colour (embed 1.13.0, markdown-editor 0.4.0), and an
+  edit in the visual mode no longer rewrites the rest of the file: wrapped lines
+  stay wrapped, a wrapped list item no longer becomes a loose list.
+- A console's shell no longer gets the variables of the way folio was started
+  (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
+
 ### Added
 - Consoles (`` Ctrl+` ``, **View → Console**, the rail; **Open a Console Here**
   in a project's or folder's menu): your shell in a panel under the page, in
