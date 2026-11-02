@@ -295,7 +295,23 @@ eines Tabs beendet seine Shell. Vollbildprogramme — `vim`, `htop`, `less`, `mc
 die Höhe des Felds zieht man an seiner Oberkante, es folgt dem hellen oder
 dunklen Thema des Fensters. Außerhalb des Mac gehört Strg mit einem Buchstaben
 in einer Konsole der Shell (^W, ^E, ^P …), nicht den Kürzeln von folio. Die
-Konsolen enden mit dem Fenster. Gezeichnet von `@dskripchenko/terminal`, die
+Konsolen enden mit dem Fenster.
+
+Bei zsh, bash und PowerShell ergänzt folio den Start der Shell ein wenig (nach
+Ihren eigenen Startdateien, die wie immer laufen): Jeder Befehl bekommt neben
+seiner Eingabeaufforderung eine Marke — grün bei Erfolg, rot bei Fehler,
+pulsierend, solange er läuft; beim Darüberfahren Befehl, Exit-Code und Dauer;
+ein Klick wählt seine Ausgabe aus. Der Tab zeigt, was läuft, und den Ordner
+(folgt `cd`), einen Punkt, wenn ein Befehl fehlschlug oder ein Tab im
+Hintergrund etwas ausgab. `Cmd+↑`/`Cmd+↓` (`Strg+Umschalt+↑`/`↓` außerhalb des
+Mac) gehen von Befehl zu Befehl, `Cmd+K` (`Strg+Umschalt+K`) leert, `Cmd+D`
+(`Strg+Umschalt+D`) öffnet eine zweite Konsole daneben; `Cmd+F` in einer Konsole
+sucht in ihrer Ausgabe. Ein Pfad in der Ausgabe — `src/app.ts:12:3` — öffnet
+sich mit Cmd (Strg) und Klick in folio an seiner Zeile; eine aus dem Baum (oder
+dem System) gezogene Datei wird als ihr Pfad getippt. Der Rechtsklick bietet
+Kopieren, Einfügen, Alles auswählen, Suchen, Leeren, Teilen, das Feld neben der
+Seite oder im ganzen Fenster. `FOLIO_SHELL_INTEGRATION=0` startet Shells, wie
+sie sind. Gezeichnet von `@dskripchenko/terminal`, die
 Shell läuft in `node-pty`.
 
 ## Wo die Daten liegen

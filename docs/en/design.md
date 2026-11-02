@@ -270,7 +270,21 @@ another in the same folder, a tab's × ends its shell. Full-screen programs —
 they ask for it; the panel's height is dragged by its top edge, and it follows
 the window's light or dark theme. Off a Mac, Ctrl with a letter in a console
 is the shell's (^W, ^E, ^P…), not folio's shortcut. The consoles end with the
-window. Drawn by `@dskripchenko/terminal`; the shell runs in `node-pty`.
+window.
+
+With zsh, bash and PowerShell, folio adds a little to the shell's start (after
+your own startup files, which run as always): each command gets a mark beside
+its prompt — green when it succeeded, red when it failed, pulsing while it runs;
+hover for the command, its exit code and how long it took; a click selects its
+output. The tab shows what runs and the folder (it follows `cd`), a dot when a
+command failed or a tab not in front printed something. `Cmd+↑`/`Cmd+↓`
+(`Ctrl+Shift+↑`/`↓` off a Mac) go from command to command, `Cmd+K`
+(`Ctrl+Shift+K`) clears, `Cmd+D` (`Ctrl+Shift+D`) opens a second console beside
+the first; `Cmd+F` in a console finds in its output. A path in the output —
+`src/app.ts:12:3` — opens in folio at its line with Cmd (Ctrl) and a click; a
+file dragged from the tree (or the system) is typed as its path. The right
+click has copy, paste, select all, find, clear, split, the panel beside the page
+or on the whole window. `FOLIO_SHELL_INTEGRATION=0` starts shells as they are. Drawn by `@dskripchenko/terminal`; the shell runs in `node-pty`.
 
 ## Where the data lives
 

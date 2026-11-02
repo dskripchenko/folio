@@ -442,6 +442,13 @@ export class Sidebar {
     name.textContent = entry.name
     row.append(twisty, icon(entry.type === 'dir' ? 'folder' : (FILE_ICON[entry.kind ?? 'other'] ?? 'file'), 15), name)
     li.append(row)
+    // Dragged into a console: typed there as its path.
+    row.draggable = true
+    row.addEventListener('dragstart', (e) => {
+      e.dataTransfer?.setData('application/x-folio-path', this.abs(rootPath, entry.path))
+      e.dataTransfer?.setData('text/plain', this.abs(rootPath, entry.path))
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'
+    })
 
     if (entry.type === 'dir') {
       const toggle = () => {

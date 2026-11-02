@@ -146,6 +146,7 @@ export interface FolioBridge {
   consoleInput(id: number, data: string): void
   consoleResize(id: number, cols: number, rows: number): void
   closeConsole(id: number): void
+  resolveConsolePath(cwd: string, text: string): Promise<{ path: string; line: number | null; column: number | null } | null>
   onConsoleData(callback: (id: number, data: string) => void): () => void
   onConsoleExit(callback: (id: number, code: number) => void): () => void
   searchScopes(): Promise<{ root: string; label: string | null }[]>

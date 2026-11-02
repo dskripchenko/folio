@@ -60,6 +60,7 @@ contextBridge.exposeInMainWorld('folio', {
   consoleInput: (id: number, data: string) => ipcRenderer.send('console:input', id, data),
   consoleResize: (id: number, cols: number, rows: number) => ipcRenderer.send('console:resize', id, cols, rows),
   closeConsole: (id: number) => ipcRenderer.send('console:close', id),
+  resolveConsolePath: (cwd: string, text: string) => ipcRenderer.invoke('console:resolve', cwd, text),
   onConsoleData: (callback: (id: number, data: string) => void) => {
     const handler = (_e: unknown, id: number, data: string) => callback(id, data)
     ipcRenderer.on('console:data', handler)

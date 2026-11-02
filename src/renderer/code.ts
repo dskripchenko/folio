@@ -396,6 +396,15 @@ export function codeView(text: string, name: string, state: CodeState = {}): HTM
     head.append(step)
   }
 
+  // A line asked for from elsewhere (a path with a line in a console's output).
+  ;(box as HTMLElement & { folioGoTo?: (n: number) => void }).folioGoTo = (n) => {
+    const row = goTo(Math.max(1, Math.min(count, n)))
+    if (!row) return
+    row.scrollIntoView({ block: 'center' })
+    row.classList.remove('code-flash')
+    void row.offsetWidth
+    row.classList.add('code-flash')
+  }
   applyFilter()
   box.append(head, pre)
   return box

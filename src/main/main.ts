@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session as electronSession, shell } from 'electron'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { basename, dirname, extname, join, relative, sep } from 'node:path'
+import { homedir } from 'node:os'
+import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path'
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
 import {
@@ -361,14 +362,33 @@ ipcMain.handle('search:replace', async (_e, query: unknown, options: unknown, re
   return { files: changed.length, replacements, commits }
 })
 // Consoles: a shell per tab, in a folder (Shared when none is named).
-const consoles = new Consoles({
-  data: (id, data) => send('console:data', id, data),
-  exit: (id, code) => send('console:exit', id, code),
-})
+const consoles = new Consoles(
+  {
+    data: (id, data) => send('console:data', id, data),
+    exit: (id, code) => send('console:exit', id, code),
+  },
+  join(data, 'shell-integration'),
+)
 ipcMain.handle('console:open', (_e, cwd: unknown, cols: unknown, rows: unknown) => {
   const dir = typeof cwd === 'string' && existsSync(cwd) && statSync(cwd).isDirectory() ? cwd : workspace.shared()
   const opened = consoles.open(dir, Number(cols) || 80, Number(rows) || 24)
   return 'id' in opened ? { ...opened, cwd: dir } : opened
+})
+/** A path in a console's output (`src/a.ts:12:3`, `~/notes.md`): the file it names, from the console's folder. */
+ipcMain.handle('console:resolve', (_e, cwd: unknown, text: unknown) => {
+  if (typeof text !== 'string') return null
+  const m = /^(.*?)(?::(\d+))?(?::(\d+))?$/.exec(text.trim())
+  if (!m || !m[1]) return null
+  let path = m[1]
+  if (path.startsWith('~')) path = join(homedir(), path.slice(1))
+  const base = typeof cwd === 'string' && cwd !== '' ? cwd : workspace.shared()
+  const file = isAbsolute(path) ? path : join(base, path)
+  try {
+    if (!statSync(file).isFile()) return null
+  } catch {
+    return null
+  }
+  return { path: file, line: m[2] ? Number(m[2]) : null, column: m[3] ? Number(m[3]) : null }
 })
 ipcMain.on('console:input', (_e, id: unknown, data: unknown) => {
   if (typeof id === 'number' && typeof data === 'string') consoles.write(id, data)
