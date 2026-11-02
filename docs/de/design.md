@@ -147,6 +147,18 @@ nennen; **Verlinken** macht aus einer solchen Erwähnung `[[Notiz]]` (die
 Schreibweise bleibt als Text). Ein Klick auf eine Zeile öffnet die Notiz dort.
 Das Panel folgt der sichtbaren Notiz und dem Getippten.
 
+### Formeln und Hervorhebungen
+
+TeX-Formeln werden gezeichnet, wie sie gelesen werden: `$E = mc^2$` in einer
+Zeile, `$$ … $$` (oder ein ` ```math `-Block) in eigenen Zeilen — von folios
+eigenem `@dskripchenko/math`, als MathML. Ein Preis (`$5 oder $10`) bleibt
+Text. Im visuellen Editor ist eine Formel ein Stück: ein Doppelklick bearbeitet
+ihr TeX, **Formel** im `/`-Menü fügt eine hinzu, und die Datei behält sie genau
+wie geschrieben; die Markdown-Quelle hebt ihr TeX hervor. Klammern und Wurzeln
+strecken sich in einer Mathematikschrift: der des Systems (macOS, Windows)
+oder STIX Two Math, die folio mitbringt (SIL Open Font License). `==Text==`
+wird hervorgehoben.
+
 ### Bilder
 
 Ein in eine Notiz eingefügtes Bild (ein Bildschirmfoto, ein kopiertes Bild) oder

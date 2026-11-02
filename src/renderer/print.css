@@ -1,4 +1,6 @@
 /* The print page: documents as a PDF's pages (stage 7). Margins, header and footer come from the print options. */
+/* Formulas: the system's math font, or the one folio carries (STIX Two Math, OFL) where there is none. */
+@font-face { font-family: "STIX Two Math"; src: local("STIX Two Math"), local("STIXTwoMath-Regular"), url("fonts/stix-two-math.woff2") format("woff2"); }
 :root { color-scheme: light; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2328; }
 html, body { margin: 0; background: #fff; }
 .pdf { font-size: 11pt; line-height: 1.5; }

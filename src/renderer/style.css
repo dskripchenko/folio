@@ -1,3 +1,5 @@
+/* Formulas: the system's math font, or the one folio carries (STIX Two Math, OFL) where there is none. */
+@font-face { font-family: "STIX Two Math"; src: local("STIX Two Math"), local("STIXTwoMath-Regular"), url("fonts/stix-two-math.woff2") format("woff2"); }
 :root {
   color-scheme: light dark;
   --bg: #ffffff;
