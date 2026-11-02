@@ -28,7 +28,7 @@ import {
   textAt,
 } from './git'
 import { Logins } from './logins'
-import { folderDocuments, pdfName, pdfOptions, printToPdfOptions } from './pdf'
+import { folderDocuments, pdfName, pdfOptions, printToPdfOptions, SLIDES_PDF } from './pdf'
 import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, systemTransport, type Transport } from './sync'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
@@ -44,12 +44,13 @@ import { listDir } from './tree'
 import { FileIndex } from './fileIndex'
 import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry, saveAttachment } from './fileOps'
 import { Consoles } from './pty'
-import { replaceInFiles, searchFiles, type SearchFile } from './search'
+import { parseQuery, pathPasses, replaceInFiles, searchFiles, tagsPass, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
-import { backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
+import { aliasIndex, aliasesOf, backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { resolveInside } from './paths'
-import { tagIndex } from './tags'
+import { tagIndex, tagsOf } from './tags'
+import { tasksOf, toggleTask } from './tasks'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
 import { Workspace, type Project } from './workspace'
 
@@ -376,20 +377,34 @@ ipcMain.handle('search:run', async (e, id: unknown, query: unknown, options: unk
   if (typeof id !== 'number' || typeof query !== 'string' || typeof options !== 'object' || options === null) return { error: 'invalid' }
   searchId = id
   const o = options as Record<string, unknown>
-  const pattern = patternOf(query, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+  const q = parseQuery(query)
+  const filtered = q.tags.length + q.paths.length + q.files.length > 0
+  // Filters alone: a tag's places, or each file's first line.
+  const pattern =
+    q.text !== '' || !filtered
+      ? patternOf(q.text, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+      : q.tags.length > 0
+        ? new RegExp(`(?<![\\p{L}\\p{N}_])#${q.tags[0]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}_])`, 'giu')
+        : /^.*\S.*$/m
   if (!pattern) return { error: 'invalid' }
   const files: SearchFile[] = []
   for (const s of sources()) {
     if (scope !== 'all' && scope !== s.root) continue
-    for (const f of await fileIndex.files(s.root, s.dir)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
+    for (const f of await fileIndex.files(s.root, s.dir)) if (pathPasses(q, f.path)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
   }
-  return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id)
+  return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id, {
+    ...(q.tags.length > 0 ? { accept: (text: string) => tagsPass(q, tagsOf(text)) } : {}),
+    ...(q.text === '' && filtered && q.tags.length === 0 ? { perFile: 1 } : {}),
+  })
 })
 /** Replace the matches in the files chosen; a folder that keeps a history gets one commit for it. */
 ipcMain.handle('search:replace', async (_e, query: unknown, options: unknown, replacement: unknown, files: unknown) => {
   if (typeof query !== 'string' || typeof replacement !== 'string' || typeof options !== 'object' || options === null || !Array.isArray(files)) return { error: 'invalid' }
   const o = options as Record<string, unknown>
-  const pattern = patternOf(query, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
+  // The filters chose the files; what is replaced is the text of the query.
+  const text = parseQuery(query).text
+  if (text === '') return { error: 'invalid' }
+  const pattern = patternOf(text, { caseSensitive: o.caseSensitive === true, wholeWord: o.wholeWord === true, regex: o.regex === true })
   if (!pattern) return { error: 'invalid' }
   // Only files of the roots folio knows: the window names them, the main process checks.
   const known = new Set(sources().map((s) => s.dir))
@@ -546,7 +561,8 @@ ipcMain.handle('wiki:exists', async (_e, from: unknown, targets: unknown) => {
   if (typeof from !== 'string' || !Array.isArray(targets)) return []
   const dir = linkRoot(from)
   const files = await filesOf(dir)
-  return targets.map((t) => typeof t === 'string' && resolveWiki(wikiTarget(t).name, relIn(dir, from), files) !== null)
+  const aliases = aliasIndex(await notesIn(dir, files))
+  return targets.map((t) => typeof t === 'string' && resolveWiki(wikiTarget(t).name, relIn(dir, from), files, aliases) !== null)
 })
 
 /**
@@ -563,7 +579,8 @@ ipcMain.handle('doc:peek', async (_e, from: unknown, link: unknown) => {
     const dir = linkRoot(from)
     const target = wikiTarget(l.wiki)
     heading = target.heading
-    const found = resolveWiki(target.name, relIn(dir, from), await filesOf(dir))
+    const files = await filesOf(dir)
+    const found = resolveWiki(target.name, relIn(dir, from), files, aliasIndex(await notesIn(dir, files)))
     file = found === null ? null : join(dir, ...found.split('/'))
   } else if (typeof l.url === 'string') {
     file = documentOfUrl(l.url, roots)
@@ -584,7 +601,8 @@ ipcMain.handle('wiki:open', async (_e, from: unknown, target: unknown) => {
   if (typeof from !== 'string' || typeof target !== 'string') return { error: 'invalid', path: '' }
   const dir = linkRoot(from)
   const { name, heading } = wikiTarget(target)
-  const found = resolveWiki(name, relIn(dir, from), await filesOf(dir))
+  const files = await filesOf(dir)
+  const found = resolveWiki(name, relIn(dir, from), files, aliasIndex(await notesIn(dir, files)))
   if (found !== null) return { ...open(join(dir, ...found.split('/'))), heading }
   // A new note: beside the linking one, or at the path the link names.
   const folder = name.includes('/') ? resolveInside(dir, dirname(name)) : dirname(from)
@@ -604,7 +622,13 @@ ipcMain.handle('wiki:names', async (_e, from: unknown) => {
   const dir = linkRoot(from)
   const files = await filesOf(dir)
   const self = relIn(dir, from)
-  return files.filter((f) => f !== self && kindOfLink(f)).map((f) => ({ name: linkName(f, files), path: f }))
+  const names = files.filter((f) => f !== self && kindOfLink(f)).map((f) => ({ name: linkName(f, files), path: f, label: undefined as string | undefined }))
+  // A note's aliases too: chosen, the link names the note and shows the alias.
+  for (const n of await notesIn(dir, files)) {
+    if (n.rel === self) continue
+    for (const alias of aliasesOf(n.text)) names.push({ name: `${linkName(n.rel, files)}|${alias}`, path: n.rel, label: alias })
+  }
+  return names
 })
 /** What a link suggests: notes, diagrams and pictures, not every file of a project. */
 function kindOfLink(rel: string): boolean {
@@ -686,11 +710,12 @@ ipcMain.handle('wiki:panel', async (_e, note: unknown, text: unknown) => {
   const files = await filesOf(dir)
   const rel = relIn(dir, note)
   const notes = await notesIn(dir, files)
+  const aliases = aliasIndex(notes)
   const abs = (r: string): string => join(dir, ...r.split('/'))
   return {
     name: linkName(rel, files),
-    outgoing: linksOf(text, rel, files).map((l) => ({ ...l, path: l.target === null ? null : abs(l.target) })),
-    incoming: backlinksOf(rel, notes, files).map((b) => ({ ...b, path: abs(b.rel) })),
+    outgoing: linksOf(text, rel, files, aliases).map((l) => ({ ...l, path: l.target === null ? null : abs(l.target) })),
+    incoming: backlinksOf(rel, notes, files, aliases).map((b) => ({ ...b, path: abs(b.rel) })),
     mentions: mentionsOf(rel, notes).map((m) => ({ ...m, path: abs(m.rel) })),
   }
 })
@@ -757,11 +782,12 @@ ipcMain.handle('graph:data', async (_e, note: unknown) => {
   const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()
   const files = await filesOf(dir)
   const notes = await notesIn(dir, files)
+  const aliases = aliasIndex(notes)
   const index = new Map(notes.map((n, i) => [n.rel, i]))
   const pairs = new Set<string>()
   const edges: [number, number][] = []
   notes.forEach((n, i) => {
-    for (const link of linksOf(n.text, n.rel, files)) {
+    for (const link of linksOf(n.text, n.rel, files, aliases)) {
       const j = link.target === null ? undefined : index.get(link.target)
       if (j === undefined || j === i) continue
       const key = i < j ? `${i}:${j}` : `${j}:${i}`
@@ -773,6 +799,53 @@ ipcMain.handle('graph:data', async (_e, note: unknown) => {
   return {
     nodes: notes.map((n) => ({ rel: n.rel, path: join(dir, ...n.rel.split('/')), name: basename(n.rel).replace(/\.(md|markdown)$/i, '') })),
     edges,
+  }
+})
+
+/** The tasks of the notes in a note's root (Shared without one). */
+ipcMain.handle('tasks:index', async (_e, note: unknown) => {
+  const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()
+  const notes = await notesIn(dir, await filesOf(dir))
+  return notes.flatMap((n) => tasksOf(n.text).map((t) => ({ ...t, rel: n.rel, path: join(dir, ...n.rel.split('/')) })))
+})
+
+/** A task checked or unchecked in its note; false when the note changed meanwhile. */
+ipcMain.handle('tasks:toggle', (_e, path: unknown, line: unknown, raw: unknown, done: unknown) => {
+  if (typeof path !== 'string' || typeof line !== 'number' || typeof raw !== 'string' || typeof done !== 'boolean') return false
+  if (!isNote(path) || !knownFile(path)) return false
+  try {
+    const next = toggleTask(readFileSync(path, 'utf8'), line, raw, done)
+    if (next === null) return false
+    writeFileSync(path, next)
+    if (workspace.autoCommits(path)) autoCommit.saved(path)
+    return true
+  } catch {
+    return false
+  }
+})
+
+/** A new kanban board, calendar or whiteboard, beside the note in view (in Shared without one), from a starting markup. */
+ipcMain.handle('fs:new-kind', (_e, kind: unknown, near: unknown) => {
+  if (kind !== 'kanban' && kind !== 'calendar' && kind !== 'board') return { error: 'invalid', path: '' }
+  const folder = typeof near === 'string' && knownFile(near) ? dirname(near) : workspace.shared()
+  const day = new Date().toISOString().slice(0, 10)
+  const base = kind === 'kanban' ? L().newBoardName : kind === 'calendar' ? L().newCalendarName : L().newCanvasName
+  const text =
+    kind === 'kanban'
+      ? `# ${base}\n\n## ${L().boardTodo}\n- ${L().boardFirst}\n\n## ${L().boardDoing} {wip: 3}\n\n## ${L().boardDone} {done}\n`
+      : kind === 'calendar'
+        ? `# ${base}\n\n${day} ${L().calendarFirst}\n`
+        : `${JSON.stringify({ version: 1, objects: {} }, null, 2)}\n`
+  const ext = kind === 'board' ? 'board' : `${kind}.md`
+  for (let i = 0; ; i++) {
+    const file = join(folder, `${base}${i === 0 ? '' : ` ${i}`}.${ext}`)
+    try {
+      writeFileSync(file, text, { flag: 'wx' })
+      if (workspace.autoCommits(file)) autoCommit.saved(file)
+      return open(file)
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') return { error: 'failed', path: file }
+    }
   }
 })
 
@@ -1100,8 +1173,9 @@ async function renderPdf(job: PdfJob, file: string): Promise<void> {
  */
 ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) => {
   if (!win || !target || typeof target !== 'object') return { error: 'invalid' }
-  const t = target as { kind?: string; path?: unknown; text?: unknown; name?: unknown; dir?: unknown }
-  const options = pdfOptions(rawOptions)
+  const t = target as { kind?: string; path?: unknown; text?: unknown; name?: unknown; dir?: unknown; slides?: unknown }
+  // A note as slides: pages of its own shape, whatever the dialog last chose.
+  const options = t.slides === true && t.kind === 'doc' ? SLIDES_PDF : pdfOptions(rawOptions)
   const opened = (files: string[]) => {
     const list = files.map(open).filter((o): o is OpenedDocument => !('error' in o))
     const ids = [...new Set(list.map((o) => o.root))]

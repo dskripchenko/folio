@@ -86,6 +86,14 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
     }
     case 'drawio':
       return withText('dsk-drawio', text)
+    case 'kanban':
+    case 'calendar':
+      return withText(`dsk-${format}`, text)
+    case 'board': {
+      const el = withText('dsk-board', text)
+      el.setAttribute('height', o.main ? 'calc(100vh - 150px)' : '480')
+      return el
+    }
     case 'openapi': {
       const el = withText('dsk-openapi', text)
       localApi(el, text)
@@ -118,6 +126,21 @@ export function editorOf(format: Format, text: string, o: ViewOptions, changed: 
     el.setAttribute('editable', '')
     el.setAttribute('height', 'calc(100vh - 150px)')
     el.addEventListener('dsk:change', (e) => changed((e as CustomEvent<{ xml: string }>).detail.xml))
+    return el
+  }
+  // A board or a calendar is edited on itself: cards dragged, events moved, the source tab.
+  if (format === 'kanban' || format === 'calendar') {
+    const el = withText(`dsk-${format}`, text)
+    el.setAttribute('editable', '')
+    el.addEventListener('dsk:change', (e) => changed((e as CustomEvent<{ source: string }>).detail.source))
+    return el
+  }
+  // A whiteboard is drawn on: the file keeps its JSON, two-space indented, as written by hand.
+  if (format === 'board') {
+    const el = withText('dsk-board', text)
+    el.setAttribute('editable', '')
+    el.setAttribute('height', 'calc(100vh - 150px)')
+    el.addEventListener('dsk:change', (e) => changed(`${JSON.stringify((e as CustomEvent<{ board: unknown }>).detail.board, null, 2)}\n`))
     return el
   }
   if (format === 'openapi') {

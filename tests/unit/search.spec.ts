@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { patternOf } from '../../src/common/pattern'
-import { hitsIn, searchFiles, type FileHits } from '../../src/main/search'
+import { hitsIn, searchFiles, type FileHits, parseQuery, pathPasses, tagsPass } from '../../src/main/search'
 
 const p = (q: string, o = {}) => patternOf(q, { caseSensitive: false, wholeWord: false, regex: false, ...o })!
 
@@ -36,5 +36,21 @@ describe('search in files', () => {
     const none = await searchFiles(files, p('needle', { caseSensitive: true, wholeWord: true }), () => {}, () => false)
     expect(none.matches).toBe(2)
     expect((await searchFiles(files, p('needle'), () => {}, () => true)).canceled).toBe(true)
+  })
+})
+
+describe('filters in a query', () => {
+  it('tag:, path:, file: with quoted values; the text left to find', () => {
+    expect(parseQuery('deadline tag:#Work path:"notes/2026" file:plan')).toEqual({ text: 'deadline', tags: ['work'], paths: ['notes/2026'], files: ['plan'] })
+    expect(parseQuery('just words')).toEqual({ text: 'just words', tags: [], paths: [], files: [] })
+  })
+
+  it('paths and names as filtered; a tag takes its nested ones', () => {
+    const q = parseQuery('path:notes file:plan tag:work')
+    expect(pathPasses(q, 'notes/2026/Plan.md')).toBe(true)
+    expect(pathPasses(q, 'notes/Ideas.md')).toBe(false)
+    expect(pathPasses(q, 'Plan.md')).toBe(false)
+    expect(tagsPass(q, ['Work/urgent'])).toBe(true)
+    expect(tagsPass(q, ['workshop'])).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
-export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'text'
+export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'board' | 'text'
 
 /** A place in a note, as the links panel shows it. */
 export interface LinkPlace {
@@ -12,6 +12,17 @@ export interface LinkPlace {
   length: number
   display: string
   nth: number
+}
+
+/** A task of a note, as the tasks panel lists it. */
+export interface TaskEntry {
+  rel: string
+  path: string
+  line: number
+  raw: string
+  text: string
+  done: boolean
+  due: string | null
 }
 
 export interface LinksData {
@@ -205,7 +216,7 @@ export interface FolioBridge {
   /** Open the file a `[[link]]` names, making the note when it is not there yet; `heading` to scroll to. */
   wikiOpen(from: string, target: string): Promise<OpenResult & { heading?: string | null; created?: boolean }>
   /** The files a note can link to, by the name a link would use. */
-  wikiNames(from: string): Promise<{ name: string; path: string }[]>
+  wikiNames(from: string): Promise<{ name: string; path: string; label?: string }[]>
   /** After a move: links to it written anew in the root's notes; how many notes changed. */
   wikiMoved(from: string, to: string, skip: string[]): Promise<number>
   /** A picture pasted into a note, saved in `attachments/` beside it: its path for the Markdown. */
@@ -216,6 +227,12 @@ export interface FolioBridge {
   tagIndex(note: string | null): Promise<{ tag: string; notes: { rel: string; path: string }[] }[]>
   /** The notes of a note's root and the links between them (indexes into `nodes`). */
   graph(note: string | null): Promise<{ nodes: { rel: string; path: string; name: string }[]; edges: [number, number][] }>
+  /** The tasks of a note's root. */
+  tasks(note: string | null): Promise<TaskEntry[]>
+  /** A new board or calendar file beside a note (in Shared without one), opened. */
+  newKind(kind: 'kanban' | 'calendar' | 'board', near: string | null): Promise<OpenResult>
+  /** A task checked or unchecked in its note; false when the note changed meanwhile. */
+  toggleTask(path: string, line: number, raw: string, done: boolean): Promise<boolean>
   /** Whether spelling is checked as text is written; turned on or off. */
   spellcheck(): Promise<boolean>
   setSpellcheck(on: boolean): Promise<boolean>

@@ -19,3 +19,8 @@ html, body { margin: 0; background: #fff; }
 pre, code { white-space: pre-wrap; overflow-wrap: anywhere; }
 img, svg { max-width: 100%; }
 .pdf .plain-text { font: 9.5pt/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+/* Slides: one to a 16:9 page, the content centred and larger, nothing spilling to the next page. */
+.pdf-slide { box-sizing: border-box; width: 13.333in; height: 7.5in; padding: 0.55in 0.8in; display: flex; flex-direction: column; justify-content: center; overflow: hidden; break-after: page; }
+.pdf-slide > * { zoom: 1.5; }
+.pdf-slide:last-child { break-after: auto; }
+.pdf-slides { break-before: auto; }

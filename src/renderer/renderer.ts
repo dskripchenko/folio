@@ -18,18 +18,22 @@ import { icon, iconButton, type IconName } from './icons'
 import { popMenu, popMenuAt } from './menu'
 import { openCloneDialog, type CloneText } from './clone'
 import { openPdfDialog, type PdfTarget, type PdfText } from './pdfDialog'
+import { Presentation, slidesOf, type SlidesText } from './slides'
 import { describeRefusal, HistoryPanel, type HistoryText } from './history'
 import { Sidebar, type SidebarText } from './sidebar'
 import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
 import { HoverPreview } from './hoverPreview'
+import { watchEmbeds } from './embeds'
+import { TasksPanel, type TasksText } from './tasksPanel'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
+import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
 import { CommandPalette, type Command, type PaletteText } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
-type CommandsText = PaletteText & Record<'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
+type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
 import type { GitRefusal, Version, WorkspaceView } from './bridge'
 
 const TEXT = {
@@ -72,14 +76,17 @@ const TEXT = {
     historyPanel: { title: 'History', noFile: 'Open a file to see its history.', outside: 'This file is outside the projects and Shared: no history here.', noHistory: 'This folder keeps no history yet.', start: 'Keep a history', autoCommit: 'Commit when saved', commitNow: 'Commit now', commitPlaceholder: 'What changed…', commit: 'Commit', noVersions: 'No versions of this file yet.', nothingToCommit: 'Nothing to commit: the changes are in the history already.', close: 'Close', scopeFile: 'This file', scopeAll: 'All commits', graph: 'Commit graph', branches: 'Branches', newBranch: 'New branch', create: 'Create', switched: 'On branch {branch}.', remotePlaceholder: 'Remote: https://… or git@…', connect: 'Connect', sync: 'Sync', syncing: 'Syncing…', synced: { 'up-to-date': 'Up to date.', pushed: 'Sent.', pulled: 'Received.', merged: 'Merged and sent.', conflict: 'Conflicts: resolve them in the text, then finish the merge.' }, username: 'User', token: 'Token or password', remember: 'Remember on this computer', signIn: 'Sign in and sync', mergeConflicts: 'Merging: conflicts in {n} file(s). Edit the text between the <<<<<<< and >>>>>>> lines, save, then finish.', mergeReady: 'Merging: every conflict is resolved.', finishMerge: 'Finish the merge', abortMerge: 'Cancel the merge', mergeDone: 'Merged. Sync to send it.', errors: { dirty: 'Save or commit the changes first: {files}', merging: 'A merge is in progress: finish or cancel it first.', 'no-remote': 'No remote yet.', detached: 'Not on a branch.', auth: 'The remote asks for a login ({detail}).', authSystem: 'git could not log in ({detail}). Set up its credentials as for a terminal: a credential helper or an SSH key.', network: 'Could not reach the remote: {detail}', invalid: 'Not a valid name or address.', markers: 'Conflict markers are still in: {files}', exists: 'Already exists: {detail}', canceled: '' } } as HistoryText,
     pdf: { title: 'Export as PDF', folderTitle: 'Export the folder as one PDF', pageSize: 'Page size', orientation: 'Orientation', portrait: 'Portrait', landscape: 'Landscape', margins: 'Margins', marginNames: ['None', 'Narrow', 'Normal', 'Wide'], header: 'Title at the top of each page', footer: 'Page numbers at the bottom', toc: 'Table of contents', outline: 'Bookmarks from the headings', background: 'Colours and backgrounds', export: 'Export…', exporting: 'Exporting…', cancel: 'Cancel', saved: 'Saved: {file}', failed: 'Not exported: {error}' } as PdfText,
     console: { title: 'Console', newConsole: 'New console', close: 'Close the console', hide: 'Hide the consoles (Ctrl+`)', ended: '[the shell ended, code {code}]', failed: 'The console did not start: {error}', split: 'Split: a console beside', toRight: 'Beside the page', toBottom: 'Under the page', maximize: 'The whole window', restore: 'Back to the panel', copy: 'Copy', paste: 'Paste', selectAll: 'Select all', clear: 'Clear', find: 'Find…', closePane: 'Close this console', running: 'Running: {command}' } as ConsoleText,
-    search: { title: 'Search', placeholder: 'Search the files', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', close: 'Close', everywhere: 'Everywhere', shared: 'Shared', searching: 'Searching…', summary: '{matches} in {files}', truncated: '(the first ones)', none: 'Nothing found', invalid: 'Invalid expression', matches: ['match', 'matches'], files: ['file', 'files'], toggleReplace: 'Replace', replacePlaceholder: 'Replace with', replaceAll: 'Replace all', confirm: 'Replace {matches} in {files}?', replaced: 'Replaced {matches} in {files}.', committed: 'Committed to the history.', skipped: 'Left out, open with unsaved changes: {n}.', include: 'Replace in this file' } as SearchText,
+    search: { title: 'Search', placeholder: 'Search the files (tag: path: file:)', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', close: 'Close', everywhere: 'Everywhere', shared: 'Shared', searching: 'Searching…', summary: '{matches} in {files}', truncated: '(the first ones)', none: 'Nothing found', invalid: 'Invalid expression', matches: ['match', 'matches'], files: ['file', 'files'], toggleReplace: 'Replace', replacePlaceholder: 'Replace with', replaceAll: 'Replace all', confirm: 'Replace {matches} in {files}?', replaced: 'Replaced {matches} in {files}.', committed: 'Committed to the history.', skipped: 'Left out, open with unsaved changes: {n}.', include: 'Replace in this file' } as SearchText,
     links: { title: 'Links', close: 'Close', incoming: 'Linked here', outgoing: 'Links from this note', mentions: 'Named without a link', noNote: 'Open a note to see its links.', none: 'None', missing: 'No such note yet: a click makes it.', link: 'Link', linked: 'Made a link.', changed: 'The note has changed meanwhile: look again.' } as LinksText,
     tags: { title: 'Tags', close: 'Close', filter: 'Filter tags', none: 'No such tag', noTags: 'No tags in this project yet: write #tag in a note, or tags: in its properties.' } as TagsText,
     graph: { title: 'Graph', close: 'Close', local: 'This note', all: 'All', empty: 'No notes here yet.' } as GraphText,
+    tasks: { title: 'Tasks', close: 'Close', open: 'Open', all: 'All', overdue: 'Overdue', today: 'Today', later: 'Later', noDate: 'No date', done: 'Done', none: 'No tasks here: write - [ ] in a note.', changed: 'The note has changed meanwhile: look again.' } as TasksText,
+    outline: { title: 'Outline', close: 'Close', none: 'No headings in this note.' } as OutlineText,
+    slides: { close: 'End the show (Esc)', pdf: 'The slides as PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}' } as StatusText,
     spellcheck: 'Check spelling',
     spellcheckFetch: 'Check spelling (fetches dictionaries)',
-    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks' } as CommandsText,
+    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
@@ -124,14 +131,17 @@ const TEXT = {
     historyPanel: { title: 'История', noFile: 'Откройте файл, чтобы увидеть его историю.', outside: 'Файл вне проектов и «Общих»: истории здесь нет.', noHistory: 'Эта папка пока не ведёт историю.', start: 'Вести историю', autoCommit: 'Фиксировать при сохранении', commitNow: 'Зафиксировать сейчас', commitPlaceholder: 'Что изменилось…', commit: 'Зафиксировать', noVersions: 'У этого файла пока нет версий.', nothingToCommit: 'Нечего фиксировать: изменения уже в истории.', close: 'Закрыть', scopeFile: 'Этот файл', scopeAll: 'Все коммиты', graph: 'Граф коммитов', branches: 'Ветки', newBranch: 'Новая ветка', create: 'Создать', switched: 'Ветка {branch}.', remotePlaceholder: 'Удалённый репозиторий: https://… или git@…', connect: 'Подключить', sync: 'Синхронизировать', syncing: 'Синхронизация…', synced: { 'up-to-date': 'Всё совпадает.', pushed: 'Отправлено.', pulled: 'Получено.', merged: 'Слито и отправлено.', conflict: 'Конфликты: разрешите их в тексте и завершите слияние.' }, username: 'Пользователь', token: 'Токен или пароль', remember: 'Запомнить на этом компьютере', signIn: 'Войти и синхронизировать', mergeConflicts: 'Слияние: конфликты в файлах — {n}. Поправьте текст между строками <<<<<<< и >>>>>>>, сохраните и завершите.', mergeReady: 'Слияние: все конфликты разрешены.', finishMerge: 'Завершить слияние', abortMerge: 'Отменить слияние', mergeDone: 'Слито. Синхронизируйте, чтобы отправить.', errors: { dirty: 'Сначала сохраните или зафиксируйте изменения: {files}', merging: 'Идёт слияние: сначала завершите или отмените его.', 'no-remote': 'Удалённого репозитория пока нет.', detached: 'Вы не на ветке.', auth: 'Удалённый репозиторий просит войти ({detail}).', authSystem: 'git не смог войти ({detail}). Настройте его вход как для терминала: помощник учётных данных или SSH-ключ.', network: 'Не удалось связаться с удалённым репозиторием: {detail}', invalid: 'Неверное имя или адрес.', markers: 'Маркеры конфликта ещё есть в: {files}', exists: 'Уже существует: {detail}', canceled: '' } } as HistoryText,
     pdf: { title: 'Экспорт в PDF', folderTitle: 'Экспорт папки одним PDF', pageSize: 'Размер страницы', orientation: 'Ориентация', portrait: 'Книжная', landscape: 'Альбомная', margins: 'Поля', marginNames: ['Без полей', 'Узкие', 'Обычные', 'Широкие'], header: 'Название вверху каждой страницы', footer: 'Номера страниц внизу', toc: 'Оглавление', outline: 'Закладки по заголовкам', background: 'Цвета и фоны', export: 'Экспортировать…', exporting: 'Экспорт…', cancel: 'Отмена', saved: 'Сохранено: {file}', failed: 'Не экспортировано: {error}' } as PdfText,
     console: { title: 'Консоль', newConsole: 'Новая консоль', close: 'Закрыть консоль', hide: 'Скрыть консоли (Ctrl+`)', ended: '[оболочка завершилась, код {code}]', failed: 'Консоль не запустилась: {error}', split: 'Разделить: консоль рядом', toRight: 'Справа от страницы', toBottom: 'Под страницей', maximize: 'На всё окно', restore: 'Вернуть в панель', copy: 'Копировать', paste: 'Вставить', selectAll: 'Выделить всё', clear: 'Очистить', find: 'Найти…', closePane: 'Закрыть эту консоль', running: 'Выполняется: {command}' } as ConsoleText,
-    search: { title: 'Поиск', placeholder: 'Искать в файлах', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', close: 'Закрыть', everywhere: 'Везде', shared: 'Общие', searching: 'Поиск…', summary: '{matches} в {files}', truncated: '(первые)', none: 'Ничего не найдено', invalid: 'Неверное выражение', matches: ['совпадение', 'совпадения', 'совпадений'], files: ['файле', 'файлах', 'файлах'], toggleReplace: 'Заменить', replacePlaceholder: 'Заменить на', replaceAll: 'Заменить всё', confirm: 'Заменить {matches} в {files}?', replaced: 'Заменено: {matches} в {files}.', committed: 'Зафиксировано в истории.', skipped: 'Пропущены открытые с несохранёнными правками: {n}.', include: 'Заменять в этом файле' } as SearchText,
+    search: { title: 'Поиск', placeholder: 'Искать в файлах (tag: path: file:)', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', close: 'Закрыть', everywhere: 'Везде', shared: 'Общие', searching: 'Поиск…', summary: '{matches} в {files}', truncated: '(первые)', none: 'Ничего не найдено', invalid: 'Неверное выражение', matches: ['совпадение', 'совпадения', 'совпадений'], files: ['файле', 'файлах', 'файлах'], toggleReplace: 'Заменить', replacePlaceholder: 'Заменить на', replaceAll: 'Заменить всё', confirm: 'Заменить {matches} в {files}?', replaced: 'Заменено: {matches} в {files}.', committed: 'Зафиксировано в истории.', skipped: 'Пропущены открытые с несохранёнными правками: {n}.', include: 'Заменять в этом файле' } as SearchText,
     links: { title: 'Ссылки', close: 'Закрыть', incoming: 'Ссылаются сюда', outgoing: 'Ссылки из заметки', mentions: 'Упоминания без ссылки', noNote: 'Откройте заметку, чтобы увидеть её ссылки.', none: 'Нет', missing: 'Такой заметки ещё нет: щелчок создаст её.', link: 'Связать', linked: 'Ссылка добавлена.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as LinksText,
     tags: { title: 'Теги', close: 'Закрыть', filter: 'Найти тег', none: 'Нет такого тега', noTags: 'В этом проекте пока нет тегов: напишите #тег в заметке или tags: в её свойствах.' } as TagsText,
     graph: { title: 'Граф', close: 'Закрыть', local: 'Эта заметка', all: 'Все', empty: 'Заметок здесь пока нет.' } as GraphText,
+    tasks: { title: 'Задачи', close: 'Закрыть', open: 'Открытые', all: 'Все', overdue: 'Просрочено', today: 'Сегодня', later: 'Позже', noDate: 'Без даты', done: 'Сделано', none: 'Задач нет: напишите - [ ] в заметке.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as TasksText,
+    outline: { title: 'Оглавление', close: 'Закрыть', none: 'В этой заметке нет заголовков.' } as OutlineText,
+    slides: { close: 'Завершить показ (Esc)', pdf: 'Слайды в PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}' } as StatusText,
     spellcheck: 'Проверять орфографию',
     spellcheckFetch: 'Проверять орфографию (скачает словари)',
-    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок' } as CommandsText,
+    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
@@ -146,8 +156,12 @@ let linksPanel: LinksPanel | null = null
 let tagsPanel: TagsPanel | null = null
 /** The graph of notes: made with the rest of the window, drawn around the note in view. */
 let graphPanel: GraphPanel | null = null
+/** The tasks of the project in view. */
+let tasksPanel: TasksPanel | null = null
 /** The status line under the page. */
 let statusBar: StatusBar | null = null
+/** The outline of the note in view. */
+let outlinePanel: OutlinePanel | null = null
 /** Spelling checked as text is written (folio's setting). */
 let spellOn = false
 /** The modifier key as the system writes it in shortcuts. */
@@ -213,6 +227,8 @@ function applyText(): void {
   linksPanel?.setText(t.links)
   tagsPanel?.setText(t.tags)
   graphPanel?.setText(t.graph)
+  tasksPanel?.setText(t.tasks)
+  outlinePanel?.setText(t.outline)
   statusBar?.setText(t.status)
   syncStatus()
   palette.setText(t.commands)
@@ -515,9 +531,11 @@ function buildRail(): void {
   tools.append(
     iconButton('console', `${t.console.title} (Ctrl+\`)`, () => consolePanel.toggle(null), 'toggle-console'),
     iconButton('search', `${t.search.title} (${mod}⇧F)`, () => (searchPanel.visible ? searchPanel.setVisible(false) : void searchPanel.open()), 'toggle-search'),
+    iconButton('outline', t.outline.title, () => outlinePanel?.setVisible(!outlinePanel.visible), 'toggle-outline'),
     iconButton('links', t.links.title, () => linksPanel?.setVisible(!linksPanel.visible), 'toggle-links'),
     iconButton('tag', t.tags.title, () => tagsPanel?.setVisible(!tagsPanel.visible), 'toggle-tags'),
     iconButton('graph', t.graph.title, () => graphPanel?.setVisible(!graphPanel.visible), 'toggle-graph'),
+    iconButton('tasks', t.tasks.title, () => tasksPanel?.setVisible(!tasksPanel.visible), 'toggle-tasks'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
     iconButton('pdf', `${t.exportPdf} (${mod}⇧P)`, () => exportActive(), 'rail-pdf'),
@@ -553,6 +571,16 @@ function syncRail(): void {
   if (cp) {
     cp.setAttribute('aria-pressed', String(consolePanel.visible))
     cp.classList.toggle('on', consolePanel.visible)
+  }
+  const op = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-outline"]')
+  if (op) {
+    op.setAttribute('aria-pressed', String(!!outlinePanel?.visible))
+    op.classList.toggle('on', !!outlinePanel?.visible)
+  }
+  const kp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-tasks"]')
+  if (kp) {
+    kp.setAttribute('aria-pressed', String(!!tasksPanel?.visible))
+    kp.classList.toggle('on', !!tasksPanel?.visible)
   }
   const gp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-graph"]')
   if (gp) {
@@ -614,17 +642,68 @@ function noteOf(tab: Tab | null): { path: string; text: () => string } | null {
 let linksTimer: ReturnType<typeof setTimeout> | null = null
 /** The links panel drawn again once typing or the disk is quiet. */
 function linksSoon(): void {
-  if (!linksPanel?.visible && !tagsPanel?.visible && !graphPanel?.visible) return
+  if (!linksPanel?.visible && !tagsPanel?.visible && !graphPanel?.visible && !tasksPanel?.visible) return
   if (linksTimer) clearTimeout(linksTimer)
   linksTimer = setTimeout(() => {
     void linksPanel?.refresh()
     void tagsPanel?.refresh()
     void graphPanel?.refresh()
+    void tasksPanel?.refresh()
   }, 600)
+}
+
+/** The outline for the note in view, and the section the page shows. */
+function syncOutline(): void {
+  if (!outlinePanel?.visible) return
+  const tab = active
+  outlinePanel.show(tab && !tab.version && formatOf(tab) === 'markdown' ? tab.text : null)
+  markSection()
+}
+
+/** A heading of the note in view, as drawn: the n-th heading with its text (code blocks' own left out). */
+function headingElement(tab: Tab, heading: Heading, index: number, all: Heading[]): HTMLElement | null {
+  const nth = all.slice(0, index).filter((h) => h.text === heading.text).length
+  const found = [...tab.pane.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')].filter((el) => !el.closest('pre, .dsk-md__preview, .hover-preview') && el.textContent?.trim() === heading.text)
+  return found[nth] ?? null
+}
+
+/** The section the page shows: the last heading above its top. */
+function markSection(): void {
+  const tab = active
+  if (!outlinePanel?.visible || !tab || formatOf(tab) !== 'markdown') return
+  const scroller = scrollerOf(tab)
+  const top = scroller.getBoundingClientRect().top + 48
+  const all = [...tab.pane.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')].filter((el) => !el.closest('pre, .dsk-md__preview, .hover-preview'))
+  let index = -1
+  all.forEach((el, i) => {
+    if (el.getBoundingClientRect().top <= top) index = i
+  })
+  outlinePanel.mark(index)
+}
+
+/** To a heading: the caret on its line in the source, scrolled to otherwise. */
+function goToHeading(heading: Heading, index: number): void {
+  const tab = active
+  if (!tab) return
+  const field = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility())
+  if (field) {
+    const at = tab.text.split('\n').slice(0, heading.line).join('\n').length + (heading.line > 0 ? 1 : 0)
+    field.focus()
+    field.setSelectionRange(at, at)
+    // The field scrolls to its caret when it takes the focus again.
+    field.blur()
+    field.focus()
+    return
+  }
+  const el = headingElement(tab, heading, index, headingsOf(tab.text))
+  if (!el) return
+  const scroller = scrollerOf(tab)
+  scroller.scrollTop += el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 16
 }
 
 /** The status line for the document in view: its length, and the caret in its source. */
 function syncStatus(): void {
+  syncOutline()
   const tab = active
   if (!statusBar) return
   if (!tab || tab.version || (formatOf(tab) !== 'markdown' && formatOf(tab) !== 'text')) return statusBar.show(null)
@@ -688,6 +767,7 @@ function activate(tab: Tab | null): void {
   linksPanel?.show(noteOf(tab))
   tagsPanel?.show(tab?.path ?? null)
   graphPanel?.show(tab?.path ?? null)
+  tasksPanel?.show(tab?.path ?? null)
   syncStatus()
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
@@ -783,6 +863,10 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   }
   pane.dataset.path = tab.path ?? ''
   recheckLinks.set(pane, watchWikiLinks(pane, () => (formatOf(tab) === 'markdown' && !tab.version ? tab.path : null), folio.wikiExists))
+  watchEmbeds(pane, () => (formatOf(tab) === 'markdown' ? tab.path : null), {
+    peek: (from, link) => folio.peek(from, link),
+    draw: (note, text) => viewOf('markdown', text, { base: note.base, name: note.name }),
+  })
   button.addEventListener('click', (event) => {
     if ((event.target as HTMLElement).classList.contains('close')) void close(tab)
     else activate(tab)
@@ -1258,6 +1342,14 @@ const bookmarked = (path: string): boolean => bookmarkPaths.has(path)
 
 const isDaily = (): boolean => !!active?.path && /(^|[\\/])\d{4}-\d{2}-\d{2}\.md$/.test(active.path)
 
+/** A new kanban board, calendar or whiteboard beside the note in view, opened for editing. */
+async function newKind(kind: 'kanban' | 'calendar' | 'board'): Promise<void> {
+  const result = await folio.newKind(kind, active?.path ?? null)
+  await add(result)
+  const tab = tabs.find((t) => t.path === result.path)
+  if (tab && isOpened(result)) setMode(tab, 'visual')
+}
+
 /** Today's daily note, or the one before / after the open one's day. */
 async function openDaily(step: 0 | -1 | 1): Promise<void> {
   const result = await folio.dailyOpen(isDaily() ? active!.path : null, step)
@@ -1309,10 +1401,15 @@ function commands(): Command[] {
     { id: 'save-as', group: file, title: c.saveAs, keys: `${mod}⇧S`, icon: 'save', when: has, run: () => active && void save(active, true) },
     { id: 'print', group: file, title: t.print, keys: `${mod}P`, icon: 'print', when: has, run: () => void printActive() },
     { id: 'export-pdf', group: file, title: t.exportPdf, keys: `${mod}⇧P`, icon: 'pdf', when: has, run: () => exportActive() },
+    { id: 'present', group: view, title: c.present, keys: 'F5', icon: 'present', when: isNote, run: () => present() },
+    { id: 'export-slides', group: file, title: c.slidesPdf, icon: 'pdf', when: isNote, run: () => void exportSlides() },
     { id: 'close-tab', group: file, title: c.closeTab, keys: `${mod}W`, icon: 'close', when: has, run: () => active && void close(active) },
     { id: 'daily', group: c.notes, title: c.daily, keys: `${mod}⇧D`, icon: 'calendar', run: () => void openDaily(0) },
     { id: 'daily-prev', group: c.notes, title: c.dailyPrev, icon: 'calendar', when: isDaily, run: () => void openDaily(-1) },
     { id: 'daily-next', group: c.notes, title: c.dailyNext, icon: 'calendar', when: isDaily, run: () => void openDaily(1) },
+    { id: 'new-kanban', group: c.notes, title: c.newKanban, icon: 'tasks', run: () => void newKind('kanban') },
+    { id: 'new-calendar', group: c.notes, title: c.newCalendar, icon: 'calendar', run: () => void newKind('calendar') },
+    { id: 'new-canvas', group: c.notes, title: c.newCanvas, icon: 'diagram', run: () => void newKind('board') },
     { id: 'bookmark', group: c.notes, title: c.bookmark, icon: 'star', when: () => !!active?.path && !bookmarked(active.path), run: () => void folio.bookmark(active!.path!, true) },
     { id: 'unbookmark', group: c.notes, title: c.unbookmark, icon: 'star', when: () => !!active?.path && bookmarked(active.path), run: () => void folio.bookmark(active!.path!, false) },
     { id: 'template-insert', group: c.notes, title: c.insertTemplate, icon: 'note', when: () => !!active && formatOf(active) === 'markdown' && !active.version, run: () => void chooseTemplate((path) => void insertTemplate(path)) },
@@ -1325,8 +1422,10 @@ function commands(): Command[] {
     { id: 'sidebar', group: view, title: c.sidebar, keys: `${mod}B`, icon: 'collapse', run: () => sidebar.toggleCollapsed() },
     { id: 'console', group: view, title: t.console.title, keys: 'Ctrl+`', icon: 'console', run: () => consolePanel.toggle(null) },
     { id: 'history', group: view, title: t.history, keys: `${mod}⇧H`, icon: 'history', when: () => !!active?.path, run: () => toggleHistory() },
+    { id: 'outline', group: view, title: t.outline.title, icon: 'outline', run: () => outlinePanel?.setVisible(!outlinePanel.visible) },
     { id: 'links', group: view, title: t.links.title, icon: 'links', run: () => linksPanel?.setVisible(!linksPanel.visible) },
     { id: 'tags', group: view, title: t.tags.title, icon: 'tag', run: () => tagsPanel?.setVisible(!tagsPanel.visible) },
+    { id: 'tasks', group: view, title: t.tasks.title, icon: 'tasks', run: () => tasksPanel?.setVisible(!tasksPanel.visible) },
     { id: 'graph', group: view, title: t.graph.title, icon: 'graph', run: () => graphPanel?.setVisible(!graphPanel.visible) },
     ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),
   ]
@@ -1344,7 +1443,7 @@ const searchPanel = new SearchPanel(
     void folio.openEntry(file.root, file.path).then(async (result) => {
       await add(result)
       // After the tab's own scroll comes back (the next frame): then to the match.
-      requestAnimationFrame(() => requestAnimationFrame(() => findBar.openWith(query, options, index)))
+      if (query) requestAnimationFrame(() => requestAnimationFrame(() => findBar.openWith(query, options, index)))
     }),
   () => syncRail(),
 )
@@ -1382,6 +1481,40 @@ graphPanel = new GraphPanel(
 )
 document.querySelector('.content')!.insertBefore(graphPanel.el, document.querySelector('.history'))
 graphPanel.show(null)
+
+tasksPanel = new TasksPanel(
+  t.tasks,
+  {
+    load: (note) => folio.tasks(note),
+    toggle: (task, done) => folio.toggleTask(task.path, task.line, task.raw, done),
+    isDirty: (path) => tabs.some((tab) => tab.path === path && isDirty(tab)),
+    open: (task) =>
+      void folio.open(task.path).then(async (result) => {
+        await add(result)
+        requestAnimationFrame(() => requestAnimationFrame(() => findBar.openWith(task.text, { caseSensitive: true, wholeWord: false, regex: false }, 0)))
+      }),
+  },
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(tasksPanel.el, document.querySelector('.history'))
+tasksPanel.show(null)
+
+outlinePanel = new OutlinePanel(t.outline, { go: (h, i) => goToHeading(h, i) }, (on) => {
+  syncRail()
+  if (on) syncOutline()
+})
+document.querySelector('.content')!.insertBefore(outlinePanel.el, document.querySelector('.history'))
+for (const view of [viewEl, besideEl]) {
+  let pending = false
+  view.addEventListener('scroll', () => {
+    if (pending) return
+    pending = true
+    requestAnimationFrame(() => {
+      pending = false
+      markSection()
+    })
+  }, { passive: true })
+}
 
 statusBar = new StatusBar(document.querySelector<HTMLElement>('.status')!, t.status)
 // The caret moved in a source field: its line and column.
@@ -1450,6 +1583,12 @@ window.addEventListener(
     if (event.key === 'F1' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
       event.preventDefault()
       palette.open()
+      return
+    }
+    // F5, as in presentation programs: the note as slides.
+    if (event.key === 'F5' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && isNote()) {
+      event.preventDefault()
+      present()
       return
     }
     const mod = folio.platform === 'darwin' ? event.metaKey : event.ctrlKey
@@ -1528,6 +1667,30 @@ function exportActive(): void {
   exportPdf({ kind: 'doc', path: active.path, text: active.text, name: titleOf(active) })
 }
 folio.onExportPdf(() => exportActive())
+
+// Presenting: the active note as slides, over the whole screen; its slides as a PDF, one to a page.
+const isNote = (): boolean => !!active && formatOf(active) === 'markdown'
+let showing: Presentation | null = null
+function present(): void {
+  if (!active || showing) return
+  const tab = active
+  const slides = slidesOf(tab.text)
+  if (slides.length === 0) return
+  showing = new Presentation(
+    t.slides,
+    slides,
+    (slide) => viewOf('markdown', slide, viewOptions(tab)),
+    () => void exportSlides(tab),
+    () => (showing = null),
+  )
+  showing.open()
+}
+async function exportSlides(tab = active): Promise<void> {
+  if (!tab) return
+  const result = await folio.exportPdf({ kind: 'doc', path: tab.path, text: tab.text, name: titleOf(tab), slides: true }, {})
+  if ('canceled' in result) return
+  notify('saved' in result ? t.pdf.saved.replace('{file}', result.saved) : t.pdf.failed.replace('{error}', result.error))
+}
 folio.onExportFile((value) => exportPdf({ kind: 'doc', path: value as string }))
 folio.onExportFolder((value) => exportPdf({ kind: 'folder', dir: value as string }))
 

@@ -146,6 +146,22 @@ template is a note in the templates folder (`Templates` in Shared):
 a quick note of it; `{{title}}`, `{{date}}`, `{{time}}` and `{{date:DD.MM.YYYY}}`
 are filled in. Both folders are chosen in the settings menu.
 
+`![[Note]]` embeds another note in this one — drawn as when read, in a frame
+with its link; `![[Note#Heading]]` embeds that heading's section. An embed
+inside an embed is drawn too (three deep), a note embedding itself stays a
+link, and in the editor an embed is its link, kept as written.
+
+A note's other names — `aliases:` in its properties (`aliases: [Road map]`) —
+work as its name in links: `[[Road map]]` reaches it when no file is named so,
+and `[[` offers them, writing `[[Roadmap|Road map]]`.
+
+### The outline
+
+The outline panel (on the right rail, or among the commands) lists the
+headings of the note in view, indented by level, as it is written; a click
+goes to one — the caret on its line in the source — and the section in view
+is marked as the page scrolls.
+
 ### Spelling and the status line
 
 Spelling is checked as text is written — by the system on macOS and Windows,
@@ -170,6 +186,43 @@ A file kept at hand: **Add to bookmarks** in a tab's menu, a file's menu in the
 tree, or among the commands. The bookmarks are listed above Shared; a click
 opens one, its menu lets it go. A bookmark follows its file renamed or moved
 in folio; one whose file is gone elsewhere stays, faded.
+
+### Boards and calendars
+
+A `*.kanban.md` file opens as a kanban board, a `*.calendar.md` file as a
+calendar — both written as markup any editor can read (columns `## …` and
+cards `- …`; events `2026-11-03 10:00 …`, repeats `every mon …`). **Edit**
+makes them editable on themselves: cards dragged and added, events moved, the
+source in a tab of their own; the file keeps the markup, changed only where
+the edit was. **New kanban board** and **New calendar** among the commands
+make one beside the note in view.
+
+### Whiteboards
+
+A `*.board` file opens as a whiteboard (`@dskripchenko/board`): sticky notes,
+shapes, text, frames, connectors, emoji, pen and marker on an endless canvas.
+**Edit** draws on it; the file keeps the board's JSON, indented, so a diff
+shows what moved. **New whiteboard** among the commands makes one beside the
+note in view.
+
+### Tasks
+
+The tasks panel (on the right rail, or among the commands) lists the `- [ ]`
+tasks of the project in view by when they are due — **Overdue**, **Today**,
+**Later**, **No date** — and with **All** the done ones too; a day is written
+`📅 2026-11-10`, `@2026-11-10` or `due:2026-11-10`. A task is checked or
+unchecked from the panel, in its note (not one open with unsaved changes); its
+text opens the note there.
+
+### Slides
+
+**Show as slides** (`F5`, or among the commands) shows the note in view over
+the whole screen, a slide at a time: the slides are its parts between `---`
+lines with an empty line before them (outside code and the properties, as in
+Marp and reveal.js). The arrows, Space, Page Up/Down, Home and End, or a click
+on the left or right half go through them; Escape ends the show. **Export the
+slides as PDF** (among the commands, or on the show's bar) writes one 16:9
+page per slide.
 
 ### Previews
 
@@ -341,6 +394,10 @@ relative paths.
 | `Cmd/Ctrl+Shift+F` | search the files |
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |
+
+Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
+`file:plan` (a value in quotes may have spaces); with no text left, a filter
+alone lists its files.
 
 ## Finding
 

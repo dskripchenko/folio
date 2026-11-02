@@ -159,6 +159,24 @@ Einfügemarke, **Neue Notiz aus Vorlage…** macht eine Schnellnotiz daraus;
 `{{title}}`, `{{date}}`, `{{time}}` und `{{date:DD.MM.YYYY}}` werden ausgefüllt.
 Beide Ordner werden im Einstellungsmenü gewählt.
 
+`![[Notiz]]` bettet eine andere Notiz in diese ein — gezeichnet wie beim Lesen,
+in einem Rahmen mit ihrem Link; `![[Notiz#Überschrift]]` bettet den Abschnitt
+ein. Eine Einbettung in einer Einbettung wird ebenfalls gezeichnet (drei Ebenen
+tief), eine Notiz, die sich selbst einbettet, bleibt ein Link, und im Editor ist
+eine Einbettung ihr Link, wie geschrieben erhalten.
+
+Andere Namen einer Notiz — `aliases:` in ihren Eigenschaften (`aliases: [Fahrplan]`)
+— gelten in Links als ihr Name: `[[Fahrplan]]` erreicht sie, wenn keine Datei so
+heißt, und `[[` bietet sie an und schreibt `[[Roadmap|Fahrplan]]`.
+
+### Die Gliederung
+
+Das Gliederungs-Panel (auf der rechten Leiste oder unter den Befehlen) zeigt
+die Überschriften der sichtbaren Notiz, nach Ebene eingerückt, während sie
+geschrieben wird; ein Klick führt zur Überschrift — in der Quelle setzt er die
+Einfügemarke auf ihre Zeile —, und der sichtbare Abschnitt wird beim Scrollen
+markiert.
+
 ### Rechtschreibung und Statuszeile
 
 Die Rechtschreibung wird beim Schreiben geprüft — auf macOS und Windows vom
@@ -185,6 +203,45 @@ Datei im Baum oder unter den Befehlen. Die Lesezeichen stehen über
 „Gemeinsam“; ein Klick öffnet eines, sein Menü entfernt es. Ein Lesezeichen
 folgt seiner Datei, wenn sie in folio umbenannt oder verschoben wird; eines,
 dessen Datei anderswo verschwunden ist, bleibt blass stehen.
+
+### Boards und Kalender
+
+Eine `*.kanban.md`-Datei öffnet sich als Kanban-Board, eine `*.calendar.md`-Datei
+als Kalender — beide als Markup geschrieben, das jeder Editor lesen kann
+(Spalten `## …` und Karten `- …`; Termine `2026-11-03 10:00 …`, Wiederholungen
+`every mon …`). **Bearbeiten** macht sie auf sich selbst bearbeitbar: Karten
+gezogen und hinzugefügt, Termine verschoben, die Quelle in einem eigenen Tab;
+die Datei behält das Markup und ändert sich nur, wo bearbeitet wurde. **Neues
+Kanban-Board** und **Neuer Kalender** unter den Befehlen legen eines neben der
+sichtbaren Notiz an.
+
+### Whiteboards
+
+Eine `*.board`-Datei öffnet sich als Whiteboard (`@dskripchenko/board`):
+Haftnotizen, Formen, Text, Rahmen, Verbinder, Emoji, Stift und Marker auf
+einer endlosen Fläche. **Bearbeiten** zeichnet darauf; die Datei behält das
+JSON des Boards, eingerückt, sodass ein Diff zeigt, was sich bewegt hat.
+**Neues Whiteboard** unter den Befehlen legt eines neben der geöffneten
+Notiz an.
+
+### Aufgaben
+
+Das Aufgaben-Panel (auf der rechten Leiste oder unter den Befehlen) listet die
+`- [ ]`-Aufgaben des sichtbaren Projekts nach Fälligkeit — **Überfällig**,
+**Heute**, **Später**, **Ohne Datum** — und mit **Alle** auch die erledigten; ein
+Tag wird `📅 2026-11-10`, `@2026-11-10` oder `due:2026-11-10` geschrieben. Eine
+Aufgabe wird im Panel abgehakt oder wieder geöffnet, in ihrer Notiz (nicht in
+einer mit ungespeicherten Änderungen); ihr Text öffnet die Notiz dort.
+
+### Folien
+
+**Als Folien zeigen** (`F5` oder unter den Befehlen) zeigt die Notiz bildschirmfüllend,
+Folie für Folie: Folien sind ihre Teile zwischen `---`-Zeilen mit einer
+Leerzeile davor (außerhalb von Code und Eigenschaften, wie in Marp und
+reveal.js). Pfeiltasten, Leertaste, Bild auf/ab, Pos1 und Ende oder ein Klick
+auf die linke oder rechte Hälfte blättern; Escape beendet die Vorführung.
+**Folien als PDF exportieren** (unter den Befehlen oder in der Leiste der
+Vorführung) schreibt eine 16:9-Seite pro Folie.
 
 ### Vorschau
 
@@ -384,6 +441,10 @@ Treffer; ein Klick öffnet die Datei und setzt die Suchleiste auf diesen
 Treffer. Binärdateien, Dateien über 8 MB und die vom Gehe-zu-Datei
 ausgelassenen Ordner werden nicht durchsucht; höchstens 200 Treffer je Datei
 und 5 000 insgesamt werden gelistet.
+
+Filter grenzen die durchsuchten Dateien ein: `tag:arbeit` (auch verschachtelte
+Tags), `path:notes/`, `file:plan` (ein Wert in Anführungszeichen darf Leerzeichen
+enthalten); ohne Text listet ein Filter allein seine Dateien.
 
 Der Pfeil vor der Suchanfrage öffnet **Ersetzen**: jeder Treffer zeigt, was aus
 ihm wird, Häkchen bestimmen die beteiligten Dateien, und **Alle ersetzen**

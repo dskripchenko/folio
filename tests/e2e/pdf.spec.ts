@@ -109,3 +109,51 @@ test('a document and a folder exported as PDF: page size, header and footer, con
     rmSync(f.root, { recursive: true, force: true })
   }
 })
+
+test('a note as slides: shown one at a time, keys and clicks go through them; its PDF a 16:9 page per slide', async () => {
+  const f = fixture()
+  const doc = join(f.root, 'talk.md')
+  writeFileSync(doc, '---\ntitle: Talk\n---\n# Talk\n\nWhy it matters.\n\n---\n\n## Second\n\n- one\n- two\n\n---\n\n## Third\n\nThe end.\n')
+  const app = await electron.launch({ args: ['.', doc], env: { ...process.env, FOLIO_DATA: f.data } })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('article.doc:not([hidden]) dsk-markdown h1')).toHaveText('Talk')
+    await win.locator('article.doc:not([hidden])').click()
+    await win.keyboard.press('F5')
+    const show = win.getByTestId('slides')
+    await expect(show).toBeVisible()
+    const counter = win.getByTestId('slides-counter')
+    await expect(counter).toHaveText('1 / 3')
+    await expect(show.locator('.slide h1')).toHaveText('Talk')
+    await win.keyboard.press('ArrowRight')
+    await expect(counter).toHaveText('2 / 3')
+    await expect(show.locator('.slide h2')).toHaveText('Second')
+    await win.keyboard.press('End')
+    await expect(counter).toHaveText('3 / 3')
+    await win.keyboard.press('ArrowRight')
+    await expect(counter).toHaveText('3 / 3')
+    // A click on the left half goes back.
+    const box = (await show.boundingBox())!
+    await win.mouse.click(box.x + 20, box.y + box.height / 2)
+    await expect(counter).toHaveText('2 / 3')
+
+    // The slides as PDF, from the show.
+    const file = join(f.root, 'talk.pdf')
+    await saveAs(app, file)
+    await show.getByTestId('slides-pdf').click()
+    await expect(win.getByTestId('notice')).toContainText('talk.pdf', { timeout: 60_000 })
+    expect(readFileSync(file).subarray(0, 5).toString()).toBe('%PDF-')
+    if (poppler) {
+      expect(pages(file)).toBe(3)
+      const [w, h] = pageSize(file)
+      expect(Math.abs(w! - 960)).toBeLessThan(2)
+      expect(Math.abs(h! - 540)).toBeLessThan(2)
+      expect(pdftext(file)).toContain('The end.')
+    }
+
+    await win.keyboard.press('Escape')
+    await expect(show).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})

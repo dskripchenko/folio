@@ -39,15 +39,16 @@ export interface LinkSuggestion {
  * What the editor offers after `[[`: the files of the note's root, best
  * matches first. The list is asked for once per `[[` typed and kept briefly.
  */
-export function linkSuggester(pathOf: () => string | null, names: (from: string) => Promise<{ name: string; path: string }[]>): (query: string) => Promise<LinkSuggestion[]> {
-  let cache: { from: string; at: number; list: Promise<{ name: string; path: string }[]> } | null = null
+export function linkSuggester(pathOf: () => string | null, names: (from: string) => Promise<{ name: string; path: string; label?: string }[]>): (query: string) => Promise<LinkSuggestion[]> {
+  let cache: { from: string; at: number; list: Promise<{ name: string; path: string; label?: string }[]> } | null = null
   return async (query) => {
     const from = pathOf()
     if (!from) return []
     if (!cache || cache.from !== from || Date.now() - cache.at > 5000) cache = { from, at: Date.now(), list: names(from) }
     const list = await cache.list
-    const ranked = query === '' ? list.slice(0, 50).map((item) => ({ item })) : rank(query, list, (n) => n.path, 50)
-    return ranked.map(({ item }) => ({ label: item.name.split('/').pop() ?? item.name, insert: item.name, detail: item.path }))
+    // An alias is found by itself, a note by its path.
+    const ranked = query === '' ? list.slice(0, 50).map((item) => ({ item })) : rank(query, list, (n) => n.label ?? n.path, 50)
+    return ranked.map(({ item }) => ({ label: item.label ?? item.name.split('/').pop() ?? item.name, insert: item.name, detail: item.path }))
   }
 }
 

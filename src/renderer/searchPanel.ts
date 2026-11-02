@@ -5,6 +5,7 @@
  * by file, each line with its match; a click opens the file at the match.
  */
 import { patternOf, type FindOptions } from '../common/pattern'
+import { parseQuery } from '../common/query'
 import { icon, iconButton } from './icons'
 
 export interface SearchText {
@@ -259,7 +260,7 @@ export class SearchPanel {
   /** What each match becomes, shown in its line while replacing. */
   private previews(): void {
     const on = !this.replaceRow.hidden
-    const pattern = on ? patternOf(this.input.value, this.options) : null
+    const pattern = on ? patternOf(parseQuery(this.input.value).text, this.options) : null
     const single = pattern ? new RegExp(pattern.source, pattern.flags.replace('g', '')) : null
     const replacement = this.options.regex ? this.replaceInput.value : this.replaceInput.value.replace(/\$/g, '$$$$')
     for (const ins of this.results.querySelectorAll<HTMLElement>('.search-preview ins')) {
@@ -328,7 +329,9 @@ export class SearchPanel {
   }
 
   private add(batch: FileHits[]): void {
-    const query = this.input.value
+    // What the find bar looks for in an opened file: the text of the query, or the tag it filters by.
+    const q = parseQuery(this.input.value)
+    const query = q.text !== '' ? q.text : q.tags.length > 0 ? `#${q.tags[0]}` : ''
     const options = { ...this.options }
     for (const file of batch) {
       this.matches += file.hits.length

@@ -20,6 +20,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Whiteboards: `*.board` files drawn and drawn on as a whiteboard
+  (@dskripchenko/board), kept as indented JSON; a new one from the commands.
+- Slides: a note shown over the whole screen a slide at a time, split on its
+  `---` lines (`F5`), and exported as PDF with one 16:9 page per slide.
+- Boards and calendars: `*.kanban.md` and `*.calendar.md` files drawn and
+  edited as a kanban board and a calendar, kept as markup; new ones from the
+  commands.
+- The tasks panel: the project's `- [ ]` tasks by when they are due, checked
+  from the panel into their notes.
+- Embedded notes: `![[Note]]` and `![[Note#Heading]]` drawn in the note
+  (embed 1.18.0), an embed in an embed three deep, a loop left a link.
+- The outline panel: the note's headings, live, a click going to one, the
+  section in view marked. Search filters `tag:`, `path:`, `file:`.
+- Aliases: `aliases:` in a note's properties work as its name in `[[links]]`
+  (previews, the links panel and the graph too), and `[[` offers them.
 - Spelling checked as text is written (the system's on macOS and Windows;
   on Linux when turned on), corrections in a field's menu; a status line with
   the document's words, characters, reading time and the caret's place.
