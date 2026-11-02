@@ -23,6 +23,16 @@ pnpm test:e2e       # 启动构建好的应用并进行检查（Playwright）
 在没有显示器的 Linux 上，请在虚拟显示器下运行端到端测试：
 `xvfb-run --auto-servernum pnpm test:e2e`。
 
+## 便携构建
+
+```sh
+pnpm dist           # 构建，然后把本系统的压缩包放进 release/
+node scripts/checksums.mjs release
+FOLIO_APP=… FOLIO_ARCHIVE=… pnpm exec playwright test -c playwright.package.config.ts --workers=1
+```
+
+`electron-builder.yml` 在 macOS（Apple Silicon 与 Intel，ad hoc 签名）和 Windows 上生成 zip，在 Linux 上生成 AppImage。`tests/package/` 运行解压后的程序：所有组件、控制台、PDF、旁边的数据，以及替换到原位的更新（`FOLIO_UPDATE_URL` 让更新指向本地服务器）。release 工作流在三个系统上完成这些；版本与 `package.json` 一致的 `v*` 标签会发布压缩包及其校验和与来源证明。
+
 ## 目录结构
 
 | 路径 | 内容 |

@@ -34,7 +34,7 @@ import { CommandPalette, type Command, type PaletteText } from './commandPalette
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
 type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
-import type { GitRefusal, Version, WorkspaceView } from './bridge'
+import type { GitRefusal, UpdateState, Version, WorkspaceView } from './bridge'
 
 const TEXT = {
   en: {
@@ -85,6 +85,7 @@ const TEXT = {
     slides: { close: 'End the show (Esc)', pdf: 'The slides as PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}' } as StatusText,
     spellcheck: 'Check spelling',
+    update: { check: 'Check for updates', checking: 'Looking for a new version…', latest: 'folio {v} is the latest version.', downloading: 'Downloading folio {v}…', ready: 'folio {v} is downloaded: it takes over when folio closes.', restart: 'Restart to update to {v}', auto: 'Look for updates daily', failed: 'No update: {error}', source: 'folio run from its source is updated with git, not here.' },
     spellcheckFetch: 'Check spelling (fetches dictionaries)',
     commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
@@ -140,6 +141,7 @@ const TEXT = {
     slides: { close: 'Завершить показ (Esc)', pdf: 'Слайды в PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}' } as StatusText,
     spellcheck: 'Проверять орфографию',
+    update: { check: 'Проверить обновления', checking: 'Ищем новую версию…', latest: 'folio {v} — последняя версия.', downloading: 'Скачиваем folio {v}…', ready: 'folio {v} скачан: он заменит эту версию, когда folio закроется.', restart: 'Перезапустить и обновить до {v}', auto: 'Проверять обновления раз в день', failed: 'Обновление не удалось: {error}', source: 'folio, запущенный из исходников, обновляется через git, а не здесь.' },
     spellcheckFetch: 'Проверять орфографию (скачает словари)',
     commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
@@ -626,6 +628,10 @@ function openSettings(anchor: HTMLElement): void {
     ...(['system', 'light', 'dark'] as const).map((value) => ({ label: t.themes[value], checked: theme === value, testid: `theme-${value}`, action: () => applyTheme(value) })),
     { separator: true, label: '', action: () => undefined },
     { label: folio.platform === 'linux' ? t.spellcheckFetch : t.spellcheck, checked: spellOn, testid: 'spellcheck', action: () => void folio.setSpellcheck(!spellOn).then((on) => (spellOn = on)) },
+    { separator: true, label: '', action: () => undefined },
+    ...(update.state.status === 'ready' ? [{ label: t.update.restart.replace('{v}', update.state.version), icon: 'history' as const, testid: 'update-restart', action: () => void folio.restartToUpdate() }] : []),
+    { label: `${t.update.check} (${update.current})`, disabled: update.state.status === 'checking' || update.state.status === 'downloading', testid: 'update-check', action: () => checkUpdate() },
+    { label: t.update.auto, checked: update.auto, testid: 'update-auto', action: () => void folio.setAutoUpdate(!update.auto).then((on) => (update.auto = on)) },
     { separator: true, label: '', action: () => undefined },
     { label: t.commands.dailyFolder, icon: 'calendar', testid: 'daily-folder', action: () => void folio.chooseFolder('daily') },
     { label: t.commands.templatesFolder, icon: 'note', testid: 'templates-folder', action: () => void folio.chooseFolder('templates') },
@@ -1523,6 +1529,31 @@ document.addEventListener('selectionchange', () => {
 })
 document.addEventListener('focusin', () => syncStatus())
 void folio.spellcheck().then((on) => (spellOn = on))
+
+// Updates: where a check is; what it found is said when it was asked for, or when a version is ready.
+let update: { state: UpdateState; auto: boolean; current: string; checkable: boolean } = { state: { status: 'idle' }, auto: true, current: '', checkable: false }
+let askedForUpdate = false
+void folio.updateState().then((u) => {
+  update = u
+  if (u.state.status === 'ready') notify(t.update.ready.replace('{v}', u.state.version))
+})
+function sayUpdate(state: UpdateState): void {
+  update.state = state
+  const v = 'version' in state ? state.version : update.current
+  if (state.status === 'ready') notify(t.update.ready.replace('{v}', v))
+  else if (!askedForUpdate) return
+  else if (state.status === 'downloading') notify(t.update.downloading.replace('{v}', v))
+  else if (state.status === 'latest') notify(t.update.latest.replace('{v}', v))
+  else if (state.status === 'error') notify(t.update.failed.replace('{error}', state.error))
+  if (state.status !== 'checking' && state.status !== 'downloading') askedForUpdate = false
+}
+folio.onUpdate((state) => sayUpdate(state as UpdateState))
+function checkUpdate(): void {
+  if (!update.checkable) return notify(t.update.source)
+  askedForUpdate = true
+  notify(t.update.checking)
+  void folio.checkUpdate()
+}
 linksPanel.show(noteOf(active))
 
 const consolePanel = new ConsolePanel(

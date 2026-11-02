@@ -1,0 +1,74 @@
+name: virustotal
+
+# The published archives sent to VirusTotal, the report links put in the
+# release notes — so somebody deciding whether to trust a download can read a
+# report rather than take the README's word for it.
+#
+# Triggered by the release workflow finishing, not by `release: published`:
+# GitHub starts no workflow from an event raised with `GITHUB_TOKEN`, which is
+# what publishes the release, so such a trigger would never fire.
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to scan, to redo one by hand.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+    steps:
+      - name: Fetch the published archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'folio-*.zip' --pattern 'folio-*.AppImage' --dir archives
+          ls -l archives
+
+      # A busy queue or a missing key leaves a published release as it is: the
+      # step does nothing and the run ends green.
+      - name: Scan
+        id: scan
+        continue-on-error: true
+        uses: crazy-max/ghaction-virustotal@936d8c5c00afe97d3d9a1af26d017cfdf26800a2 # v5.0.0
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: archives/*
+          # Four a minute is what the free public API allows.
+          request_rate: 4
+
+      # Links to each file's page by its digest, not to one analysis: the same
+      # address forever, showing what the engines say today.
+      - name: Put the reports in the release notes
+        if: steps.scan.outcome == 'success' && steps.scan.outputs.analysis != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          notes="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)"
+          case "$notes" in *virustotal.com/gui/file/*) echo "$TAG already links its reports."; exit 0 ;; esac
+          {
+            printf '%s\n\n**VirusTotal**\n\n' "$notes"
+            for f in archives/*; do
+              printf -- '- [%s](https://www.virustotal.com/gui/file/%s)\n' "$(basename "$f")" "$(sha256sum "$f" | cut -d' ' -f1)"
+            done
+          } > notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+
+      - name: Say what happened
+        run: |
+          if [ "${{ steps.scan.outcome }}" = success ]; then echo "Scanned."; else echo "VirusTotal did not answer, or no VT_API_KEY is set; $TAG is unaffected."; fi

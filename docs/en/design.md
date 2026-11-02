@@ -485,6 +485,22 @@ Deleting the program's folder therefore removes everything it ever wrote. The
 flip side: the folder must be writable, so do not unpack folio into a place
 only an administrator can write to.
 
+## Updates
+
+Once a day at start folio looks at the latest release on GitHub. A newer
+version is downloaded into `folio-data/update/`, checked against the
+`.sha256` published beside it and unpacked there; it takes the program's
+place when folio closes — the `.app` or the AppImage renamed into place, on
+Windows the folder's files copied over once folio has exited (`folio-data/`
+left alone) — or at once with **Restart to update** in the settings. Nothing
+runs in the background. **Check for updates** looks now; **Look for updates
+daily** turns the daily look off.
+
+The checksum proves that the archive is the one the release names, whole; it
+comes over TLS from the same release, so it does not prove who made the
+release. That is what the build's provenance is for:
+`gh attestation verify folio-….zip --repo dskripchenko/folio`.
+
 ## One window at a time
 
 A second start brings the running folio to the front instead of starting a

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session as electronSession, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -52,6 +52,7 @@ import { resolveInside } from './paths'
 import { tagIndex, tagsOf } from './tags'
 import { tasksOf, toggleTask } from './tasks'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
+import { Updater } from './update'
 import { Workspace, type Project } from './workspace'
 
 // Before anything reads it: settings, caches and session data live beside the program.
@@ -177,6 +178,31 @@ function spelling(w: BrowserWindow): void {
     Menu.buildFromTemplate(items).popup({ window: w })
   })
 }
+
+/** Updates: the latest release looked for, fetched and checked; it takes over when folio closes. */
+const updater = new Updater({
+  dir: join(data, 'update'),
+  current: app.getVersion(),
+  platform: process.platform,
+  arch: process.arch,
+  execPath: process.execPath,
+  appImage: process.env.APPIMAGE,
+  fetch: (url) => net.fetch(url, { headers: { Accept: 'application/vnd.github+json' } }),
+  releases: process.env.FOLIO_UPDATE_URL,
+  onState: (state) => send('update:changed', state),
+})
+ipcMain.handle('update:state', () => ({ state: updater.current, auto: workspace.updates(), current: app.getVersion(), checkable: app.isPackaged || !!process.env.FOLIO_UPDATE_URL }))
+ipcMain.handle('update:check', () => (app.isPackaged || process.env.FOLIO_UPDATE_URL ? updater.check() : updater.current))
+ipcMain.handle('update:auto', (_e, on: unknown) => {
+  if (typeof on === 'boolean') workspace.setUpdates(on)
+  return workspace.updates()
+})
+ipcMain.handle('update:restart', () => {
+  if (updater.current.status !== 'ready' || !app.isPackaged) return false
+  updater.restartAfter()
+  app.quit()
+  return true
+})
 
 ipcMain.handle('spellcheck:get', () => workspace.spellcheck())
 ipcMain.handle('spellcheck:set', (_e, on: unknown) => {
@@ -1370,7 +1396,13 @@ app.on('before-quit', (event) => {
   void autoCommit.flush().finally(() => app.quit())
 })
 
-app.on('will-quit', () => watcher.close())
+app.on('will-quit', () => {
+  watcher.close()
+  // A downloaded version takes the program's place; only a packaged one has a place to take.
+  if (!app.isPackaged) return
+  const result = updater.apply(process.pid)
+  if (result.relaunch) app.relaunch(result.execPath ? { execPath: result.execPath, args: [] } : undefined)
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
@@ -1388,4 +1420,7 @@ void app.whenReady().then(() => {
   gate = gateNetwork(docs, (file) => consent.allows(file), (document, hosts) => send('net:blocked', { document, hosts }))
   buildMenu()
   win = createWindow()
+  updater.tidy()
+  // Once a day at start, a while after the window is up; a source checkout (no release to replace) never looks.
+  if ((app.isPackaged || process.env.FOLIO_UPDATE_URL) && workspace.updates() && updater.due()) setTimeout(() => void updater.check(), 10_000)
 })

@@ -52,6 +52,8 @@ function linksWithin(root: HTMLElement, docs: PdfJob['docs']): void {
     }
   })
   for (const a of root.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+    // A link inside a drawing is an SVG one: its href is not a string, and it stays as drawn.
+    if (!(a instanceof HTMLAnchorElement)) continue
     const [path, hash] = a.href.split('#')
     const id = target.get(path!) ?? target.get(noExtension(path!))
     if (!id) continue

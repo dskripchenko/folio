@@ -1,0 +1,44 @@
+# Portable builds (ADR-001, stage 8): an archive to unpack and run, no installer,
+# no registry, no file associations — zip for macOS and Windows, AppImage for Linux.
+appId: space.dskripchenko.folio
+productName: folio
+copyright: Copyright © 2026 Denis Skripchenko
+artifactName: folio-${version}-${os}-${arch}.${ext}
+directories:
+  output: release
+  buildResources: build
+# The main process and the window are bundled by esbuild; only node-pty (native) comes from node_modules.
+files:
+  - dist/**
+  - '!dist/**/*.map'
+  - package.json
+asarUnpack:
+  - node_modules/node-pty/**
+# node-pty is N-API, prebuilt for macOS and Windows and built at install on Linux: nothing to rebuild for Electron.
+npmRebuild: false
+publish: null
+mac:
+  target:
+    - target: zip
+      arch: [arm64, x64]
+  icon: build/icons/folio.icns
+  category: public.app-category.productivity
+  # No publisher's certificate (ADR-001): signed ad hoc, as Apple Silicon needs to start an app at all.
+  identity: '-'
+  hardenedRuntime: false
+  gatekeeperAssess: false
+win:
+  target:
+    - target: zip
+      arch: [x64]
+  icon: build/icons/folio.ico
+  signAndEditExecutable: true
+linux:
+  # x64, not AppImage's own x86_64: the name the updater looks for (src/main/update.ts).
+  artifactName: folio-${version}-linux-x64.${ext}
+  target:
+    - target: AppImage
+      arch: [x64]
+  icon: build/icons/png
+  category: Office
+  synopsis: Markdown with live diagrams, API references and editors

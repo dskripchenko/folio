@@ -8,6 +8,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Fixed
+- A PDF of a document whose drawings hold links (draw.io, diagrams) is
+  exported again: the print page failed on their SVG links.
 - A palette opened under a resting pointer no longer chooses the row under it.
 - The tree no longer loses a name being typed, or shows a stale folder, when
   the disk reports changes late (macOS).
@@ -20,6 +22,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Portable builds: a zip for macOS (Apple Silicon and Intel) and Windows, an
+  AppImage for Linux, each run unpacked in CI before it is published, with a
+  `.sha256` and Sigstore provenance; a VirusTotal report in the release notes.
+- Updates: the latest release looked for once a day at start (or from the
+  settings), downloaded and checked against its checksum, and put in the
+  program's place when folio closes; can be turned off.
 - Whiteboards: `*.board` files drawn and drawn on as a whiteboard
   (@dskripchenko/board), kept as indented JSON; a new one from the commands.
 - Slides: a note shown over the whole screen a slide at a time, split on its

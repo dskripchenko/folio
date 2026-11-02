@@ -134,6 +134,14 @@ export interface Changes {
 
 type Listener = (cb: (value: unknown) => void) => () => void
 
+export type UpdateState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'latest' }
+  | { status: 'downloading'; version: string }
+  | { status: 'ready'; version: string }
+  | { status: 'error'; error: string }
+
 export interface FolioBridge {
   platform: string
   startup(): Promise<{ tabs: RestoredTab[]; active: number | null; locale: string; shared: string }>
@@ -236,6 +244,12 @@ export interface FolioBridge {
   /** Whether spelling is checked as text is written; turned on or off. */
   spellcheck(): Promise<boolean>
   setSpellcheck(on: boolean): Promise<boolean>
+  /** Updates: where a check is, whether it runs daily, the running version; a check now; the ready one put in place. */
+  updateState(): Promise<{ state: UpdateState; auto: boolean; current: string; checkable: boolean }>
+  checkUpdate(): Promise<UpdateState>
+  setAutoUpdate(on: boolean): Promise<boolean>
+  restartToUpdate(): Promise<boolean>
+  onUpdate: Listener
   /** Today's daily note (made when missing), or the one before / after a daily note's day. */
   dailyOpen(from: string | null, step: 0 | -1 | 1): Promise<OpenResult>
   templates(): Promise<{ name: string; path: string }[]>

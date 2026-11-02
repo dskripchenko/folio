@@ -23,6 +23,22 @@ Arbeitsverzeichnis ab; `FOLIO_DATA=/some/dir pnpm start` legt sie woanders ab. `
 Unter Linux ohne Bildschirm laufen die End-to-End-Tests unter einem virtuellen:
 `xvfb-run --auto-servernum pnpm test:e2e`.
 
+## Portable Builds
+
+```sh
+pnpm dist           # bauen, dann die Archive für dieses System nach release/
+node scripts/checksums.mjs release
+FOLIO_APP=… FOLIO_ARCHIVE=… pnpm exec playwright test -c playwright.package.config.ts --workers=1
+```
+
+`electron-builder.yml` erzeugt ein Zip unter macOS (Apple Silicon und Intel,
+ad hoc signiert) und Windows sowie ein AppImage unter Linux. `tests/package/`
+startet das entpackte Programm: alle Widgets, eine Konsole, ein PDF, seine
+Daten daneben und ein Update an seinem Platz (`FOLIO_UPDATE_URL` lenkt das
+Update auf einen lokalen Server). Der Release-Workflow tut all das auf den drei
+Systemen; ein `v*`-Tag, der zur Version in `package.json` passt, veröffentlicht
+die Archive mit Prüfsummen und Herkunftsnachweis.
+
 ## Aufbau
 
 | Pfad | Was |
