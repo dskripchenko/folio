@@ -8,6 +8,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Fixed
+- The Markdown source is highlighted more fully (embed 1.13.1, syntax 0.3.3):
+  links and badges in parts, quoted text, references, tables, inline HTML.
 - The Markdown source is in colour (embed 1.13.0, markdown-editor 0.4.0), and an
   edit in the visual mode no longer rewrites the rest of the file: wrapped lines
   stay wrapped, a wrapped list item no longer becomes a loose list.
