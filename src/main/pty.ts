@@ -39,6 +39,29 @@ function fixSpawnHelper(): void {
   }
 }
 
+/**
+ * The environment a shell starts with: the user's, without what the way folio
+ * itself was started put there — Electron's variables, and npm's or pnpm's
+ * when folio runs from `pnpm start` (`npm_config_prefix` makes nvm refuse to
+ * load, a node's `PATH` of the package's bin folders shadows the user's tools).
+ */
+export function shellEnv(from: NodeJS.ProcessEnv): Record<string, string> {
+  const env: Record<string, string> = {}
+  for (const [k, v] of Object.entries(from)) {
+    if (v === undefined || /^(ELECTRON_|npm_|NPM_|PNPM_|pnpm_)/.test(k) || k === 'INIT_CWD' || k === 'NODE' || k === 'NODE_OPTIONS' || k === 'NODE_PATH') continue
+    env[k] = v
+  }
+  // Package managers put the package's own bin folders first in PATH: the shell gets the user's.
+  const path = env.PATH ?? env.Path
+  if (path) {
+    const sep = process.platform === 'win32' ? ';' : ':'
+    const kept = path.split(sep).filter((d) => !/[\\/]node_modules[\\/]\.bin$|[\\/]node-gyp-bin$/.test(d))
+    if (env.PATH) env.PATH = kept.join(sep)
+    else env.Path = kept.join(sep)
+  }
+  return env
+}
+
 export class Consoles {
   private readonly ptys = new Map<number, IPty>()
   private next = 1
@@ -56,8 +79,7 @@ export class Consoles {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pty = require('node-pty') as typeof import('node-pty')
     const { file, args } = shellOf()
-    const env: Record<string, string> = {}
-    for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !k.startsWith('ELECTRON_')) env[k] = v
+    const env = shellEnv(process.env)
     Object.assign(env, { TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'folio' })
     env.LANG ??= 'en_US.UTF-8'
     let p: IPty
