@@ -25,6 +25,7 @@ import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
 import { HoverPreview } from './hoverPreview'
 import { watchEmbeds } from './embeds'
+import { TasksPanel, type TasksText } from './tasksPanel'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
 import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
@@ -78,6 +79,7 @@ const TEXT = {
     links: { title: 'Links', close: 'Close', incoming: 'Linked here', outgoing: 'Links from this note', mentions: 'Named without a link', noNote: 'Open a note to see its links.', none: 'None', missing: 'No such note yet: a click makes it.', link: 'Link', linked: 'Made a link.', changed: 'The note has changed meanwhile: look again.' } as LinksText,
     tags: { title: 'Tags', close: 'Close', filter: 'Filter tags', none: 'No such tag', noTags: 'No tags in this project yet: write #tag in a note, or tags: in its properties.' } as TagsText,
     graph: { title: 'Graph', close: 'Close', local: 'This note', all: 'All', empty: 'No notes here yet.' } as GraphText,
+    tasks: { title: 'Tasks', close: 'Close', open: 'Open', all: 'All', overdue: 'Overdue', today: 'Today', later: 'Later', noDate: 'No date', done: 'Done', none: 'No tasks here: write - [ ] in a note.', changed: 'The note has changed meanwhile: look again.' } as TasksText,
     outline: { title: 'Outline', close: 'Close', none: 'No headings in this note.' } as OutlineText,
     status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}' } as StatusText,
     spellcheck: 'Check spelling',
@@ -131,6 +133,7 @@ const TEXT = {
     links: { title: 'Ссылки', close: 'Закрыть', incoming: 'Ссылаются сюда', outgoing: 'Ссылки из заметки', mentions: 'Упоминания без ссылки', noNote: 'Откройте заметку, чтобы увидеть её ссылки.', none: 'Нет', missing: 'Такой заметки ещё нет: щелчок создаст её.', link: 'Связать', linked: 'Ссылка добавлена.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as LinksText,
     tags: { title: 'Теги', close: 'Закрыть', filter: 'Найти тег', none: 'Нет такого тега', noTags: 'В этом проекте пока нет тегов: напишите #тег в заметке или tags: в её свойствах.' } as TagsText,
     graph: { title: 'Граф', close: 'Закрыть', local: 'Эта заметка', all: 'Все', empty: 'Заметок здесь пока нет.' } as GraphText,
+    tasks: { title: 'Задачи', close: 'Закрыть', open: 'Открытые', all: 'Все', overdue: 'Просрочено', today: 'Сегодня', later: 'Позже', noDate: 'Без даты', done: 'Сделано', none: 'Задач нет: напишите - [ ] в заметке.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as TasksText,
     outline: { title: 'Оглавление', close: 'Закрыть', none: 'В этой заметке нет заголовков.' } as OutlineText,
     status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}' } as StatusText,
     spellcheck: 'Проверять орфографию',
@@ -150,6 +153,8 @@ let linksPanel: LinksPanel | null = null
 let tagsPanel: TagsPanel | null = null
 /** The graph of notes: made with the rest of the window, drawn around the note in view. */
 let graphPanel: GraphPanel | null = null
+/** The tasks of the project in view. */
+let tasksPanel: TasksPanel | null = null
 /** The status line under the page. */
 let statusBar: StatusBar | null = null
 /** The outline of the note in view. */
@@ -219,6 +224,7 @@ function applyText(): void {
   linksPanel?.setText(t.links)
   tagsPanel?.setText(t.tags)
   graphPanel?.setText(t.graph)
+  tasksPanel?.setText(t.tasks)
   outlinePanel?.setText(t.outline)
   statusBar?.setText(t.status)
   syncStatus()
@@ -526,6 +532,7 @@ function buildRail(): void {
     iconButton('links', t.links.title, () => linksPanel?.setVisible(!linksPanel.visible), 'toggle-links'),
     iconButton('tag', t.tags.title, () => tagsPanel?.setVisible(!tagsPanel.visible), 'toggle-tags'),
     iconButton('graph', t.graph.title, () => graphPanel?.setVisible(!graphPanel.visible), 'toggle-graph'),
+    iconButton('tasks', t.tasks.title, () => tasksPanel?.setVisible(!tasksPanel.visible), 'toggle-tasks'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
     iconButton('pdf', `${t.exportPdf} (${mod}⇧P)`, () => exportActive(), 'rail-pdf'),
@@ -566,6 +573,11 @@ function syncRail(): void {
   if (op) {
     op.setAttribute('aria-pressed', String(!!outlinePanel?.visible))
     op.classList.toggle('on', !!outlinePanel?.visible)
+  }
+  const kp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-tasks"]')
+  if (kp) {
+    kp.setAttribute('aria-pressed', String(!!tasksPanel?.visible))
+    kp.classList.toggle('on', !!tasksPanel?.visible)
   }
   const gp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-graph"]')
   if (gp) {
@@ -627,12 +639,13 @@ function noteOf(tab: Tab | null): { path: string; text: () => string } | null {
 let linksTimer: ReturnType<typeof setTimeout> | null = null
 /** The links panel drawn again once typing or the disk is quiet. */
 function linksSoon(): void {
-  if (!linksPanel?.visible && !tagsPanel?.visible && !graphPanel?.visible) return
+  if (!linksPanel?.visible && !tagsPanel?.visible && !graphPanel?.visible && !tasksPanel?.visible) return
   if (linksTimer) clearTimeout(linksTimer)
   linksTimer = setTimeout(() => {
     void linksPanel?.refresh()
     void tagsPanel?.refresh()
     void graphPanel?.refresh()
+    void tasksPanel?.refresh()
   }, 600)
 }
 
@@ -751,6 +764,7 @@ function activate(tab: Tab | null): void {
   linksPanel?.show(noteOf(tab))
   tagsPanel?.show(tab?.path ?? null)
   graphPanel?.show(tab?.path ?? null)
+  tasksPanel?.show(tab?.path ?? null)
   syncStatus()
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
@@ -1395,6 +1409,7 @@ function commands(): Command[] {
     { id: 'outline', group: view, title: t.outline.title, icon: 'outline', run: () => outlinePanel?.setVisible(!outlinePanel.visible) },
     { id: 'links', group: view, title: t.links.title, icon: 'links', run: () => linksPanel?.setVisible(!linksPanel.visible) },
     { id: 'tags', group: view, title: t.tags.title, icon: 'tag', run: () => tagsPanel?.setVisible(!tagsPanel.visible) },
+    { id: 'tasks', group: view, title: t.tasks.title, icon: 'tasks', run: () => tasksPanel?.setVisible(!tasksPanel.visible) },
     { id: 'graph', group: view, title: t.graph.title, icon: 'graph', run: () => graphPanel?.setVisible(!graphPanel.visible) },
     ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),
   ]
@@ -1450,6 +1465,23 @@ graphPanel = new GraphPanel(
 )
 document.querySelector('.content')!.insertBefore(graphPanel.el, document.querySelector('.history'))
 graphPanel.show(null)
+
+tasksPanel = new TasksPanel(
+  t.tasks,
+  {
+    load: (note) => folio.tasks(note),
+    toggle: (task, done) => folio.toggleTask(task.path, task.line, task.raw, done),
+    isDirty: (path) => tabs.some((tab) => tab.path === path && isDirty(tab)),
+    open: (task) =>
+      void folio.open(task.path).then(async (result) => {
+        await add(result)
+        requestAnimationFrame(() => requestAnimationFrame(() => findBar.openWith(task.text, { caseSensitive: true, wholeWord: false, regex: false }, 0)))
+      }),
+  },
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(tasksPanel.el, document.querySelector('.history'))
+tasksPanel.show(null)
 
 outlinePanel = new OutlinePanel(t.outline, { go: (h, i) => goToHeading(h, i) }, (on) => {
   syncRail()

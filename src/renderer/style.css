@@ -452,6 +452,22 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .outline-item:hover { background: color-mix(in srgb, var(--line) 60%, transparent); }
 .outline-item.on { border-left-color: var(--accent); color: var(--accent); }
 @media print { .outline-panel { display: none !important; } }
+.tasks-panel { width: 340px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
+.tasks-panel[hidden] { display: none; }
+.tasks-panel header { display: flex; align-items: center; gap: 8px; padding: 10px 10px 6px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.tasks-title { flex: 1; }
+.tasks-status { padding: 0 14px; color: var(--muted); font-size: 12px; }
+.tasks-list { flex: 1; min-height: 0; overflow: auto; padding: 0 6px 12px; }
+.tasks-none { margin: 6px 8px; color: var(--muted); font-size: 12px; }
+.tasks-group h3 { margin: 10px 6px 4px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.tasks-overdue h3 { color: #cf222e; }
+.tasks-row { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: start; padding: 4px 6px; border-radius: 5px; }
+.tasks-row:hover { background: color-mix(in srgb, var(--line) 50%, transparent); }
+.tasks-row input { margin: 3px 0 0; }
+.tasks-text { padding: 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.tasks-done .tasks-text { color: var(--muted); text-decoration: line-through; }
+.tasks-where { grid-column: 2; color: var(--muted); font-size: 11px; }
+@media print { .tasks-panel { display: none !important; } }
 
 .search-toggle { flex: none; display: grid; place-items: center; width: 20px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; }
 .search-toggle svg { transition: transform 0.1s; }

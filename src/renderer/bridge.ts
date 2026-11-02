@@ -14,6 +14,17 @@ export interface LinkPlace {
   nth: number
 }
 
+/** A task of a note, as the tasks panel lists it. */
+export interface TaskEntry {
+  rel: string
+  path: string
+  line: number
+  raw: string
+  text: string
+  done: boolean
+  due: string | null
+}
+
 export interface LinksData {
   /** How a link names this note. */
   name: string
@@ -216,6 +227,10 @@ export interface FolioBridge {
   tagIndex(note: string | null): Promise<{ tag: string; notes: { rel: string; path: string }[] }[]>
   /** The notes of a note's root and the links between them (indexes into `nodes`). */
   graph(note: string | null): Promise<{ nodes: { rel: string; path: string; name: string }[]; edges: [number, number][] }>
+  /** The tasks of a note's root. */
+  tasks(note: string | null): Promise<TaskEntry[]>
+  /** A task checked or unchecked in its note; false when the note changed meanwhile. */
+  toggleTask(path: string, line: number, raw: string, done: boolean): Promise<boolean>
   /** Whether spelling is checked as text is written; turned on or off. */
   spellcheck(): Promise<boolean>
   setSpellcheck(on: boolean): Promise<boolean>

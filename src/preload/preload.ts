@@ -115,6 +115,8 @@ contextBridge.exposeInMainWorld('folio', {
   wikiPanel: (note: string, text: string) => ipcRenderer.invoke('wiki:panel', note, text),
   tagIndex: (note: string | null) => ipcRenderer.invoke('tags:index', note),
   graph: (note: string | null) => ipcRenderer.invoke('graph:data', note),
+  tasks: (note: string | null) => ipcRenderer.invoke('tasks:index', note),
+  toggleTask: (path: string, line: number, raw: string, done: boolean) => ipcRenderer.invoke('tasks:toggle', path, line, raw, done),
   spellcheck: () => ipcRenderer.invoke('spellcheck:get'),
   setSpellcheck: (on: boolean) => ipcRenderer.invoke('spellcheck:set', on),
   dailyOpen: (from: string | null, step: 0 | -1 | 1) => ipcRenderer.invoke('daily:open', from, step),

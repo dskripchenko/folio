@@ -204,6 +204,15 @@ Datei im Baum oder unter den Befehlen. Die Lesezeichen stehen über
 folgt seiner Datei, wenn sie in folio umbenannt oder verschoben wird; eines,
 dessen Datei anderswo verschwunden ist, bleibt blass stehen.
 
+### Aufgaben
+
+Das Aufgaben-Panel (auf der rechten Leiste oder unter den Befehlen) listet die
+`- [ ]`-Aufgaben des sichtbaren Projekts nach Fälligkeit — **Überfällig**,
+**Heute**, **Später**, **Ohne Datum** — und mit **Alle** auch die erledigten; ein
+Tag wird `📅 2026-11-10`, `@2026-11-10` oder `due:2026-11-10` geschrieben. Eine
+Aufgabe wird im Panel abgehakt oder wieder geöffnet, in ihrer Notiz (nicht in
+einer mit ungespeicherten Änderungen); ihr Text öffnet die Notiz dort.
+
 ### Vorschau
 
 Ruht der Zeiger auf einem `[[Link]]` oder einem Link zu einer Notiz, erscheint

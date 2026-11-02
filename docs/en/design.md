@@ -187,6 +187,15 @@ tree, or among the commands. The bookmarks are listed above Shared; a click
 opens one, its menu lets it go. A bookmark follows its file renamed or moved
 in folio; one whose file is gone elsewhere stays, faded.
 
+### Tasks
+
+The tasks panel (on the right rail, or among the commands) lists the `- [ ]`
+tasks of the project in view by when they are due — **Overdue**, **Today**,
+**Later**, **No date** — and with **All** the done ones too; a day is written
+`📅 2026-11-10`, `@2026-11-10` or `due:2026-11-10`. A task is checked or
+unchecked from the panel, in its note (not one open with unsaved changes); its
+text opens the note there.
+
 ### Previews
 
 The pointer resting on a `[[link]]` or a link to a note shows the note in a

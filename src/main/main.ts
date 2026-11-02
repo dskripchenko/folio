@@ -50,6 +50,7 @@ import { Watcher } from './watcher'
 import { aliasIndex, aliasesOf, backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { resolveInside } from './paths'
 import { tagIndex, tagsOf } from './tags'
+import { tasksOf, toggleTask } from './tasks'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
 import { Workspace, type Project } from './workspace'
 
@@ -798,6 +799,28 @@ ipcMain.handle('graph:data', async (_e, note: unknown) => {
   return {
     nodes: notes.map((n) => ({ rel: n.rel, path: join(dir, ...n.rel.split('/')), name: basename(n.rel).replace(/\.(md|markdown)$/i, '') })),
     edges,
+  }
+})
+
+/** The tasks of the notes in a note's root (Shared without one). */
+ipcMain.handle('tasks:index', async (_e, note: unknown) => {
+  const dir = typeof note === 'string' ? linkRoot(note) : workspace.shared()
+  const notes = await notesIn(dir, await filesOf(dir))
+  return notes.flatMap((n) => tasksOf(n.text).map((t) => ({ ...t, rel: n.rel, path: join(dir, ...n.rel.split('/')) })))
+})
+
+/** A task checked or unchecked in its note; false when the note changed meanwhile. */
+ipcMain.handle('tasks:toggle', (_e, path: unknown, line: unknown, raw: unknown, done: unknown) => {
+  if (typeof path !== 'string' || typeof line !== 'number' || typeof raw !== 'string' || typeof done !== 'boolean') return false
+  if (!isNote(path) || !knownFile(path)) return false
+  try {
+    const next = toggleTask(readFileSync(path, 'utf8'), line, raw, done)
+    if (next === null) return false
+    writeFileSync(path, next)
+    if (workspace.autoCommits(path)) autoCommit.saved(path)
+    return true
+  } catch {
+    return false
   }
 })
 

@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- The tasks panel: the project's `- [ ]` tasks by when they are due, checked
+  from the panel into their notes.
 - Embedded notes: `![[Note]]` and `![[Note#Heading]]` drawn in the note
   (embed 1.18.0), an embed in an embed three deep, a loop left a link.
 - The outline panel: the note's headings, live, a click going to one, the
