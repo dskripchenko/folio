@@ -119,6 +119,15 @@ in the tree takes its links along: `[[…]]` links and relative links
 so are the moved note's own relative links; notes open with unsaved changes are
 left as they are.
 
+### Pictures
+
+A picture pasted into a note (a screenshot, an image copied) or dropped on the
+editor — the visual mode or the source — is saved in `attachments/` beside the
+note and linked where the caret is: by its own name, or `Pasted image` and the
+time for a nameless screenshot; a name already taken gets a number. The
+editor's image button picks pictures from the disk the same way. A quick note
+not yet saved says to save it first, as its pictures need a folder.
+
 ## History with git
 
 Per folder — Shared and each project — and only if you want it. A folder that

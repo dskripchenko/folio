@@ -75,3 +75,45 @@ export function duplicate(path: string): string {
   }
   throw new FileOpError('exists')
 }
+
+/** The folder pictures pasted into a note go to, beside it. */
+export const ATTACHMENTS = 'attachments'
+
+const IMAGE_EXT: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg',
+  'image/avif': '.avif',
+  'image/bmp': '.bmp',
+}
+
+/**
+ * A picture pasted or dropped into a note, saved in `attachments/` beside it:
+ * by its own name, or `Pasted image <time>` for a nameless screenshot; a name
+ * taken gets ` 1`, ` 2`… Its path from the note's folder, `/`-separated.
+ */
+export function saveAttachment(note: string, name: string, type: string, bytes: Uint8Array, now = new Date()): string {
+  const ext = IMAGE_EXT[type]
+  if (!ext) throw new FileOpError('type')
+  const dir = join(dirname(note), ATTACHMENTS)
+  mkdirSync(dir, { recursive: true })
+  let base = [...name.replace(/\.[^.]*$/, '')].filter((c) => !BAD.test(c) && !control(c)).join('').trim()
+  if (/^(image|blob|untitled)?$/i.test(base)) {
+    const pad = (n: number): string => String(n).padStart(2, '0')
+    base = `Pasted image ${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+  }
+  base = base.slice(0, 150)
+  const own = extname(name).toLowerCase()
+  const suffix = own && Object.values(IMAGE_EXT).includes(own === '.jpeg' ? '.jpg' : own) ? own : ext
+  for (let i = 0; ; i++) {
+    const file = `${base}${i === 0 ? '' : ` ${i}`}${suffix}`
+    try {
+      writeFileSync(join(dir, file), bytes, { flag: 'wx' })
+      return `${ATTACHMENTS}/${file}`
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e
+    }
+  }
+}

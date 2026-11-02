@@ -42,7 +42,7 @@ import { Session } from './session'
 import { labels } from './i18n'
 import { listDir } from './tree'
 import { FileIndex } from './fileIndex'
-import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry } from './fileOps'
+import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry, saveAttachment } from './fileOps'
 import { Consoles } from './pty'
 import { replaceInFiles, searchFiles, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
@@ -566,6 +566,21 @@ ipcMain.handle('wiki:moved', async (_e, from: unknown, to: unknown, skip: unknow
     if (workspace.autoCommits(file)) autoCommit.saved(file)
   }
   return changed
+})
+
+/** A picture pasted or dropped into a note: saved in `attachments/` beside it; its path for the Markdown. */
+ipcMain.handle('image:save', (_e, note: unknown, name: unknown, type: unknown, bytes: unknown) => {
+  if (typeof note !== 'string' || typeof name !== 'string' || typeof type !== 'string' || !(bytes instanceof Uint8Array)) return { error: 'failed' }
+  // Only beside a note folio has open from a folder it knows, and not a file of any size.
+  const known = sources().some((s) => note.startsWith(s.dir + sep)) || roots.dir(Roots.idOf(dirname(note))) !== undefined
+  if (!known || !MARKDOWN_EXT.includes(extname(note).toLowerCase()) || !existsSync(note)) return { error: 'failed' }
+  if (bytes.byteLength > 64 * 1024 * 1024) return { error: 'large' }
+  return fileOp(() => {
+    const path = saveAttachment(note, name, type, bytes)
+    const file = join(dirname(note), ...path.split('/'))
+    if (workspace.autoCommits(file)) autoCommit.saved(file)
+    return { path }
+  })
 })
 
 ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {

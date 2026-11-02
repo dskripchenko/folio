@@ -128,6 +128,16 @@ Notiz oder ein Ordner nimmt die Links mit: `[[…]]`-Links und relative Links
 geschrieben, ebenso die relativen Links der verschobenen Notiz selbst; Notizen,
 die mit ungespeicherten Änderungen offen sind, bleiben unverändert.
 
+### Bilder
+
+Ein in eine Notiz eingefügtes Bild (ein Bildschirmfoto, ein kopiertes Bild) oder
+ein auf den Editor gezogenes — im visuellen Modus oder in der Quelle — wird in
+`attachments/` neben der Notiz gespeichert und an der Einfügemarke verlinkt:
+unter seinem eigenen Namen, ein namenloses Bildschirmfoto als `Pasted image` mit
+der Uhrzeit; ein vergebener Name bekommt eine Nummer. Die Bild-Schaltfläche des
+Editors nimmt Bilder von der Festplatte ebenso. Eine noch nicht gespeicherte
+Schnellnotiz bittet, sie zuerst zu speichern — ihre Bilder brauchen einen Ordner.
+
 ## Verlauf mit git
 
 Pro Ordner — „Gemeinsam“ und jedes Projekt — und nur, wenn Sie es wollen. Ein
