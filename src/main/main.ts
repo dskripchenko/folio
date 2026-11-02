@@ -824,18 +824,21 @@ ipcMain.handle('tasks:toggle', (_e, path: unknown, line: unknown, raw: unknown, 
   }
 })
 
-/** A new board or calendar, beside the note in view (in Shared without one), from a starting markup. */
+/** A new kanban board, calendar or whiteboard, beside the note in view (in Shared without one), from a starting markup. */
 ipcMain.handle('fs:new-kind', (_e, kind: unknown, near: unknown) => {
-  if (kind !== 'kanban' && kind !== 'calendar') return { error: 'invalid', path: '' }
+  if (kind !== 'kanban' && kind !== 'calendar' && kind !== 'board') return { error: 'invalid', path: '' }
   const folder = typeof near === 'string' && knownFile(near) ? dirname(near) : workspace.shared()
   const day = new Date().toISOString().slice(0, 10)
-  const base = kind === 'kanban' ? L().newBoardName : L().newCalendarName
+  const base = kind === 'kanban' ? L().newBoardName : kind === 'calendar' ? L().newCalendarName : L().newCanvasName
   const text =
     kind === 'kanban'
       ? `# ${base}\n\n## ${L().boardTodo}\n- ${L().boardFirst}\n\n## ${L().boardDoing} {wip: 3}\n\n## ${L().boardDone} {done}\n`
-      : `# ${base}\n\n${day} ${L().calendarFirst}\n`
+      : kind === 'calendar'
+        ? `# ${base}\n\n${day} ${L().calendarFirst}\n`
+        : `${JSON.stringify({ version: 1, objects: {} }, null, 2)}\n`
+  const ext = kind === 'board' ? 'board' : `${kind}.md`
   for (let i = 0; ; i++) {
-    const file = join(folder, `${base}${i === 0 ? '' : ` ${i}`}.${kind}.md`)
+    const file = join(folder, `${base}${i === 0 ? '' : ` ${i}`}.${ext}`)
     try {
       writeFileSync(file, text, { flag: 'wx' })
       if (workspace.autoCommits(file)) autoCommit.saved(file)

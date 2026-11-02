@@ -215,6 +215,15 @@ die Datei behält das Markup und ändert sich nur, wo bearbeitet wurde. **Neues
 Kanban-Board** und **Neuer Kalender** unter den Befehlen legen eines neben der
 sichtbaren Notiz an.
 
+### Whiteboards
+
+Eine `*.board`-Datei öffnet sich als Whiteboard (`@dskripchenko/board`):
+Haftnotizen, Formen, Text, Rahmen, Verbinder, Emoji, Stift und Marker auf
+einer endlosen Fläche. **Bearbeiten** zeichnet darauf; die Datei behält das
+JSON des Boards, eingerückt, sodass ein Diff zeigt, was sich bewegt hat.
+**Neues Whiteboard** unter den Befehlen legt eines neben der geöffneten
+Notiz an.
+
 ### Aufgaben
 
 Das Aufgaben-Panel (auf der rechten Leiste oder unter den Befehlen) listet die

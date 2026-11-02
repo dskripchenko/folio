@@ -197,6 +197,14 @@ source in a tab of their own; the file keeps the markup, changed only where
 the edit was. **New kanban board** and **New calendar** among the commands
 make one beside the note in view.
 
+### Whiteboards
+
+A `*.board` file opens as a whiteboard (`@dskripchenko/board`): sticky notes,
+shapes, text, frames, connectors, emoji, pen and marker on an endless canvas.
+**Edit** draws on it; the file keeps the board's JSON, indented, so a diff
+shows what moved. **New whiteboard** among the commands makes one beside the
+note in view.
+
 ### Tasks
 
 The tasks panel (on the right rail, or among the commands) lists the `- [ ]`

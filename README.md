@@ -7,7 +7,7 @@
 
 A desktop app to read, edit and print Markdown — with live diagrams of every
 notation, OpenAPI and AsyncAPI references, BPMN and DMN, draw.io, process
-flows, kanban boards and calendars — on macOS, Windows and Linux, without
+flows, kanban boards, calendars and whiteboards, slides — on macOS, Windows and Linux, without
 installing anything.
 
 > Status: **in development, nothing to download yet.** It reads: a Markdown file

@@ -7,9 +7,9 @@ import { languageOf } from '@dskripchenko/syntax'
  * their editors); draw.io (`<dsk-drawio>`, a view); OpenAPI (`<dsk-openapi>`,
  * the reference or its editor); AsyncAPI (`<dsk-asyncapi>`); a diagram in a
  * text notation (`<dsk-diagram>`, edited as source beside a preview); or any
- * other text.
+ * other text; a kanban board, a calendar, a whiteboard (`<dsk-board>`).
  */
-export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'text'
+export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'board' | 'text'
 
 /** The text notations, by extension, with the syntax `<dsk-diagram>` reads them in. */
 export const DIAGRAM_SYNTAX: Readonly<Record<string, string>> = {
@@ -31,7 +31,7 @@ export const MARKDOWN_EXT = ['.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt
 const DATA_EXT = ['.yaml', '.yml', '.json']
 
 /** The extensions folio opens, for the Open dialog. */
-export const OPENABLE_EXT = [...MARKDOWN_EXT, '.bpmn', '.dmn', '.drawio', '.dio', ...Object.keys(DIAGRAM_SYNTAX), ...DATA_EXT]
+export const OPENABLE_EXT = [...MARKDOWN_EXT, '.bpmn', '.dmn', '.drawio', '.dio', '.board', ...Object.keys(DIAGRAM_SYNTAX), ...DATA_EXT]
 
 /** Of a YAML or JSON document, from its first lines: an API description, or plain data. */
 export function sniffData(text: string): 'openapi' | 'asyncapi' | 'text' {
@@ -55,6 +55,8 @@ export function formatByName(name: string): Format | 'data' {
   if (ext === '.bpmn') return 'bpmn'
   if (ext === '.dmn') return 'dmn'
   if (ext === '.drawio' || ext === '.dio') return 'drawio'
+  // A whiteboard: @dskripchenko/board's JSON.
+  if (ext === '.board') return 'board'
   if (ext in DIAGRAM_SYNTAX) return 'diagram'
   if (DATA_EXT.includes(ext)) return 'data'
   return 'text'
