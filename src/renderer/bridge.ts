@@ -184,6 +184,8 @@ export interface FolioBridge {
   wikiNames(from: string): Promise<{ name: string; path: string }[]>
   /** After a move: links to it written anew in the root's notes; how many notes changed. */
   wikiMoved(from: string, to: string, skip: string[]): Promise<number>
+  /** A picture pasted into a note, saved in `attachments/` beside it: its path for the Markdown. */
+  saveImage(note: string, name: string, type: string, bytes: Uint8Array): Promise<{ path: string } | { error: string }>
   entryMenu(root: string, rel: string): void
   onWorkspace: Listener
   onEdit: Listener

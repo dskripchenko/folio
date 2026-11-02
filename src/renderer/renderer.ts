@@ -32,6 +32,8 @@ const TEXT = {
     allowFolder: 'Allow for its folder',
     close: 'Close',
     linksUpdated: 'Links updated in {n} notes.',
+    saveBeforePictures: 'Save the note first: its pictures go beside it.',
+    pictureNotSaved: 'The picture was not saved.',
     edit: 'Edit',
     read: 'Read',
     untitled: 'Quick note',
@@ -73,6 +75,8 @@ const TEXT = {
     allowFolder: 'Разрешить для его папки',
     close: 'Закрыть',
     linksUpdated: 'Ссылки обновлены в заметках: {n}.',
+    saveBeforePictures: 'Сначала сохраните заметку: картинки кладутся рядом с ней.',
+    pictureNotSaved: 'Картинку сохранить не удалось.',
     edit: 'Править',
     read: 'Читать',
     untitled: 'Быстрая заметка',
@@ -336,7 +340,7 @@ function render(tab: Tab): void {
     bar.id = `doc-toolbar-${tab.id}`
     bar.dataset.testid = 'doc-toolbar'
     tab.pane.append(bar)
-    const ed = document.createElement('dsk-markdown-editor') as HTMLElement & { value: string; mode: string; linkSuggest: unknown }
+    const ed = document.createElement('dsk-markdown-editor') as HTMLElement & { value: string; mode: string; linkSuggest: unknown; saveImage: unknown }
     ed.setAttribute('toolbar-target', `#${bar.id}`)
     ed.setAttribute('mode-switch', 'false')
     if (base) {
@@ -347,6 +351,19 @@ function render(tab: Tab): void {
     ed.setAttribute('min-height', 'calc(100vh - 140px)')
     // After `[[`: the notes of the document's root.
     ed.linkSuggest = linkSuggester(() => tab.path, folio.wikiNames)
+    // Pictures pasted or dropped: into `attachments/` beside the note; a quick note is saved first.
+    ed.saveImage = async (file: File) => {
+      if (!tab.path) {
+        notify(t.saveBeforePictures)
+        return null
+      }
+      const saved = await folio.saveImage(tab.path, file.name, file.type, new Uint8Array(await file.arrayBuffer()))
+      if ('error' in saved) {
+        notify(t.pictureNotSaved)
+        return null
+      }
+      return saved.path
+    }
     const source = document.createElement('script')
     source.type = 'text/plain'
     // textContent, not markup: a `</script>` in the text stays text.
@@ -935,6 +952,8 @@ viewEl.addEventListener('dragover', (event) => {
   viewEl.classList.add('dropping')
 })
 viewEl.addEventListener('dragleave', () => viewEl.classList.remove('dropping'))
+// Seen first: a picture dropped into the editor is taken there and goes no further.
+viewEl.addEventListener('drop', () => viewEl.classList.remove('dropping'), true)
 viewEl.addEventListener('drop', async (event) => {
   if (!event.dataTransfer?.types.includes('Files')) return
   event.preventDefault()

@@ -19,6 +19,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   (`npm_config_prefix` from `pnpm start` made nvm refuse to load).
 
 ### Added
+- Pictures pasted into a note or dropped on the editor (and chosen with its
+  image button) are saved in `attachments/` beside the note and linked at the
+  caret — by their name, or `Pasted image <time>` for a screenshot (embed 1.15.0).
 - Links between notes: `[[Note]]`, `[[Note#Heading|text]]`, `![[picture.png]]`
   name a file of the project by its name (embed 1.14.0). A click opens it at the
   heading, or makes a missing note (drawn faded) beside the linking one; in the

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { create, duplicate, FileOpError, move, rename } from '../../src/main/fileOps'
+import { create, duplicate, FileOpError, move, rename, saveAttachment } from '../../src/main/fileOps'
 
 const box = () => mkdtempSync(join(tmpdir(), 'folio-ops-'))
 
@@ -43,5 +43,26 @@ describe('file operations from the tree', () => {
     writeFileSync(join(d, 'n.md'), 'n')
     expect(duplicate(join(d, 'n.md'))).toBe(join(d, 'n copy.md'))
     expect(duplicate(join(d, 'n.md'))).toBe(join(d, 'n copy 2.md'))
+  })
+})
+
+describe('pictures pasted into a note', () => {
+  const png = new Uint8Array([137, 80, 78, 71])
+  it('saved beside it in attachments/, by name, a taken name numbered', () => {
+    const d = box()
+    const note = join(d, 'Plan.md')
+    writeFileSync(note, '')
+    expect(saveAttachment(note, 'Diagram.png', 'image/png', png)).toBe('attachments/Diagram.png')
+    expect(saveAttachment(note, 'Diagram.png', 'image/png', png)).toBe('attachments/Diagram 1.png')
+    expect(readFileSync(join(d, 'attachments', 'Diagram 1.png'))).toEqual(Buffer.from(png))
+  })
+
+  it('a nameless screenshot gets the time; the type gives the extension; not a picture is refused', () => {
+    const d = box()
+    const note = join(d, 'Plan.md')
+    expect(saveAttachment(note, 'image.png', 'image/png', png, new Date(2026, 10, 2, 9, 5, 7))).toBe('attachments/Pasted image 20261102090507.png')
+    expect(saveAttachment(note, 'photo', 'image/jpeg', png)).toBe('attachments/photo.jpg')
+    expect(saveAttachment(note, 'a:b?.png', 'image/png', png)).toBe('attachments/ab.png')
+    expect(() => saveAttachment(note, 'x.exe', 'application/x-msdownload', png)).toThrow(FileOpError)
   })
 })
