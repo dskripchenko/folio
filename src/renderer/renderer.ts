@@ -7,7 +7,7 @@
  */
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
-import { editorConfigFor, indentOptions, type CodeEditor, type CompletionSource } from '@dskripchenko/code-editor'
+import { commands as editorCommands, editorConfigFor, indentOptions, keyName, normalizeKey, type CodeEditor, type CompletionSource, type KeyBinding } from '@dskripchenko/code-editor'
 import { canEdit, editorOf, READ_ONLY_BYTES, viewOf, type SourceEditorElement, type ViewOptions } from './formats'
 import type { CodeState } from './code'
 import { domTarget, editorTarget, fieldTarget, selectInField, type FindTarget, type WithFindTarget } from './find'
@@ -32,6 +32,7 @@ import { ChangesPanel, type ChangesText } from './changesPanel'
 import { GitMarks, type GitMarksText } from './gitMarks'
 import { CodeNav, type NavItem } from './codeNav'
 import { SymbolPalette, type SymbolPaletteText } from './symbolPalette'
+import { parseProblems, ProblemsPanel, type ProblemsText, type ResolvedProblem } from './problems'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
 import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
@@ -89,6 +90,8 @@ const TEXT = {
     changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
     gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
+    problems: { title: 'Problems', close: 'Close', none: 'No problems. A task\'s errors and warnings come here.', from: 'From the task {task}' } as ProblemsText,
+    tasks2: { run: 'Run a task', none: 'No tasks here: scripts of package.json or composer.json, Makefile targets, justfile recipes, or .folio/settings.json.' },
     blame: 'Who changed each line (blame)',
     notCommitted: 'Not committed yet',
     outline: { title: 'Outline', close: 'Close', none: 'No headings in this note.' } as OutlineText,
@@ -150,6 +153,8 @@ const TEXT = {
     changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
     gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
+    problems: { title: 'Проблемы', close: 'Закрыть', none: 'Проблем нет. Сюда попадают ошибки и предупреждения задач.', from: 'Из задачи {task}' } as ProblemsText,
+    tasks2: { run: 'Запустить задачу', none: 'Задач нет: скрипты package.json или composer.json, цели Makefile, рецепты justfile или .folio/settings.json.' },
     blame: 'Кто менял каждую строку (blame)',
     notCommitted: 'Ещё не закоммичено',
     outline: { title: 'Оглавление', close: 'Закрыть', none: 'В этой заметке нет заголовков.' } as OutlineText,
@@ -177,6 +182,7 @@ let graphPanel: GraphPanel | null = null
 let tasksPanel: TasksPanel | null = null
 let changesPanel: ChangesPanel | null = null
 let symbolPalette: SymbolPalette | null = null
+let problemsPanel: ProblemsPanel | null = null
 /** The status line under the page. */
 let statusBar: StatusBar | null = null
 /** The outline of the note in view. */
@@ -249,6 +255,7 @@ function applyText(): void {
   tasksPanel?.setText(t.tasks)
   changesPanel?.setText(t.changes)
   symbolPalette?.setText(t.symbols)
+  problemsPanel?.setText(t.problems)
   outlinePanel?.setText(t.outline)
   statusBar?.setText(t.status)
   syncStatus()
@@ -313,7 +320,7 @@ function formatOf(tab: Tab): Format {
 }
 
 function viewOptions(tab: Tab, main = false): ViewOptions {
-  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main, code: main ? tab.code : undefined, completion: projectCompletion }
+  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main, code: main ? tab.code : undefined, completion: projectCompletion, keymap: editorKeymap }
 }
 
 /** A version from the history: as it was, its changes against now, or the two side by side. */
@@ -425,9 +432,19 @@ function render(tab: Tab): void {
     // Its symbols: the outline, the breadcrumbs, going to one by name.
     const crumbs = (el as SourceEditorElement).folioCrumbs
     if (editor && crumbs) navs.set(editor, new CodeNav(editor, editor.language, crumbs, placeOf(tab), () => syncOutline()))
+    // A task's problems in this file, marked in it.
+    if (editor && path) {
+      editorPaths.set(editor, path)
+      markProblems()
+    }
     if (editor && path)
-      void folio.editorConfigs(path).then((files) => {
-        const indent = indentOptions(editorConfigFor(path, files))
+      void Promise.all([folio.editorConfigs(path), folio.projectSettings(path)]).then(([files, settings]) => {
+        // The project's own settings over .editorconfig's.
+        const indent = {
+          ...indentOptions(editorConfigFor(path, files)),
+          ...(settings.indentUnit ? { indentUnit: settings.indentUnit } : {}),
+          ...(settings.tabSize ? { tabSize: settings.tabSize } : {}),
+        }
         if (indent.indentUnit || indent.tabSize) editor.configure(indent)
       })
   } else {
@@ -570,6 +587,7 @@ function buildRail(): void {
     iconButton('graph', t.graph.title, () => graphPanel?.setVisible(!graphPanel.visible), 'toggle-graph'),
     iconButton('tasks', t.tasks.title, () => tasksPanel?.setVisible(!tasksPanel.visible), 'toggle-tasks'),
     iconButton('commit', `${t.changes.title} (Ctrl+⇧G)`, () => changesPanel?.setVisible(!changesPanel.visible), 'toggle-changes'),
+    iconButton('alert', t.problems.title, () => problemsPanel?.setVisible(!problemsPanel.visible), 'toggle-problems'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
     iconButton('pdf', `${t.exportPdf} (${mod}⇧P)`, () => exportActive(), 'rail-pdf'),
@@ -610,6 +628,11 @@ function syncRail(): void {
   if (op) {
     op.setAttribute('aria-pressed', String(!!outlinePanel?.visible))
     op.classList.toggle('on', !!outlinePanel?.visible)
+  }
+  const pr = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-problems"]')
+  if (pr) {
+    pr.setAttribute('aria-pressed', String(!!problemsPanel?.visible))
+    pr.classList.toggle('on', !!problemsPanel?.visible)
   }
   const ch = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-changes"]')
   if (ch) {
@@ -833,14 +856,14 @@ function goToSymbol(scope: 'file' | 'project'): void {
     const nav = navOf(active)
     if (!nav) return
     void symbolPalette?.open(
-      'file',
+      t.symbols.file,
       async () => nav.items.map((i) => ({ name: i.text, kind: i.kind, container: i.container, line: i.line, column: i.column })),
       (s) => nav.go(s),
     )
     return
   }
   void symbolPalette?.open(
-    'project',
+    t.symbols.project,
     async () => (await folio.projectSymbols()).map((s) => ({ name: s.name, kind: s.kind, container: s.container, line: s.line, column: s.column, file: { root: s.root, label: s.label, path: s.path } })),
     (s) =>
       void folio.openEntry(s.file!.root, s.file!.path).then(async (result) => {
@@ -852,6 +875,144 @@ function goToSymbol(scope: 'file' | 'project'): void {
         requestAnimationFrame(() => codeEditorOf(tab)?.goToLine(s.line + 1, s.column))
       }),
   )
+}
+
+// Keys of one's own (folio-data/keybindings.json) ------------------------------------
+
+/** The editor's commands and actions by name, for keybindings.json. */
+const EDITOR_ACTIONS = new Set(['undo', 'redo', 'fold', 'unfold', 'goToLine', 'findNext', 'findPrevious', 'complete', 'jumpToBracket'])
+let editorKeymap: KeyBinding[] = []
+/** folio's own commands (the palette's, `folio.<id>`) by key, as the editor names keys. */
+let folioKeys = new Map<string, string>()
+/** The editor's keys of one's own: in the editor they are its, over folio's own shortcuts. */
+let editorKeys = new Set<string>()
+
+void folio.keybindings().then((list) => {
+  const mac = folio.platform === 'darwin'
+  const table = editorCommands as unknown as Record<string, unknown>
+  editorKeymap = list.flatMap((b): KeyBinding[] => {
+    if (EDITOR_ACTIONS.has(b.command)) return [{ key: b.key, run: b.command as KeyBinding['run'], readOnly: true }]
+    const run = table[b.command]
+    // A command that makes one (insertText('x')) is not bound from a file: only commands themselves.
+    return typeof run === 'function' && run.length >= 1 && b.command !== 'insertText' && b.command !== 'typeText' ? [{ key: b.key, run: run as KeyBinding['run'] }] : []
+  })
+  folioKeys = new Map(list.filter((b) => b.command.startsWith('folio.')).map((b) => [normalizeKey(b.key, mac), b.command.slice(6)]))
+  editorKeys = new Set(editorKeymap.map((b) => normalizeKey(mac ? (b.mac ?? b.key) : (b.other ?? b.key), mac)))
+})
+
+/** A key of one's own for a folio command: run it; true when it was one. */
+function folioKey(event: KeyboardEvent): boolean {
+  if (folioKeys.size === 0) return false
+  const id = folioKeys.get(keyName(event))
+  if (!id) return false
+  const command = commands().find((c) => c.id === id)
+  if (!command || (command.when && !command.when())) return false
+  event.preventDefault()
+  event.stopPropagation()
+  void command.run()
+  return true
+}
+
+/** The files the code editors edit (for marking a task's problems in them). */
+const editorPaths = new Map<CodeEditor, string>()
+
+/** A file opened in the code editor at a line and column. */
+async function openInEditor(path: string, line: number, column = 1): Promise<void> {
+  await add(await folio.open(path))
+  const tab = active
+  if (!tab) return
+  if (tab.view !== 'edit' && canEdit(formatOf(tab))) toggleEditTo(tab, 'edit')
+  requestAnimationFrame(() => codeEditorOf(tab)?.goToLine(line, column))
+}
+
+// Tasks and their problems (ADR-002, I3) ---------------------------------------------
+
+/** The output of tasks running, by their console. */
+const taskRuns = new Map<number, { name: string; dir: string; out: string }>()
+const RECENT_TASKS = 'folio.tasks.recent'
+
+function recentTasks(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_TASKS) ?? '[]') as string[]
+  } catch {
+    return []
+  }
+}
+
+/** The tasks of the project in view, the ones run lately first; the one chosen run in a console. */
+async function chooseTask(): Promise<void> {
+  const path = active?.path ?? null
+  const found = path ? await folio.projectTasks(path) : null
+  const recent = recentTasks()
+  const key = (dir: string, name: string) => `${dir}\u0000${name}`
+  const tasks = (found?.tasks ?? []).slice().sort((a, b) => {
+    const ra = recent.indexOf(key(found!.dir, a.name))
+    const rb = recent.indexOf(key(found!.dir, b.name))
+    return (ra < 0 ? Infinity : ra) - (rb < 0 ? Infinity : rb)
+  })
+  void symbolPalette?.open(
+    tasks.length ? t.tasks2.run : t.tasks2.none,
+    async () => tasks.map((task) => ({ name: task.name, kind: task.source, container: task.command, line: 0, column: 1 })),
+    (s) => {
+      if (!found) return
+      const task = tasks.find((x) => x.name === s.name)!
+      try {
+        localStorage.setItem(RECENT_TASKS, JSON.stringify([key(found.dir, task.name), ...recent.filter((r) => r !== key(found.dir, task.name))].slice(0, 30)))
+      } catch {
+        /* this window only */
+      }
+      void runTask(found.dir, task.name, task.command)
+    },
+  )
+}
+
+async function runTask(dir: string, name: string, command: string): Promise<void> {
+  const id = await consolePanel.run(dir, command, name)
+  if (id !== null) taskRuns.set(id, { name, dir, out: '' })
+}
+
+folio.onConsoleData((id, data) => {
+  const run = taskRuns.get(id)
+  // Enough to read problems from; a task that writes without end is not kept whole.
+  if (run && run.out.length < 4_000_000) run.out += data
+})
+folio.onConsoleExit((id) => {
+  const run = taskRuns.get(id)
+  if (!run) return
+  taskRuns.delete(id)
+  void taskDone(run)
+})
+
+/** A task ended: the problems in its output, in the panel (shown when there are some) and in the editors. */
+async function taskDone(run: { name: string; dir: string; out: string }): Promise<void> {
+  const found = parseProblems(run.out)
+  const where = new Map<string, string | null>()
+  for (const p of found) if (!where.has(p.file)) where.set(p.file, (await folio.resolveConsolePath(run.dir, p.file))?.path ?? null)
+  const list: ResolvedProblem[] = found.map((p) => ({ ...p, path: where.get(p.file) ?? null, task: run.name }))
+  problemsPanel?.set(run.name, list)
+  if (list.length && problemsPanel && !problemsPanel.visible) problemsPanel.setVisible(true)
+  markProblems()
+}
+
+/** The problems of the files in code editors, as their diagnostics. */
+function markProblems(): void {
+  const all = problemsPanel?.all ?? []
+  for (const [editor, path] of editorPaths) {
+    if (!editor.dom.isConnected) {
+      editorPaths.delete(editor)
+      continue
+    }
+    const doc = editor.state.doc
+    const mine = all.filter((p) => p.path === path)
+    editor.setDiagnostics(
+      mine.map((p) => {
+        const index = Math.min(doc.lineCount - 1, Math.max(0, p.line - 1))
+        const from = Math.min(doc.lineEnd(index), doc.lineStart(index) + Math.max(0, p.column - 1))
+        return { from, to: Math.min(doc.lineEnd(index), from + 1), message: p.message, severity: p.severity }
+      }),
+      'task',
+    )
+  }
 }
 
 /** The editors showing their changes against the last commit, by the file they edit. */
@@ -918,6 +1079,30 @@ async function committedAgain(): Promise<void> {
     if (committed !== null) marks.setCommitted(committed)
     if (blamed.has(editor)) void showBlame(editor, path)
   }
+}
+
+/**
+ * The project's formatter over the text in the code editor, before it is
+ * saved (when the project asks for it): only what changed is changed, so the
+ * cursors stay and the formatting is undone as one step.
+ */
+async function formatBeforeSave(tab: Tab): Promise<void> {
+  const editor = codeEditorOf(tab)
+  if (!editor || !tab.path) return
+  const before = editor.value
+  const formatted = await folio.formatText(tab.path, before)
+  if (formatted === null || formatted === before || editor.value !== before) return
+  let start = 0
+  while (start < before.length && start < formatted.length && before[start] === formatted[start]) start++
+  let end = 0
+  while (end < before.length - start && end < formatted.length - start && before[before.length - 1 - end] === formatted[formatted.length - 1 - end]) end++
+  // Offsets in the editor's text, whose line breaks are always \n.
+  const lf = (s: string) => s.replace(/\r\n/g, '\n')
+  const from = lf(before.slice(0, start)).length
+  const to = from + lf(before.slice(start, before.length - end)).length
+  editor.dispatch({ changes: { from, to, insert: lf(formatted.slice(start, formatted.length - end)) }, userEvent: 'input.format' })
+  pull(tab)
+  tab.text = editor.value
 }
 
 /** The source editor's last change, taken now if it waits for typing to pause (a big file). */
@@ -1215,6 +1400,7 @@ function savedAs(tab: Tab, result: Extract<SaveResult, { saved: OpenResult }>): 
 
 async function save(tab: Tab, as: boolean): Promise<boolean> {
   pull(tab)
+  await formatBeforeSave(tab)
   if (tab.timer) flush(tab)
   const dir = tab.doc?.folder ?? sharedDir
   const result: SaveResult =
@@ -1656,6 +1842,8 @@ function commands(): Command[] {
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },
     { id: 'symbol-project', group: c.edit, title: t.symbols.project, keys: `${mod}⌥O`, icon: 'search', run: () => goToSymbol('project') },
+    { id: 'task-run', group: c.edit, title: t.tasks2.run, keys: `${mod}⇧B`, icon: 'play', run: () => void chooseTask() },
+    { id: 'problems', group: view, title: t.problems.title, icon: 'alert', run: () => problemsPanel?.setVisible(!problemsPanel.visible) },
     { id: 'find-in-files', group: c.edit, title: c.findInFiles, keys: `${mod}⇧F`, icon: 'search', run: () => void searchPanel.open() },
     ...MODES.map(([m, name]): Command => ({ id: `mode-${m}`, group: view, title: t.modeNames[m], icon: name, when: () => modesOf(active).has(m) && modeOf(active!) !== m, run: () => setMode(active, m) })),
     { id: 'beside', group: view, title: t.openBeside, keys: `${mod}\\`, icon: 'panelRight', when: () => !!active && active !== beside && tabs.length > 1, run: () => active && openBeside(active) },
@@ -1724,6 +1912,13 @@ graphPanel = new GraphPanel(
 )
 document.querySelector('.content')!.insertBefore(graphPanel.el, document.querySelector('.history'))
 graphPanel.show(null)
+
+problemsPanel = new ProblemsPanel(
+  t.problems,
+  (p) => p.path && void openInEditor(p.path, p.line, p.column),
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(problemsPanel.el, document.querySelector('.history'))
 
 changesPanel = new ChangesPanel(
   t.changes,
@@ -1813,7 +2008,7 @@ linksPanel.show(noteOf(active))
 const consolePanel = new ConsolePanel(
   t.console,
   {
-    open: (cwd, cols, rows) => folio.openConsole(cwd, cols, rows),
+    open: (cwd, cols, rows, command) => folio.openConsole(cwd, cols, rows, command),
     input: (id, data) => folio.consoleInput(id, data),
     resize: (id, cols, rows) => folio.consoleResize(id, cols, rows),
     close: (id) => folio.closeConsole(id),
@@ -1854,6 +2049,9 @@ folio.onFind((what) => (what === 'next' ? findBar.step(1) : what === 'previous' 
 window.addEventListener(
   'keydown',
   (event) => {
+    // Keys of one's own come first: the editor's in the editor (it handles them), then folio's.
+    if (editorKeys.size && (event.target as Element | null)?.closest?.('.dsk-code-editor') && editorKeys.has(keyName(event))) return
+    if (folioKey(event)) return
     // Ctrl+` on every system: the consoles.
     if (event.ctrlKey && !event.metaKey && !event.altKey && event.code === 'Backquote') {
       event.preventDefault()
@@ -1881,6 +2079,13 @@ window.addEventListener(
       event.preventDefault()
       event.stopPropagation()
       changesPanel?.setVisible(!changesPanel.visible)
+      return
+    }
+    // Cmd/Ctrl+Shift+B: a task of the project (VS Code's build task).
+    if ((folio.platform === 'darwin' ? event.metaKey : event.ctrlKey) && event.shiftKey && !event.altKey && event.code === 'KeyB') {
+      event.preventDefault()
+      event.stopPropagation()
+      void chooseTask()
       return
     }
     // Cmd/Ctrl+Shift+O: a symbol of the file; Cmd/Ctrl+Alt+O: of the projects (as in VS Code).

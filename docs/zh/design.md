@@ -76,6 +76,32 @@ folio 能打开的文件，文件夹在前，并跟随磁盘变化：在别处�
 标记光标所在的符号，点击即跳转；文本上方的面包屑显示文件的项目和文件夹，以及包含光标的符号；`Cmd/Ctrl+Shift+O` 按名称跳转到
 文件中的符号，`Cmd/Ctrl+Alt+O` 跳转到任一可见项目的符号（在编辑器中打开其文件并定位）。自动补全除文件自身的单词外，还提供各项目中的名称。
 
+**任务**（`Cmd/Ctrl+Shift+B`，或命令中的*运行任务*）属于项目自身：`package.json` 的脚本（用锁文件指明的包管理器运行）和
+`composer.json` 的脚本、`Makefile` 的目标、`justfile` 的配方，以及 `.folio/settings.json` 中的任务；最近运行的排在前面。
+任务在以其命名的独立控制台标签页中运行，随任务结束。其输出会被解析出**问题**——`路径:行:列: 消息`（gcc、clang、go、ruff、
+mypy、pytest、eslint 的 unix 格式）、tsc、eslint 的 stylish 块、rustc、psalm——显示在**问题**面板中（右侧栏，任务发现问题时自动打开），
+每条都能跳转到对应位置，并在代码编辑器中加下划线。
+
+代码项目可以在**保存时格式化**，使用项目自己的格式化工具——prettier（项目自带的）、pint、gofmt、ruff、rustfmt、black，
+或从 stdin 读取文本的自定义命令——前提是 `.folio/settings.json` 中这样设置；只修改格式化工具改动的部分，可一步撤销。
+
+项目根目录的 `.folio/settings.json` 保存项目自己的设置，需手动编写（如项目成员愿意，可随项目提交）：
+
+```json
+{
+  "kind": "code",
+  "indentUnit": "  ",
+  "tabSize": 2,
+  "formatOnSave": true,
+  "formatter": "prettier",
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }]
+}
+```
+
+类型优先于自动判断的类型，缩进优先于 `.editorconfig`。自定义按键写在 `folio-data/keybindings.json` 中，没有单独的设置界面：
+`[{ "key": "Mod-Shift-d", "command": "copyLineDown" }, { "key": "Mod-Alt-p", "command": "folio.problems" }]`
+——代码编辑器的命令用其名称，folio 的命令用 `folio.` 加命令 id；在编辑器中，编辑器自己的按键优先于 folio 的快捷键。
+
 项目分为**笔记**项目和**代码**项目——添加时自动判断（根目录有 `package.json`、`composer.json`、`go.mod`、`Cargo.toml`……，
 或是除 README 外没有笔记的 git 仓库，即为代码项目），可在其菜单中更改。代码项目列出所有文件，包括以点开头的文件
 （`.github`、`.editorconfig`），非文本文件用系统程序打开；保存不会自动提交——提交需手动完成。在 git 管理的文件夹中，
@@ -265,6 +291,7 @@ folio 则什么都不问——所有内容都已在磁盘上。如果在你编�
 | `Ctrl+G` | 在代码编辑器中跳转到行（所有系统） |
 | `Ctrl+Shift+G` | 更改：暂存、提交（所有系统） |
 | `Cmd/Ctrl+Shift+O`、`Cmd/Ctrl+Alt+O` | 文件中的符号、项目中的符号 |
+| `Cmd/Ctrl+Shift+B` | 运行项目任务 |
 | `Cmd/Ctrl+W` | 关闭标签页 |
 | `Cmd/Ctrl+B` | 侧边栏 |
 

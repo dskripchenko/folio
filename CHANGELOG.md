@@ -34,6 +34,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   one holding the caret marked; breadcrumbs above the code editor;
   `Cmd/Ctrl+Shift+O` goes to a symbol of the file, `Cmd/Ctrl+Alt+O` to one of
   every visible project; completion offers the projects' names.
+- Tasks (ADR-002, I3): `Cmd/Ctrl+Shift+B` runs a script of `package.json` or
+  `composer.json`, a `Makefile` target, a `justfile` recipe or a task of
+  `.folio/settings.json` in a console tab of its own; the ones run lately come
+  first.
+- The **Problems** panel: errors and warnings read from a task's output (tsc,
+  eslint, gcc/clang, go, rustc, ruff, mypy, pytest, psalm…), each a way to
+  its place, and underlined in the code editor.
+- Formatting on save with the project's formatter (prettier, pint, gofmt,
+  ruff, rustfmt, black, or a command of its own), when `.folio/settings.json`
+  asks for it.
+- `.folio/settings.json`: a project's kind, indentation, tasks and
+  formatting; `folio-data/keybindings.json`: keys of one's own for the code
+  editor's commands and folio's.
 
 ## [1.1.0] - 2026-11-03
 

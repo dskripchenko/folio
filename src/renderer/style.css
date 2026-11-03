@@ -605,3 +605,20 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .git-peek-head span { flex: 1; }
 .git-peek-revert { padding: 2px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--tab); color: var(--fg); font: inherit; cursor: pointer; }
 .git-peek-old { margin: 0; padding: 6px 10px; background: color-mix(in srgb, #cf222e 10%, transparent); font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+.problems-panel { width: 340px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
+.problems-panel[hidden] { display: none; }
+.problems-panel header { display: flex; align-items: center; gap: 8px; padding: 10px 10px 6px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.problems-title { flex: 1; }
+.problems-list { flex: 1; min-height: 0; overflow: auto; padding: 0 6px 12px; }
+.problems-none { margin: 6px 8px; color: var(--muted); font-size: 12px; }
+.problems-file h3 { margin: 10px 6px 4px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.problems-row { display: flex; gap: 6px; align-items: baseline; width: 100%; padding: 3px 6px; border: 0; border-radius: 5px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.problems-row:hover { background: color-mix(in srgb, var(--line) 50%, transparent); }
+.problems-row:disabled { cursor: default; opacity: 0.7; }
+.problems-sign { flex: none; font-size: 10px; }
+.problems-error .problems-sign { color: #cf222e; }
+.problems-warning .problems-sign { color: #9a6700; }
+.problems-info .problems-sign { color: #0969da; }
+.problems-message { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.problems-at { flex: none; color: var(--muted); font-size: 11px; }
+@media print { .problems-panel { display: none !important; } }

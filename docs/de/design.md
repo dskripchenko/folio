@@ -121,6 +121,46 @@ zeigen Projekt und Ordner der Datei, dann die Symbole um die Einfügemarke;
 geöffnet). Die Vervollständigung bietet die Namen der Projekte neben den
 Wörtern der Datei.
 
+**Aufgaben** (`Cmd/Strg+Umschalt+B` oder *Eine Aufgabe ausführen* unter den
+Befehlen) sind die des Projekts: die Skripte von `package.json` (mit dem
+Paketmanager, den die Lock-Datei nennt) und `composer.json`, die Ziele eines
+`Makefile`, die Rezepte einer `justfile` und die Aufgaben aus
+`.folio/settings.json`; die zuletzt ausgeführten zuerst. Eine Aufgabe läuft in
+einem eigenen Konsolen-Tab mit ihrem Namen, der mit ihr endet. Ihre Ausgabe wird
+nach **Problemen** gelesen — `Pfad:Zeile:Spalte: Meldung` (gcc, clang, go, ruff,
+mypy, pytest, eslints Unix-Form), tsc, eslints Stylish-Blöcke, rustc, psalm —,
+gezeigt in der Leiste **Probleme** (rechte Leiste, öffnet sich, wenn eine
+Aufgabe welche findet), jedes ein Weg zu seiner Stelle und im Code-Editor
+unterstrichen.
+
+Ein Code-Projekt kann **beim Speichern formatieren** mit seinem eigenen
+Formatierer — prettier (das des Projekts), pint, gofmt, ruff, rustfmt, black
+oder einem eigenen Befehl, der den Text von stdin liest —, wenn
+`.folio/settings.json` es verlangt; nur was der Formatierer änderte, wird
+geändert, in einem Schritt rückgängig zu machen.
+
+`.folio/settings.json` oben in einem Projekt enthält seine eigenen
+Einstellungen, von Hand geschrieben (und mit ihm committet, wenn seine Leute
+wollen):
+
+```json
+{
+  "kind": "code",
+  "indentUnit": "  ",
+  "tabSize": 2,
+  "formatOnSave": true,
+  "formatter": "prettier",
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }]
+}
+```
+
+Die Art gilt vor der erratenen, die Einrückung vor der von `.editorconfig`.
+Eigene Tasten stehen in `folio-data/keybindings.json`, ohne Fenster dafür:
+`[{ "key": "Mod-Shift-d", "command": "copyLineDown" }, { "key": "Mod-Alt-p",
+"command": "folio.problems" }]` — die Befehle des Code-Editors mit ihren Namen,
+die von folio mit `folio.` und der ID ihres Befehls; im Editor gelten seine
+vor folios Kürzeln.
+
 Ein Projekt ist eines aus **Notizen** oder aus **Code** — beim Hinzufügen
 erraten (ein `package.json`, `composer.json`, `go.mod`, `Cargo.toml` … oben,
 oder ein Git-Repository ohne Notizen neben seiner README macht es zu Code) und in
@@ -495,6 +535,7 @@ Pfade.
 | `Strg+G` | zu einer Zeile gehen, im Code-Editor (auf jedem System) |
 | `Strg+Umschalt+G` | die Änderungen: vormerken, committen (auf jedem System) |
 | `Cmd/Strg+Umschalt+O`, `Cmd/Strg+Alt+O` | ein Symbol der Datei, der Projekte |
+| `Cmd/Strg+Umschalt+B` | eine Aufgabe des Projekts ausführen |
 
 ## Suchen
 

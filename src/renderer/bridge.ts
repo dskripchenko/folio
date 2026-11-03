@@ -203,7 +203,7 @@ export interface FolioBridge {
   onGoToFile: Listener
   onToggleConsole: Listener
   onConsoleHere: Listener
-  openConsole(cwd: string | null, cols: number, rows: number): Promise<{ id: number; cwd: string } | { error: string }>
+  openConsole(cwd: string | null, cols: number, rows: number, command?: string): Promise<{ id: number; cwd: string } | { error: string }>
   consoleInput(id: number, data: string): void
   consoleResize(id: number, cols: number, rows: number): void
   closeConsole(id: number): void
@@ -216,6 +216,14 @@ export interface FolioBridge {
   replace(query: string, options: Record<string, boolean>, replacement: string, files: string[]): Promise<{ files: number; replacements: number; commits: number } | { error: string }>
   onSearchHits(callback: (id: number, batch: unknown) => void): () => void
   allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'other' }[]>
+  /** The settings of the project a file is in (`.folio/settings.json`). */
+  projectSettings(path: string): Promise<{ indentUnit?: string; tabSize?: number }>
+  /** Keys of one's own, from folio-data/keybindings.json. */
+  keybindings(): Promise<{ key: string; command: string }[]>
+  /** A file's text formatted before it is saved, when its project asks for it; null otherwise. */
+  formatText(path: string, text: string): Promise<string | null>
+  /** The tasks of the project a path is in, and the folder they run in (ADR-002, I3). */
+  projectTasks(path: string): Promise<{ dir: string; tasks: { name: string; command: string; source: string }[] } | null>
   /** The symbols of every visible project's code (ADR-002, I2). */
   projectSymbols(): Promise<{ root: string; label: string | null; path: string; name: string; kind: string; container: string; line: number; column: number }[]>
   onPrint: Listener

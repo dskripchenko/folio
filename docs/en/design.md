@@ -113,6 +113,42 @@ file by name and `Cmd/Ctrl+Alt+O` to one of every visible project (its file
 opened in the editor at it). Completion offers the projects' names besides the
 file's own words.
 
+**Tasks** (`Cmd/Ctrl+Shift+B`, or *Run a task* among the commands) are the
+project's own: the scripts of `package.json` (run by the package manager its
+lockfile names) and `composer.json`, the targets of a `Makefile`, the recipes of
+a `justfile`, and the tasks of `.folio/settings.json`; the ones run lately come
+first. A task runs in a console tab of its own named after it, which ends when
+it does. Its output is read for **problems** — `path:line:col: message` (gcc,
+clang, go, ruff, mypy, pytest, eslint's unix form), tsc, eslint's stylish
+blocks, rustc, psalm — shown in the **Problems** panel (right rail, opened when
+a task finds some), each a way to its place, and underlined in the code editor.
+
+A project of code may **format on save** with its own formatter — prettier
+(the project's), pint, gofmt, ruff, rustfmt, black, or a command of its own
+reading the text on stdin — when `.folio/settings.json` asks for it; only what
+the formatter changed is changed, undone as one step.
+
+`.folio/settings.json` at a project's top holds its own settings, written by
+hand (and committed with it, if its people want):
+
+```json
+{
+  "kind": "code",
+  "indentUnit": "  ",
+  "tabSize": 2,
+  "formatOnSave": true,
+  "formatter": "prettier",
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }]
+}
+```
+
+The kind is taken over the guessed one, the indentation over `.editorconfig`'s.
+Keys of one's own go in `folio-data/keybindings.json`, without a window for
+them: `[{ "key": "Mod-Shift-d", "command": "copyLineDown" }, { "key":
+"Mod-Alt-p", "command": "folio.problems" }]` — the code editor's commands by
+their names, folio's by `folio.` and their command's id; in the editor its own
+win over folio's shortcuts.
+
 A project is of **notes** or of **code** — guessed when it is added (a
 `package.json`, `composer.json`, `go.mod`, `Cargo.toml`… at its top, or a git
 repository with no notes beside its README makes it code) and changed in its
@@ -453,6 +489,7 @@ relative paths.
 | `Ctrl+G` | go to a line, in the code editor (on every system) |
 | `Ctrl+Shift+G` | the changes: staged, committed (on every system) |
 | `Cmd/Ctrl+Shift+O`, `Cmd/Ctrl+Alt+O` | a symbol of the file, of the projects |
+| `Cmd/Ctrl+Shift+B` | run a task of the project |
 
 Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
 `file:plan` (a value in quotes may have spaces); with no text left, a filter

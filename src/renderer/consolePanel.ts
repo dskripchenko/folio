@@ -32,7 +32,8 @@ export interface ConsoleText {
 }
 
 export interface ConsoleBridge {
-  open(cwd: string | null, cols: number, rows: number): Promise<{ id: number; cwd: string } | { error: string }>
+  /** A shell in a folder; with a command, one that runs it and ends with it (a task). */
+  open(cwd: string | null, cols: number, rows: number, command?: string): Promise<{ id: number; cwd: string } | { error: string }>
   input(id: number, data: string): void
   resize(id: number, cols: number, rows: number): void
   close(id: number): void
@@ -86,6 +87,8 @@ interface Group {
   button: HTMLButtonElement
   label: HTMLElement
   activity: boolean
+  /** A task's name: the tab's label, whatever runs in it. */
+  task?: string
 }
 
 type Position = 'bottom' | 'right'
@@ -232,12 +235,25 @@ export class ConsolePanel {
 
   /** A new console in a folder (null: Shared), in a tab of its own. */
   async open(cwd: string | null): Promise<void> {
+    await this.openGroup(cwd)
+  }
+
+  /**
+   * A task: its command run in a console of its own in the folder, the tab
+   * named after it, ending when the command does. The console's id, to follow
+   * its output; null when it did not start.
+   */
+  async run(cwd: string, command: string, name: string): Promise<number | null> {
+    return this.openGroup(cwd, { command, name })
+  }
+
+  private async openGroup(cwd: string | null, task?: { command: string; name: string }): Promise<number | null> {
     this.setVisible(true)
     const el = document.createElement('div')
     el.className = 'console-group'
     const button = document.createElement('button')
     const label = document.createElement('span')
-    const group: Group = { panes: [], active: null as unknown as Pane, el, button, label, activity: false }
+    const group: Group = { panes: [], active: null as unknown as Pane, el, button, label, activity: false, ...(task ? { task: task.name } : {}) }
     button.type = 'button'
     button.className = 'console-tab'
     button.setAttribute('role', 'tab')
@@ -262,7 +278,7 @@ export class ConsolePanel {
     this.body.append(el)
     this.groups.push(group)
     this.activate(group)
-    await this.addPane(group, cwd)
+    return this.addPane(group, cwd, task?.command)
   }
 
   /** A second console beside the one in front, in its folder. */
@@ -275,7 +291,7 @@ export class ConsolePanel {
 
   // Panes -----------------------------------------------------------------------------------
 
-  private async addPane(group: Group, cwd: string | null): Promise<void> {
+  private async addPane(group: Group, cwd: string | null, command?: string): Promise<number | null> {
     const el = document.createElement('div')
     el.className = 'console-pane'
     el.dataset.testid = 'console'
@@ -345,17 +361,20 @@ export class ConsolePanel {
       if (this.active === group) pane.view.focus()
     })
     const { cols, rows } = pane.view.fit()
-    const opened = await this.bridge.open(cwd, cols, rows)
+    // A task's command shown first, as if typed.
+    if (command !== undefined) term.write(`\x1b[2m$ ${command}\x1b[0m\r\n`)
+    const opened = await this.bridge.open(cwd, cols, rows, command)
     if ('error' in opened) {
       pane.ended = true
       term.write(`\x1b[31m${this.text.failed.replace('{error}', opened.error)}\x1b[0m\r\n`)
       this.decorate(group)
-      return
+      return null
     }
     pane.id = opened.id
     pane.cwd = opened.cwd
     this.decorate(group)
     this.bridge.resize(opened.id, term.cols, term.rows)
+    return opened.id
   }
 
   private closePane(group: Group, pane: Pane): void {
@@ -428,7 +447,7 @@ export class ConsolePanel {
     })
     const runningText = last && last.output !== undefined && last.end === undefined ? last.text : null
     const where = pane.cwd ? baseName(pane.cwd) : this.text.title
-    group.label.textContent = runningText ? `${runningText.split(/\s+/)[0]} · ${where}` : where
+    group.label.textContent = group.task ? `${group.task} · ${where}` : runningText ? `${runningText.split(/\s+/)[0]} · ${where}` : where
     group.button.title = [pane.cwd, runningText ? this.text.running.replace('{command}', runningText) : ''].filter(Boolean).join('\n')
     // How the last finished command ended (the last one may be the empty prompt after it).
     const done = [...pane.term.commands].reverse().find((c) => c.end !== undefined)

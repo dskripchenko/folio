@@ -107,12 +107,12 @@ export class SymbolPalette {
   }
 
   /** Opens over the window with the symbols `load` gives (in the file: in its order; across projects: by name). */
-  async open(scope: 'file' | 'project', load: () => Promise<SymbolEntry[]>, choose: (s: SymbolEntry) => void): Promise<void> {
+  async open(placeholder: string, load: () => Promise<SymbolEntry[]>, choose: (s: SymbolEntry) => void): Promise<void> {
     this.choose = choose
     this.returnFocus = document.activeElement
     this.el.hidden = false
     this.input.value = ''
-    this.input.placeholder = scope === 'file' ? this.text.file : this.text.project
+    this.input.placeholder = placeholder
     this.input.setAttribute('aria-label', this.input.placeholder)
     this.input.focus()
     this.list.replaceChildren(this.note(this.text.loading))
