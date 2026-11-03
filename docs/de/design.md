@@ -150,7 +150,8 @@ wollen):
   "tabSize": 2,
   "formatOnSave": true,
   "formatter": "prettier",
-  "tasks": [{ "name": "serve", "command": "php artisan serve" }]
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }],
+  "lsp": { "php": ["phpactor", "language-server"], "python": false }
 }
 ```
 
@@ -160,6 +161,25 @@ Eigene Tasten stehen in `folio-data/keybindings.json`, ohne Fenster dafür:
 "command": "folio.problems" }]` — die Befehle des Code-Editors mit ihren Namen,
 die von folio mit `folio.` und der ID ihres Befehls; im Editor gelten seine
 vor folios Kürzeln.
+
+**Sprachserver** (LSP) verstehen den Code im Editor, wo einer auf dem Rechner
+ist: `typescript-language-server`, `intelephense` oder `phpactor`, `pyright`
+oder `pylsp`, `gopls`, `rust-analyzer`, `clangd` — folio bringt keinen mit. Eine
+Datei einer Sprache startet ihren Server für das Projekt (beendet einige
+Minuten nach dem Schließen ihrer letzten Datei); der eigene des Projekts
+(`node_modules/.bin`, `vendor/bin`, `.venv/bin`) läuft erst, wenn dem Projekt
+vertraut wird — einmal gefragt. Dann werden Probleme beim Tippen unterstrichen
+und unter **Probleme** gelistet; ruht der Zeiger auf einem Namen, sagt er, was
+er ist; `F12` oder `Cmd/Ctrl`+Klick geht zu seiner Definition, `Shift+F12`
+listet seine Verweise, `F2` benennt ihn im ganzen Projekt um (offene Dateien in
+ihren Tabs geändert, je ein Rückgängig), `Cmd/Ctrl+.` bietet die Korrekturen des
+Servers; die Vervollständigung nimmt zuerst die Einträge des Servers, die
+Parameter eines Aufrufs erscheinen nach `(` (`Cmd/Ctrl+Shift+Space`), Gliederung
+und Brotkrumen kommen vom Server. Die Statuszeile nennt den Server oder was zu
+installieren ist; *Ausgabe des Sprachservers* unter den Befehlen zeigt sein
+Protokoll. `"lsp"` in `.folio/settings.json` gibt einer Sprache einen eigenen
+Befehl oder mit `false` keinen; `"formatter": "lsp"` formatiert beim Speichern
+mit dem Server.
 
 Ein Projekt ist eines aus **Notizen** oder aus **Code** — beim Hinzufügen
 erraten (ein `package.json`, `composer.json`, `go.mod`, `Cargo.toml` … oben,

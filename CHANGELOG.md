@@ -8,11 +8,26 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [Unreleased]
 
 ### Fixed
+- The code editor measures its lines again when the page changes their height
+  (the edit mode's larger lines): a click, a hover and going to a definition
+  far down a file land on the line under the pointer.
+- A completion picked with a click keeps the cursor where the item went.
 - A note's preview no longer starts its note over when the pointer comes
   back onto the link while the note is still being read: on a slow machine it
   could never show.
 
 ### Added
+- Language servers (ADR-003): where `typescript-language-server`,
+  `intelephense`/`phpactor`, `pyright`/`pylsp`, `gopls`, `rust-analyzer` or
+  `clangd` is on the machine (or in the project, once it is trusted), the
+  code editor shows its problems as they are typed (and in Problems), what a
+  name is on hover, goes to a definition (`F12`, `Cmd/Ctrl`+click), lists
+  references (`Shift+F12`), renames across the project (`F2`, one undo a tab),
+  offers its fixes (`Cmd/Ctrl+.`), completes from it, shows a call's
+  parameters and builds the outline and breadcrumbs from it. `"lsp"` in
+  `.folio/settings.json` sets a language's command or turns it off;
+  `"formatter": "lsp"` formats on save with the server; *Language server
+  output* shows its log.
 - Projects of notes and of code (ADR-002, I1): the kind is guessed when a
   project is added (a `package.json`, `go.mod`, `Cargo.toml`… or a repository
   with no notes) and changed in its menu. A code project lists every file, its

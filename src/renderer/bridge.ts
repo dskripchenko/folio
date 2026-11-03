@@ -1,4 +1,5 @@
 import type { ChangesView } from './changesPanel'
+import type { LspOpenResult } from './lsp'
 
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
@@ -217,7 +218,21 @@ export interface FolioBridge {
   onSearchHits(callback: (id: number, batch: unknown) => void): () => void
   allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'other' }[]>
   /** The settings of the project a file is in (`.folio/settings.json`). */
-  projectSettings(path: string): Promise<{ indentUnit?: string; tabSize?: number }>
+  projectSettings(path: string): Promise<{ indentUnit?: string; tabSize?: number; formatOnSave?: boolean; formatter?: string }>
+  /** Language servers (ADR-003): a file opened in its server, its changes, its saves; requests at positions. */
+  lspOpen(path: string, text: string): Promise<LspOpenResult>
+  lspChange(path: string, edits: unknown[]): void
+  lspSave(path: string): void
+  lspClose(path: string): void
+  lspRequest(path: string, method: string, params: Record<string, unknown>): Promise<unknown>
+  lspWorkspace(path: string, method: string, params: unknown): Promise<unknown>
+  lspLog(path: string): Promise<string | null>
+  lspEditFile(path: string, edits: unknown[]): Promise<boolean>
+  lspApplied(id: number, applied: boolean): void
+  onLspDiagnostics: Listener
+  onLspApplyEdit: Listener
+  /** Lines of files (0-based), trimmed, for previews. */
+  fileLines(items: { path: string; line: number }[]): Promise<string[]>
   /** Keys of one's own, from folio-data/keybindings.json. */
   keybindings(): Promise<{ key: string; command: string }[]>
   /** A file's text formatted before it is saved, when its project asks for it; null otherwise. */

@@ -33,6 +33,20 @@ import { GitMarks, type GitMarksText } from './gitMarks'
 import { CodeNav, type NavItem } from './codeNav'
 import { SymbolPalette, type SymbolPaletteText } from './symbolPalette'
 import { parseProblems, ProblemsPanel, type ProblemsText, type ResolvedProblem } from './problems'
+import {
+  applyTextEdits,
+  applyWorkspaceEdit,
+  completionsAt,
+  definitionAt,
+  documentSymbols,
+  formattingEdits,
+  hoverAt,
+  LspBinding,
+  referencesAt,
+  signatureAt,
+  type LspLocation,
+  type LspRange,
+} from './lsp'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
 import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
@@ -90,6 +104,7 @@ const TEXT = {
     changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
     gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
+    lsp: { none: 'No language server: {install}', untrusted: '{server}: the project is not trusted', failed: '{server} did not start', log: 'Language server output', definitions: 'Definitions', references: 'References' },
     problems: { title: 'Problems', close: 'Close', none: 'No problems. A task\'s errors and warnings come here.', from: 'From the task {task}' } as ProblemsText,
     tasks2: { run: 'Run a task', none: 'No tasks here: scripts of package.json or composer.json, Makefile targets, justfile recipes, or .folio/settings.json.' },
     blame: 'Who changed each line (blame)',
@@ -153,6 +168,7 @@ const TEXT = {
     changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
     gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
+    lsp: { none: 'Нет языкового сервера: {install}', untrusted: '{server}: проекту не доверяют', failed: '{server} не запустился', log: 'Вывод языкового сервера', definitions: 'Определения', references: 'Ссылки' },
     problems: { title: 'Проблемы', close: 'Закрыть', none: 'Проблем нет. Сюда попадают ошибки и предупреждения задач.', from: 'Из задачи {task}' } as ProblemsText,
     tasks2: { run: 'Запустить задачу', none: 'Задач нет: скрипты package.json или composer.json, цели Makefile, рецепты justfile или .folio/settings.json.' },
     blame: 'Кто менял каждую строку (blame)',
@@ -320,7 +336,34 @@ function formatOf(tab: Tab): Format {
 }
 
 function viewOptions(tab: Tab, main = false): ViewOptions {
-  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main, code: main ? tab.code : undefined, completion: projectCompletion, keymap: editorKeymap }
+  return {
+    base: tab.doc?.base,
+    name: tab.doc?.name ?? titleOf(tab),
+    main,
+    code: main ? tab.code : undefined,
+    completion: async (context) => {
+      // The language server's first, then the projects' names it does not have.
+      const b = lspOf(tab)
+      const fromServer = b ? await completionsAt(b, context.pos, context.explicit, context.prefix) : null
+      const names = (await projectCompletion(context)) ?? []
+      return [...(fromServer ?? []), ...names.filter((n) => !fromServer?.some((i) => i.label === n.label))]
+    },
+    keymap: [...editorKeymap, ...lspKeys(tab)],
+    hover: ({ pos }) => {
+      const b = lspOf(tab)
+      return b ? hoverAt(b, pos) : null
+    },
+    signatureHelp: ({ pos, explicit }) => {
+      const b = lspOf(tab)
+      return b ? signatureAt(b, pos, explicit) : null
+    },
+    onModClick: (pos) => {
+      const b = lspOf(tab)
+      if (!b?.has('definitionProvider')) return false
+      void goToDefinition(b, pos)
+      return true
+    },
+  }
 }
 
 /** A version from the history: as it was, its changes against now, or the two side by side. */
@@ -431,7 +474,16 @@ function render(tab: Tab): void {
     if (editor && path) void watchChanges(editor, path)
     // Its symbols: the outline, the breadcrumbs, going to one by name.
     const crumbs = (el as SourceEditorElement).folioCrumbs
-    if (editor && crumbs) navs.set(editor, new CodeNav(editor, editor.language, crumbs, placeOf(tab), () => syncOutline()))
+    if (editor && crumbs)
+      navs.set(
+        editor,
+        new CodeNav(editor, editor.language, crumbs, placeOf(tab), () => syncOutline(), () => {
+          const b = lspBindings.get(editor)
+          return b ? documentSymbols(b) : Promise.resolve(null)
+        }),
+      )
+    // Its language server (ADR-003).
+    if (editor && path) void attachLsp(editor, path)
     // A task's problems in this file, marked in it.
     if (editor && path) {
       editorPaths.set(editor, path)
@@ -792,7 +844,7 @@ function syncStatus(): void {
   const tab = active
   if (!statusBar) return
   const editor = tab && !tab.version ? codeEditorOf(tab) : null
-  if (editor) return statusBar.showEditor(editor)
+  if (editor) return statusBar.showEditor(editor, lspStatus.get(editor) ?? null)
   if (!tab || tab.version || (formatOf(tab) !== 'markdown' && formatOf(tab) !== 'text')) return statusBar.show(null)
   const field = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility()) ?? null
   statusBar.show({ text: tab.text, field: field && document.activeElement === field ? field : null })
@@ -911,6 +963,201 @@ function folioKey(event: KeyboardEvent): boolean {
   event.stopPropagation()
   void command.run()
   return true
+}
+
+// Language servers (ADR-003) ------------------------------------------------------
+
+const lspBindings = new Map<CodeEditor, LspBinding>()
+/** What the status line says of an editor's server: its name, or why there is none. */
+const lspStatus = new Map<CodeEditor, string>()
+/** The servers' last diagnostics of each file, as they sent them (for code actions). */
+const lspDiagnostics = new Map<string, { range: LspRange; severity?: number; message: string; source?: string; code?: unknown }[]>()
+
+/** Editors taken off the page: their files closed in their servers. */
+function sweepLsp(): void {
+  for (const [editor, b] of lspBindings)
+    if (!editor.dom.isConnected) {
+      b.dispose()
+      lspBindings.delete(editor)
+      lspStatus.delete(editor)
+    }
+}
+
+function lspOf(tab: Tab | null): LspBinding | null {
+  sweepLsp()
+  const editor = codeEditorOf(tab)
+  return editor ? (lspBindings.get(editor) ?? null) : null
+}
+
+function lspByPath(path: string): LspBinding | null {
+  sweepLsp()
+  for (const b of lspBindings.values()) if (b.path === path || b.real === path) return b
+  return null
+}
+
+/** A file in the code editor opened in its language server (asked to trust a project's own the first time). */
+async function attachLsp(editor: CodeEditor, path: string): Promise<void> {
+  sweepLsp()
+  const sent = editor.value.replace(/\r\n/g, '\n')
+  const r = await folio.lspOpen(path, sent)
+  if (!editor.dom.isConnected) {
+    if (r.status === 'ok') folio.lspClose(path)
+    return
+  }
+  if (r.status === 'ok') {
+    const b = new LspBinding(editor, path, r.server, r.capabilities, folio, r.real)
+    lspBindings.set(editor, b)
+    lspStatus.set(editor, r.server)
+    // Typed while the server was starting: the server gets the text as it is now.
+    const now = editor.value.replace(/\r\n/g, '\n')
+    if (now !== sent) {
+      const lines = sent.split('\n')
+      folio.lspChange(path, [{ from: { line: 0, character: 0 }, to: { line: lines.length - 1, character: lines[lines.length - 1]!.length }, text: now }])
+    }
+    navs.get(editor)?.refresh()
+    markLspDiagnostics(path)
+  } else if (r.status === 'none') {
+    if (r.install) lspStatus.set(editor, t.lsp.none.replace('{install}', r.install))
+  } else lspStatus.set(editor, r.status === 'untrusted' ? t.lsp.untrusted.replace('{server}', r.server) : t.lsp.failed.replace('{server}', r.server))
+  syncStatus()
+}
+
+const severityName = (n?: number): 'error' | 'warning' | 'info' => (n === 2 ? 'warning' : n === 3 || n === 4 ? 'info' : 'error')
+
+/** A file's diagnostics from its server: in its editor and in the Problems panel. */
+function markLspDiagnostics(path: string, server?: string): void {
+  const list = lspDiagnostics.get(path) ?? []
+  const b = lspByPath(path)
+  if (b) {
+    b.editor.setDiagnostics(
+      list.map((d) => {
+        const from = b.offset(d.range.start)
+        return { from, to: Math.max(from, b.offset(d.range.end)), message: d.source ? `${d.message} (${d.source})` : d.message, severity: severityName(d.severity) }
+      }),
+      'lsp',
+    )
+  }
+  problemsPanel?.set(
+    `${server ?? b?.server ?? 'lsp'} · ${path}`,
+    list.map((d) => ({ file: path, line: d.range.start.line + 1, column: d.range.start.character + 1, severity: severityName(d.severity), message: d.message, path, task: server ?? b?.server ?? 'lsp' })),
+  )
+}
+
+folio.onLspDiagnostics((value) => {
+  const told = value as { path: string; server: string; list: { range: LspRange; severity?: number; message: string; source?: string }[] }
+  const { server, list } = told
+  // By the tab's path, when the server names the file another way.
+  const path = lspByPath(told.path)?.path ?? told.path
+  lspDiagnostics.set(path, list)
+  markLspDiagnostics(path, server)
+})
+
+folio.onLspApplyEdit((value) => {
+  const { id, edit } = value as { id: number; edit: unknown }
+  void applyWorkspaceEdit(edit as Parameters<typeof applyWorkspaceEdit>[0], lspByPath, (p, edits) => folio.lspEditFile(p, edits)).then((ok) => folio.lspApplied(id, ok))
+})
+
+/** To a place a server named: in this file, or another one opened in the editor. */
+function goToLocation(from: LspBinding, loc: LspLocation): void {
+  const line = loc.range.start.line + 1
+  const column = loc.range.start.character + 1
+  if (loc.path === from.path || loc.path === from.real) from.editor.goToLine(line, column)
+  else void openInEditor(loc.path, line, column)
+}
+
+/** Where a place in the projects is, for a list: the file from its project, the line's text. */
+async function chooseLocation(b: LspBinding, list: LspLocation[], title: string): Promise<void> {
+  const previews = await folio.fileLines(list.map((l) => ({ path: l.path, line: l.range.start.line })))
+  void symbolPalette?.open(
+    title,
+    async () =>
+      list.map((l, i) => ({
+        name: previews[i] || l.path.split(/[\\/]/).pop()!,
+        kind: 'reference',
+        container: `${l.path.split(/[\\/]/).slice(-2).join('/')}:${l.range.start.line + 1}`,
+        line: i,
+        column: 1,
+      })),
+    (s) => goToLocation(b, list[s.line]!),
+  )
+}
+
+async function goToDefinition(b: LspBinding, pos: number): Promise<void> {
+  const list = await definitionAt(b, pos)
+  if (list.length === 1) goToLocation(b, list[0]!)
+  else if (list.length > 1) await chooseLocation(b, list, t.lsp.definitions)
+}
+
+/** The keys of what a server knows, as in VS Code: F12, Shift+F12, F2, Cmd/Ctrl+. */
+function lspKeys(tab: Tab): KeyBinding[] {
+  const act = (fn: (b: LspBinding) => void): KeyBinding['run'] => () => {
+    const b = lspOf(tab)
+    if (b) fn(b)
+    return null
+  }
+  const head = (b: LspBinding) => b.editor.state.selection.main.head
+  return [
+    { key: 'F12', run: act((b) => void goToDefinition(b, head(b))), readOnly: true },
+    {
+      key: 'Shift-F12',
+      run: act((b) => void referencesAt(b, head(b)).then((list) => (list.length ? chooseLocation(b, list, t.lsp.references) : undefined))),
+      readOnly: true,
+    },
+    { key: 'F2', run: act((b) => void renameAt(b, head(b))) },
+    { key: 'Mod-.', run: act((b) => void codeActionsAt(b)) },
+  ]
+}
+
+/** F2: a new name typed over the word; the server's edits across the project, one undo a file. */
+async function renameAt(b: LspBinding, pos: number): Promise<void> {
+  if (!b.has('renameProvider')) return
+  const doc = b.editor.state.doc
+  let from: number
+  let to: number
+  const prepared = await b.request<LspRange | { range: LspRange; placeholder: string } | { defaultBehavior: boolean }>('textDocument/prepareRename', b.at(pos))
+  if (prepared && 'start' in prepared) [from, to] = [b.offset(prepared.start), b.offset(prepared.end)]
+  else if (prepared && 'range' in prepared) [from, to] = [b.offset(prepared.range.start), b.offset(prepared.range.end)]
+  else {
+    const line = doc.lineAt(pos)
+    const m = [...line.text.matchAll(/[\p{L}\p{N}_$]+/gu)].find((x) => line.from + x.index! <= pos && pos <= line.from + x.index! + x[0].length)
+    if (!m) return
+    from = line.from + m.index!
+    to = from + m[0].length
+  }
+  const old = doc.slice(from, to)
+  const name = await b.editor.prompt(from, to, old)
+  if (!name || name === old) return
+  const edit = await b.request('textDocument/rename', { ...b.at(from), newName: name })
+  await applyWorkspaceEdit(edit as Parameters<typeof applyWorkspaceEdit>[0], lspByPath, (p, edits) => folio.lspEditFile(p, edits))
+}
+
+/** Cmd/Ctrl+.: the server's actions for the selection (and the problems there), the one chosen applied. */
+async function codeActionsAt(b: LspBinding): Promise<void> {
+  if (!b.has('codeActionProvider')) return
+  const main = b.editor.state.selection.main
+  const range = { start: b.position(main.from), end: b.position(main.to) }
+  const here = (lspDiagnostics.get(b.path) ?? []).filter((d) => d.range.start.line <= range.end.line && d.range.end.line >= range.start.line)
+  type Action = { title: string; edit?: unknown; command?: { command: string; arguments?: unknown[] } | string; arguments?: unknown[]; disabled?: unknown }
+  const actions = ((await b.request<Action[]>('textDocument/codeAction', { range, context: { diagnostics: here, triggerKind: 1 } })) ?? []).filter((a) => !a.disabled)
+  if (actions.length === 0) return
+  const chosen = await b.editor.menu(actions.map((a) => ({ label: a.title })))
+  if (chosen === null) return
+  let action = actions[chosen]!
+  if (!action.edit && !action.command) action = ((await b.request<Action>('codeAction/resolve', action as unknown as Record<string, unknown>)) ?? action)
+  if (action.edit) await applyWorkspaceEdit(action.edit as Parameters<typeof applyWorkspaceEdit>[0], lspByPath, (p, edits) => folio.lspEditFile(p, edits))
+  // A command (an action's, or a bare one): the server runs it, and may send edits back.
+  const command = typeof action.command === 'string' ? { command: action.command, arguments: action.arguments } : action.command
+  if (command) await folio.lspWorkspace(b.path, 'workspace/executeCommand', command)
+}
+
+/** The output of the server of the file in view, in a tab of its own. */
+async function showLspLog(): Promise<void> {
+  const path = active?.path
+  if (!path) return
+  const log = (await folio.lspLog(path)) ?? ''
+  const fence = '`'.repeat(3)
+  const text = `# ${t.lsp.log}\n\n${fence}text\n${log.split(fence).join("'''")}\n${fence}\n`
+  activate(makeTab({ path: null, text, saved: text }))
 }
 
 /** The files the code editors edit (for marking a task's problems in them). */
@@ -1089,6 +1336,18 @@ async function committedAgain(): Promise<void> {
 async function formatBeforeSave(tab: Tab): Promise<void> {
   const editor = codeEditorOf(tab)
   if (!editor || !tab.path) return
+  // The language server formats when the project names it the formatter.
+  const settings = await folio.projectSettings(tab.path)
+  if (settings.formatOnSave && settings.formatter === 'lsp') {
+    const b = lspOf(tab)
+    const edits = b ? await formattingEdits(b) : null
+    if (b && edits?.length) {
+      applyTextEdits(b, edits, 'input.format')
+      pull(tab)
+      tab.text = editor.value
+    }
+    return
+  }
   const before = editor.value
   const formatted = await folio.formatText(tab.path, before)
   if (formatted === null || formatted === before || editor.value !== before) return
@@ -1409,6 +1668,7 @@ async function save(tab: Tab, as: boolean): Promise<boolean> {
       : await folio.save(tab.path, tab.text, tab.baseline, false)
   if ('saved' in result) {
     savedAs(tab, result)
+    if (tab.path && lspByPath(tab.path)) folio.lspSave(tab.path)
     return true
   }
   if ('conflict' in result) {
@@ -1843,6 +2103,7 @@ function commands(): Command[] {
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },
     { id: 'symbol-project', group: c.edit, title: t.symbols.project, keys: `${mod}⌥O`, icon: 'search', run: () => goToSymbol('project') },
     { id: 'task-run', group: c.edit, title: t.tasks2.run, keys: `${mod}⇧B`, icon: 'play', run: () => void chooseTask() },
+    { id: 'lsp-log', group: view, title: t.lsp.log, icon: 'console', when: () => !!lspOf(active), run: () => void showLspLog() },
     { id: 'problems', group: view, title: t.problems.title, icon: 'alert', run: () => problemsPanel?.setVisible(!problemsPanel.visible) },
     { id: 'find-in-files', group: c.edit, title: c.findInFiles, keys: `${mod}⇧F`, icon: 'search', run: () => void searchPanel.open() },
     ...MODES.map(([m, name]): Command => ({ id: `mode-${m}`, group: view, title: t.modeNames[m], icon: name, when: () => modesOf(active).has(m) && modeOf(active!) !== m, run: () => setMode(active, m) })),

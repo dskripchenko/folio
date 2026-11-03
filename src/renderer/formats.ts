@@ -4,7 +4,7 @@
  * (never parsed as markup). The view is used for the document, a version
  * from the history and the two sides of a comparison alike.
  */
-import { CodeEditor, type CompletionSource, type KeyBinding } from '@dskripchenko/code-editor'
+import { CodeEditor, type CodeEditorOptions, type CompletionSource, type KeyBinding } from '@dskripchenko/code-editor'
 import { languageOf } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
 import { codeView, type CodeState } from './code'
@@ -66,6 +66,10 @@ export interface ViewOptions {
   completion?: CompletionSource
   /** Keys of one's own for the code editor (before its own). */
   keymap?: KeyBinding[]
+  /** What a name is, a call's parameters, a definition (a language server's). */
+  hover?: CodeEditorOptions['hover']
+  signatureHelp?: CodeEditorOptions['signatureHelp']
+  onModClick?: CodeEditorOptions['onModClick']
 }
 
 /** The document drawn, read-only. */
@@ -212,6 +216,9 @@ function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (te
     language: languageFor(format, o.name, text) ?? undefined,
     ...(o.completion ? { completion: o.completion } : {}),
     ...(o.keymap?.length ? { keymap: o.keymap } : {}),
+    ...(o.hover ? { hover: o.hover } : {}),
+    ...(o.signatureHelp ? { signatureHelp: o.signatureHelp } : {}),
+    ...(o.onModClick ? { onModClick: o.onModClick } : {}),
     onChange: (e) => {
       if (e.state.doc.length <= EAGER_CHARS) return take()
       if (pending) clearTimeout(pending)

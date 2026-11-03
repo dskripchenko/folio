@@ -138,7 +138,8 @@ hand (and committed with it, if its people want):
   "tabSize": 2,
   "formatOnSave": true,
   "formatter": "prettier",
-  "tasks": [{ "name": "serve", "command": "php artisan serve" }]
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }],
+  "lsp": { "php": ["phpactor", "language-server"], "python": false }
 }
 ```
 
@@ -148,6 +149,23 @@ them: `[{ "key": "Mod-Shift-d", "command": "copyLineDown" }, { "key":
 "Mod-Alt-p", "command": "folio.problems" }]` — the code editor's commands by
 their names, folio's by `folio.` and their command's id; in the editor its own
 win over folio's shortcuts.
+
+**Language servers** (LSP) understand the code in the editor where one is on
+the machine: `typescript-language-server`, `intelephense` or `phpactor`,
+`pyright` or `pylsp`, `gopls`, `rust-analyzer`, `clangd` — none ships with
+folio. A file of a language starts its server for the project (stopped a few
+minutes after its last file closes); the project's own one (`node_modules/.bin`,
+`vendor/bin`, `.venv/bin`) runs only once the project is trusted, asked once.
+Then problems are underlined as they are typed and listed in **Problems**; the
+pointer resting on a name tells what it is; `F12` or `Cmd/Ctrl`+click goes to
+its definition, `Shift+F12` lists its references, `F2` renames it across the
+project (open files changed in their tabs, one undo each), `Cmd/Ctrl+.` offers
+the server's fixes; completion takes the server's items first, a call's
+parameters show after `(` (`Cmd/Ctrl+Shift+Space`), and the outline and
+breadcrumbs come from the server. The status line names the server, or what to
+install for one; *Language server output* among the commands shows its log.
+`"lsp"` in `.folio/settings.json` gives a language a command of its own, or
+`false` to have none; `"formatter": "lsp"` formats on save with the server.
 
 A project is of **notes** or of **code** — guessed when it is added (a
 `package.json`, `composer.json`, `go.mod`, `Cargo.toml`… at its top, or a git

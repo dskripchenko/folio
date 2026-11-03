@@ -26,7 +26,7 @@
     "dist": "pnpm build && electron-builder --publish never"
   },
   "devDependencies": {
-    "@dskripchenko/code-editor": "^0.2.0",
+    "@dskripchenko/code-editor": "link:../code-editor",
     "@dskripchenko/diagrams": "^1.4.0",
     "@dskripchenko/embed": "1.18.0",
     "@dskripchenko/syntax": "link:../syntax",

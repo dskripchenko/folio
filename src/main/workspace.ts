@@ -21,6 +21,8 @@ export interface Project {
   autoCommit?: boolean
   /** Notes or code (ADR-002, I1): guessed when the project is added, changed from its menu. */
   kind?: ProjectKind
+  /** Its own language servers (in node_modules, vendor) may run: asked once (ADR-003). */
+  lspTrust?: boolean
 }
 
 export interface WorkspaceData {

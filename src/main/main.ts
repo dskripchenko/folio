@@ -8,6 +8,8 @@ import { changesOf, commitStaged, discardFile, stageFiles, unstageFiles } from '
 import { blameOf } from './blame'
 import { tasksOf as projectTasksOf } from './projectTasks'
 import { formatText } from './format'
+import { applyEdits, LspManager, type PositionEdit } from './lsp/manager'
+import { languageOf } from '@dskripchenko/syntax'
 import { readProjectSettings, type ProjectSettings } from './projectSettings'
 import { SymbolIndex, type SourceFile } from './symbolIndex'
 import {
@@ -429,6 +431,96 @@ function sources(): { root: string; label: string | null; dir: string }[] {
     return { root, label: source.label, dir }
   })
 }
+
+// Language servers (ADR-003) ---------------------------------------------------------
+
+/** Edits a server asks for, applied by the window; its answer by id. */
+const editRequests = new Map<number, (applied: boolean) => void>()
+let editSeq = 0
+const lsp = new LspManager({
+  setting: (root, language) => settingsOf(root).lsp?.[language],
+  async trust(root, server) {
+    const project = workspace.projects().find((p) => resolve(p.path) === resolve(root))
+    if (!project) return false
+    if (project.lspTrust !== undefined) return project.lspTrust
+    if (!win) return false
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'question',
+      buttons: [L().lspTrust, L().lspDistrust],
+      defaultId: 0,
+      cancelId: 1,
+      message: L().lspTrustQuestion.replace('{project}', project.name).replace('{server}', server),
+      detail: L().lspTrustDetail,
+    })
+    workspace.updateProject(project.id, { lspTrust: response === 0 })
+    return response === 0
+  },
+  diagnostics: (path, server, list) => send('lsp:diagnostics', { path, server, list }),
+  applyEdit: (edit) =>
+    new Promise((resolveApplied) => {
+      const id = ++editSeq
+      editRequests.set(id, resolveApplied)
+      send('lsp:apply-edit', { id, edit })
+      setTimeout(() => {
+        if (editRequests.delete(id)) resolveApplied(false)
+      }, 30_000)
+    }),
+})
+ipcMain.on('lsp:applied', (_e, id: unknown, applied: unknown) => {
+  const done = typeof id === 'number' ? editRequests.get(id) : undefined
+  editRequests.delete(id as number)
+  done?.(applied === true)
+})
+/** A file opened in the code editor: its language server, in its project (none outside projects). */
+ipcMain.handle('lsp:open', async (_e, path: unknown, text: unknown) => {
+  if (typeof path !== 'string' || typeof text !== 'string' || !isAbsolute(path)) return { status: 'none', install: null }
+  const owner = workspace.ownerOf(path)
+  if (owner?.kind !== 'project') return { status: 'none', install: null }
+  const language = languageOf(path, text.slice(0, Math.max(0, text.indexOf('\n'))))
+  if (!language) return { status: 'none', install: null }
+  return lsp.open(path, owner.project.path, language, text)
+})
+ipcMain.on('lsp:change', (_e, path: unknown, edits: unknown) => {
+  if (typeof path === 'string' && Array.isArray(edits)) lsp.change(path, edits as PositionEdit[])
+})
+ipcMain.on('lsp:save', (_e, path: unknown) => typeof path === 'string' && lsp.save(path))
+ipcMain.on('lsp:close', (_e, path: unknown) => typeof path === 'string' && void lsp.close(path))
+ipcMain.handle('lsp:request', (_e, path: unknown, method: unknown, params: unknown) =>
+  typeof path === 'string' && typeof method === 'string' && /^(textDocument|completionItem|codeAction)\//.test(method)
+    ? lsp.request(path, method, (params ?? {}) as Record<string, unknown>)
+    : null,
+)
+ipcMain.handle('lsp:workspace', (_e, path: unknown, method: unknown, params: unknown) =>
+  typeof path === 'string' && (method === 'workspace/symbol' || method === 'workspace/executeCommand') ? lsp.workspaceRequest(path, method, params) : null,
+)
+ipcMain.handle('lsp:log', (_e, path: unknown) => (typeof path === 'string' ? lsp.logOf(path) : null))
+/** A server's edits to a file not open in folio: written on disk (inside a project only). */
+ipcMain.handle('lsp:edit-file', (_e, path: unknown, edits: unknown) => {
+  if (typeof path !== 'string' || !Array.isArray(edits) || workspace.ownerOf(path)?.kind !== 'project') return false
+  try {
+    const text = readFileSync(path, 'utf8')
+    writeFileSync(path, applyEdits(text, edits as PositionEdit[]))
+    return true
+  } catch {
+    return false
+  }
+})
+/** Lines of files (for references' previews): each file read once. */
+ipcMain.handle('fs:lines', (_e, items: unknown) => {
+  if (!Array.isArray(items)) return []
+  const files = new Map<string, string[] | null>()
+  return (items as { path: string; line: number }[]).map(({ path, line }) => {
+    if (typeof path !== 'string' || workspace.ownerOf(path) === null) return ''
+    if (!files.has(path)) {
+      try {
+        files.set(path, readFileSync(path, 'utf8').split(/\r?\n/))
+      } catch {
+        files.set(path, null)
+      }
+    }
+    return files.get(path)?.[line]?.trim().slice(0, 200) ?? ''
+  })
+})
 
 /** The settings of the project a file is in (`.folio/settings.json`), for its editor's indentation. */
 ipcMain.handle('project:settings', (_e, path: unknown) => {
@@ -1614,6 +1706,7 @@ app.on('before-quit', (event) => {
 
 app.on('will-quit', () => {
   watcher.close()
+  void lsp.stopAll()
   // A downloaded version takes the program's place; only a packaged one has a place to take.
   if (!app.isPackaged) return
   const result = updater.apply(process.pid)

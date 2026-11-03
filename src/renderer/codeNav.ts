@@ -46,6 +46,8 @@ export class CodeNav {
     private readonly place: string[],
     /** Told when the symbols changed (the outline draws them again). */
     private readonly changed: () => void,
+    /** Symbols of another source (a language server's), over the patterns' when it gives some. */
+    private readonly source?: () => Promise<SymbolNode[] | null>,
   ) {
     const soon = () => this.soon()
     const moved = () => this.draw()
@@ -85,10 +87,23 @@ export class CodeNav {
     this.timer = setTimeout(() => this.read(), 300)
   }
 
+  /** Read again now (a language server came). */
+  refresh(): void {
+    this.read()
+  }
+
   private read(): void {
     this.timer = null
     const text = this.editor.state.doc.length <= LIMIT && this.language ? this.editor.value : ''
-    this.tree = text ? symbols(text, this.language!) : []
+    this.take(text ? symbols(text, this.language!) : [])
+    // The server's, when it answers: more exact than the patterns.
+    void this.source?.().then((tree) => {
+      if (tree && tree.length) this.take(tree)
+    })
+  }
+
+  private take(tree: SymbolNode[]): void {
+    this.tree = tree
     const next = navItems(this.tree)
     const same = JSON.stringify(next) === JSON.stringify(this.items)
     this.items = next

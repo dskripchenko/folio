@@ -94,13 +94,23 @@ mypy、pytest、eslint 的 unix 格式）、tsc、eslint 的 stylish 块、rustc
   "tabSize": 2,
   "formatOnSave": true,
   "formatter": "prettier",
-  "tasks": [{ "name": "serve", "command": "php artisan serve" }]
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }],
+  "lsp": { "php": ["phpactor", "language-server"], "python": false }
 }
 ```
 
 类型优先于自动判断的类型，缩进优先于 `.editorconfig`。自定义按键写在 `folio-data/keybindings.json` 中，没有单独的设置界面：
 `[{ "key": "Mod-Shift-d", "command": "copyLineDown" }, { "key": "Mod-Alt-p", "command": "folio.problems" }]`
 ——代码编辑器的命令用其名称，folio 的命令用 `folio.` 加命令 id；在编辑器中，编辑器自己的按键优先于 folio 的快捷键。
+
+**语言服务器**（LSP）在本机装有时理解编辑器中的代码：`typescript-language-server`、`intelephense` 或 `phpactor`、
+`pyright` 或 `pylsp`、`gopls`、`rust-analyzer`、`clangd`——folio 不自带任何服务器。打开某语言的文件即为该项目启动其服务器
+（最后一个文件关闭几分钟后停止）；项目自带的服务器（`node_modules/.bin`、`vendor/bin`、`.venv/bin`）只有在信任该项目后才运行，
+只询问一次。之后问题在输入时即加下划线并列入**问题**面板；指针停在名称上显示它是什么；`F12` 或 `Cmd/Ctrl`+单击转到定义，
+`Shift+F12` 列出引用，`F2` 在整个项目中重命名（已打开的文件在其标签页中修改，每个标签页一次撤销），`Cmd/Ctrl+.` 提供服务器的修复；
+补全优先列出服务器的条目，调用的参数在 `(` 之后显示（`Cmd/Ctrl+Shift+Space`），大纲和面包屑来自服务器。状态栏显示服务器名称，
+或应安装什么；命令中的*语言服务器输出*显示其日志。`.folio/settings.json` 中的 `"lsp"` 为某语言指定自己的命令，`false` 表示不用服务器；
+`"formatter": "lsp"` 在保存时由服务器格式化。
 
 项目分为**笔记**项目和**代码**项目——添加时自动判断（根目录有 `package.json`、`composer.json`、`go.mod`、`Cargo.toml`……，
 或是除 README 外没有笔记的 git 仓库，即为代码项目），可在其菜单中更改。代码项目列出所有文件，包括以点开头的文件

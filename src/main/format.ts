@@ -29,6 +29,8 @@ const PRETTIER = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', 
 export function formatterFor(dir: string, file: string, named?: string): Run | null {
   const ext = extname(file).toLowerCase()
   const want = (name: string) => !named || named === name
+  // The language server formats in the window, not here.
+  if (named === 'lsp') return null
   if (named && !['prettier', 'pint', 'gofmt', 'ruff', 'black', 'rustfmt'].includes(named)) {
     const command = named.replace(/\{file\}/g, JSON.stringify(file))
     return win ? { bin: 'powershell.exe', args: ['-NoProfile', '-Command', command] } : { bin: '/bin/sh', args: ['-c', command] }

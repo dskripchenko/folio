@@ -15,8 +15,10 @@ export interface ProjectSettings {
   /** Tasks besides the ones found (package.json scripts, Makefile targets…). */
   tasks?: { name: string; command: string }[]
   formatOnSave?: boolean
-  /** The formatter: one folio knows (`prettier`, `gofmt`…) or a command reading the text on stdin and writing it on stdout. */
+  /** The formatter: one folio knows (`prettier`, `gofmt`…), `lsp` (the language server), or a command reading the text on stdin and writing it on stdout. */
   formatter?: string
+  /** Language servers by language: a command and its arguments, or false for none (ADR-003). */
+  lsp?: Record<string, string[] | false>
 }
 
 export function readProjectSettings(dir: string): ProjectSettings {
@@ -39,5 +41,13 @@ export function readProjectSettings(dir: string): ProjectSettings {
     )
   if (typeof r.formatOnSave === 'boolean') out.formatOnSave = r.formatOnSave
   if (typeof r.formatter === 'string' && r.formatter.trim()) out.formatter = r.formatter.trim()
+  if (r.lsp && typeof r.lsp === 'object' && !Array.isArray(r.lsp)) {
+    const lsp: Record<string, string[] | false> = {}
+    for (const [language, v] of Object.entries(r.lsp as Record<string, unknown>)) {
+      if (v === false) lsp[language] = false
+      else if (Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string')) lsp[language] = v as string[]
+    }
+    out.lsp = lsp
+  }
   return out
 }
