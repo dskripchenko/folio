@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
 ### Fixed
 - The code editor measures its lines again when the page changes their height
   (the edit mode's larger lines): a click, a hover and going to a definition
@@ -319,6 +321,7 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/dskripchenko/folio/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/dskripchenko/folio/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/dskripchenko/folio/releases/tag/v1.0.0

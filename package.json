@@ -1,6 +1,6 @@
 {
   "name": "folio",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "A desktop app to read, edit and print Markdown with live diagrams, API references and editors — portable on macOS, Windows and Linux.",
   "license": "MIT",
@@ -26,10 +26,10 @@
     "dist": "pnpm build && electron-builder --publish never"
   },
   "devDependencies": {
-    "@dskripchenko/code-editor": "link:../code-editor",
+    "@dskripchenko/code-editor": "^0.3.0",
     "@dskripchenko/diagrams": "^1.4.0",
     "@dskripchenko/embed": "1.18.0",
-    "@dskripchenko/syntax": "link:../syntax",
+    "@dskripchenko/syntax": "^0.6.0",
     "@dskripchenko/terminal": "^0.2.0",
     "@eslint/js": "10.0.1",
     "@fontsource/stix-two-math": "5.3.0",
