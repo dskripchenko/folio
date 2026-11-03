@@ -15,6 +15,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   never commits a save on its own.
 - `.gitignore` (with `.git/info/exclude` and the global excludes file) is
   followed in the tree, going to a file and searching, live as it is written.
+- The **Changes** panel (`Ctrl+Shift+G` on every system, as in VS Code): the
+  changed and the staged files, staged and unstaged a file at a time or all
+  at once, a file's changes thrown away (asked first), a message and Commit
+  (`Cmd/Ctrl+Enter`).
 
 ## [1.1.0] - 2026-11-03
 

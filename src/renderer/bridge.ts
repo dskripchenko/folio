@@ -1,3 +1,5 @@
+import type { ChangesView } from './changesPanel'
+
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
 export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'board' | 'text'
@@ -168,6 +170,13 @@ export interface FolioBridge {
   gitStart(path: string): Promise<GitInfo | null>
   gitAuto(path: string, on: boolean): Promise<GitInfo | null>
   gitCommit(path: string, message: string): Promise<string | null>
+  /** The changes of the repository holding a path (ADR-002, I1); null outside git. */
+  gitChanges(path: string): Promise<ChangesView | null>
+  gitStage(root: string, paths: string[]): Promise<boolean>
+  gitUnstage(root: string, paths: string[]): Promise<boolean>
+  /** Asks first; true when the changes were thrown away. */
+  gitDiscard(root: string, path: string): Promise<boolean>
+  gitCommitStaged(root: string, message: string): Promise<string | null>
   gitBranchCreate(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitBranchSwitch(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitRemote(path: string, url: string): Promise<{ ok: true } | GitRefusal>

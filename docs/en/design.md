@@ -311,6 +311,19 @@ a repository on branch `main` and a first commit of what is there.
 git is inside folio (isomorphic-git, pure JavaScript), so this works on a
 machine without git.
 
+### Changes
+
+`Ctrl+Shift+G` on every system (or the commit button on the right rail) opens
+**Changes**, as a code editor's source control: the files changed in the
+working folder and the ones staged for the next commit, each with its letter
+(**A**dded, **M**odified, **D**eleted, **U**ntracked). A file goes into the
+index and out of it with its `+` and `−` (or all of them at once from the
+group's heading), its changes are thrown away with the arrow — asked first,
+it cannot be undone — and its name opens it. A message and **Commit** (or
+`Cmd/Ctrl+Enter`) commit what is staged. The panel follows the document in
+view and looks again as the disk changes. In a project of code this is how
+commits are made: a save there never commits on its own.
+
 ### Branches and sync
 
 - **Branches**: the branch name in the panel opens the list — switch to one, or
@@ -418,6 +431,7 @@ relative paths.
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd+G`, `Cmd+Shift+G` (macOS); `F3`, `Shift+F3` | the next match, the previous |
 | `Ctrl+G` | go to a line, in the code editor (on every system) |
+| `Ctrl+Shift+G` | the changes: staged, committed (on every system) |
 
 Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
 `file:plan` (a value in quotes may have spaces); with no text left, a filter

@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
+import { changesOf, commitStaged, discardFile, stageFiles, unstageFiles } from './changes'
 import {
   abortMerge,
   aheadBehind,
@@ -1108,6 +1109,59 @@ ipcMain.handle('git:auto', async (_e, path: unknown, on: unknown) => {
   else if (owner?.kind === 'shared') workspace.setSharedAutoCommit(on)
   return gitInfo(path)
 })
+// Changes (ADR-002, I1): the repository's index and working folder, as source control shows them.
+ipcMain.handle('git:changes', async (_e, path: unknown) => {
+  if (typeof path !== 'string') return null
+  const root = await repoOf(path)
+  if (!root) return null
+  return { root, branch: await branchOf(root), ...(await changesOf(root)) }
+})
+/** The repository's root as asked for: one folio knows of (a project's or Shared's), never any folder. */
+async function changesRoot(root: unknown): Promise<string | null> {
+  if (typeof root !== 'string' || !isAbsolute(root)) return null
+  return (await repoOf(root)) === root && workspace.ownerOf(root) !== null ? root : null
+}
+const repoPaths = (paths: unknown): string[] | null =>
+  Array.isArray(paths) && paths.every((p) => typeof p === 'string' && !p.split('/').includes('..')) ? (paths as string[]) : null
+ipcMain.handle('git:stage', async (_e, root: unknown, paths: unknown) => {
+  const dir = await changesRoot(root)
+  const files = repoPaths(paths)
+  if (!dir || !files) return false
+  await stageFiles(dir, files)
+  return true
+})
+ipcMain.handle('git:unstage', async (_e, root: unknown, paths: unknown) => {
+  const dir = await changesRoot(root)
+  const files = repoPaths(paths)
+  if (!dir || !files) return false
+  await unstageFiles(dir, files)
+  return true
+})
+/** A file's changes thrown away, after asking: it cannot be undone. */
+ipcMain.handle('git:discard', async (_e, root: unknown, path: unknown) => {
+  const dir = await changesRoot(root)
+  const files = repoPaths([path])
+  if (!dir || !files || !win) return false
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning',
+    buttons: [L().discardConfirm, L().cancel],
+    defaultId: 1,
+    cancelId: 1,
+    message: L().discardQuestion.replace('{name}', basename(files[0]!)),
+    detail: L().discardDetail,
+  })
+  if (response !== 0) return false
+  await discardFile(dir, files[0]!)
+  return true
+})
+ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown) => {
+  const dir = await changesRoot(root)
+  if (!dir || typeof message !== 'string' || message.trim() === '' || mergeHead(dir)) return null
+  const oid = await commitStaged(dir, message.trim(), authorOf(dir, fallbackAuthor()))
+  if (oid) send('git:committed', { path: dir })
+  return oid
+})
+
 /** Commit the file now, with a message of one's own. */
 ipcMain.handle('git:commit', async (_e, path: unknown, message: unknown) => {
   if (typeof path !== 'string' || typeof message !== 'string' || message.trim() === '') return null

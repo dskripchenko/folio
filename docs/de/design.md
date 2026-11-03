@@ -339,6 +339,21 @@ Commit dessen, was da ist.
 git steckt in folio (isomorphic-git, reines JavaScript), das funktioniert also
 auch ohne installiertes git.
 
+### Änderungen
+
+`Strg+Umschalt+G` auf jedem System (oder der Commit-Knopf in der rechten
+Leiste) öffnet **Änderungen**, wie die Quellcodeverwaltung eines Code-Editors:
+die im Arbeitsordner geänderten Dateien und die für den nächsten Commit
+vorgemerkten, jede mit ihrem Buchstaben (**A** hinzugefügt, **M** geändert,
+**D** gelöscht, **U** nicht verfolgt). Eine Datei kommt mit ihrem `+` und `−`
+in den Index und wieder heraus (oder alle auf einmal aus der Überschrift der
+Gruppe), ihre Änderungen werden mit dem Pfeil verworfen — nach einer Frage, es
+lässt sich nicht rückgängig machen —, und ihr Name öffnet sie. Eine Nachricht
+und **Commit** (oder `Cmd/Strg+Enter`) committen das Vorgemerkte. Die Leiste
+folgt dem sichtbaren Dokument und sieht neu nach, wenn sich die Platte ändert.
+In einem Code-Projekt entstehen Commits so: ein Speichern committet dort nie
+von selbst.
+
 ### Branches und Synchronisieren
 
 - **Branches**: Der Branch-Name im Panel öffnet die Liste — zu einem anderen
@@ -456,6 +471,7 @@ Pfade.
 | `Cmd/Strg+F` | im Dokument suchen |
 | `Cmd+G`, `Cmd+Umschalt+G` (macOS); `F3`, `Umschalt+F3` | der nächste Treffer, der vorige |
 | `Strg+G` | zu einer Zeile gehen, im Code-Editor (auf jedem System) |
+| `Strg+Umschalt+G` | die Änderungen: vormerken, committen (auf jedem System) |
 
 ## Suchen
 

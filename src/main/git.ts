@@ -15,7 +15,7 @@ export interface Author {
 
 export type FileStatus = 'new' | 'modified' | 'deleted' | 'clean'
 
-const toGit = (root: string, path: string) => relative(root, path).split(sep).join('/')
+export const toGit = (root: string, path: string) => relative(root, path).split(sep).join('/')
 
 /** The repository holding a path (looked for upwards), or null. */
 export async function repoOf(path: string): Promise<string | null> {
@@ -88,7 +88,7 @@ export function stored(content: Buffer, committed: Uint8Array | null): Buffer {
   return Buffer.from(content.toString('latin1').replaceAll('\r\n', '\n'), 'latin1')
 }
 
-async function headBlob(root: string, filepath: string, head?: string): Promise<{ oid: string; blob: Uint8Array } | null> {
+export async function headBlob(root: string, filepath: string, head?: string): Promise<{ oid: string; blob: Uint8Array } | null> {
   try {
     const oid = head ?? (await git.resolveRef({ fs, dir: root, ref: 'HEAD' }))
     return await git.readBlob({ fs, dir: root, oid, filepath })
@@ -98,7 +98,7 @@ async function headBlob(root: string, filepath: string, head?: string): Promise<
 }
 
 /** Add a file to the index as git would store it. */
-async function stage(root: string, filepath: string, raw: Buffer, content: Buffer): Promise<void> {
+export async function stage(root: string, filepath: string, raw: Buffer, content: Buffer): Promise<void> {
   if (content === raw) return git.add({ fs, dir: root, filepath })
   const oid = await git.writeBlob({ fs, dir: root, blob: content })
   await git.updateIndex({ fs, dir: root, filepath, oid, add: true })
@@ -346,7 +346,7 @@ type Row = [string, number, number, number]
  * does not look again as the system git does), and a changed one that may
  * differ only by line endings (`stored`).
  */
-async function statusRows(root: string, filepaths?: string[]): Promise<Row[]> {
+export async function statusRows(root: string, filepaths?: string[]): Promise<Row[]> {
   const rows = (await git.statusMatrix({ fs, dir: root, filepaths })) as Row[]
   let indexTime = Infinity
   try {
