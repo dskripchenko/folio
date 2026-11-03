@@ -59,7 +59,7 @@ test('code, data and logs: listed in the tree, shown numbered in the colours of 
     await expect(doc.locator('.sx-property').first()).toHaveText('"name"')
     await viewMode(win, 'visual')
     const source = doc.getByTestId('source')
-    await source.click()
+    await source.locator('.dsk-code-editor__content').click()
     await win.keyboard.press(process.platform === 'darwin' ? 'Meta+End' : 'Control+End')
     await win.keyboard.type('\n')
     await win.keyboard.press(process.platform === 'darwin' ? 'Meta+s' : 'Control+s')

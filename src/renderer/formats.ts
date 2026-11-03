@@ -4,6 +4,8 @@
  * (never parsed as markup). The view is used for the document, a version
  * from the history and the two sides of a comparison alike.
  */
+import { CodeEditor } from '@dskripchenko/code-editor'
+import { languageOf } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
 import { codeView, type CodeState } from './code'
 
@@ -154,21 +156,25 @@ export function editorOf(format: Format, text: string, o: ViewOptions, changed: 
   return sourceEditor(format, text, o, changed)
 }
 
+/** A source editor's element: the editor in it, and its text taken now when a change is still pending. */
+export type SourceEditorElement = HTMLElement & { folioEditor?: CodeEditor; folioFlush?: () => void }
+
+/** Up to this many characters the text is taken on every change; a bigger one once typing pauses (a 50 MB string per key is not free). */
+const EAGER_CHARS = 1_000_000
+
 /**
  * The source beside a live preview (a diagram notation, AsyncAPI), or the
- * source alone (other text). The preview is drawn again once typing pauses.
+ * source alone (other text), in the code editor: highlighted, folded and
+ * checked as it is typed. The preview is drawn again once typing pauses.
  */
 function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (text: string) => void): HTMLElement {
-  const box = document.createElement('div')
+  const box: SourceEditorElement = document.createElement('div')
   box.className = 'source-editor'
   box.dataset.testid = 'source-editor'
-  const area = document.createElement('textarea')
-  area.className = 'source'
-  area.dataset.testid = 'source'
-  area.spellcheck = false
-  area.value = text
-  area.setAttribute('aria-label', o.name)
-  box.append(area)
+  const host = document.createElement('div')
+  host.className = 'source'
+  host.dataset.testid = 'source'
+  box.append(host)
   const preview = format === 'diagram' || format === 'asyncapi'
   let pane: HTMLElement | null = null
   if (preview) {
@@ -178,22 +184,39 @@ function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (te
     pane.append(viewOf(format, text, o))
     box.append(pane)
   } else box.classList.add('alone')
-  let timer: ReturnType<typeof setTimeout> | null = null
-  area.addEventListener('input', () => {
-    changed(area.value)
+  let previewTimer: ReturnType<typeof setTimeout> | null = null
+  let pending: ReturnType<typeof setTimeout> | null = null
+  const take = (): void => {
+    if (pending) clearTimeout(pending)
+    pending = null
+    const value = editor.value
+    changed(value)
     if (!pane) return
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => pane!.replaceChildren(viewOf(format, area.value, o)), 300)
+    if (previewTimer) clearTimeout(previewTimer)
+    previewTimer = setTimeout(() => pane!.replaceChildren(viewOf(format, value, o)), 300)
+  }
+  const editor = new CodeEditor(host, {
+    value: text,
+    language: languageFor(format, o.name, text) ?? undefined,
+    onChange: (e) => {
+      if (e.state.doc.length <= EAGER_CHARS) return take()
+      if (pending) clearTimeout(pending)
+      pending = setTimeout(take, 250)
+    },
   })
-  // Tab indents, as in a code editor; after Escape it moves on, so the keyboard can leave the field.
-  let escaped = false
-  area.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') escaped = true
-    if (e.key !== 'Tab' || e.shiftKey || escaped) return
-    e.preventDefault()
-    area.setRangeText('  ', area.selectionStart, area.selectionEnd, 'end')
-    area.dispatchEvent(new Event('input'))
-  })
-  area.addEventListener('blur', () => (escaped = false))
+  editor.dom.setAttribute('aria-label', o.name)
+  box.folioEditor = editor
+  box.folioFlush = () => {
+    if (pending) take()
+  }
   return box
+}
+
+/** The language a source is highlighted in: by its name, else by what it is (AsyncAPI is YAML or JSON). */
+export function languageFor(format: Format, name: string, text: string): string | null {
+  const nl = text.indexOf('\n')
+  const byName = languageOf(name, text.slice(0, nl < 0 ? 200 : nl))
+  if (byName) return byName
+  if (format === 'asyncapi' || format === 'openapi') return /^\s*[{[]/.test(text) ? 'json' : 'yaml'
+  return null
 }

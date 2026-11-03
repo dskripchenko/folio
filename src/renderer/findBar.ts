@@ -143,9 +143,9 @@ export class FindBar {
     return !this.el.hidden
   }
 
-  /** Open (or focus) the bar; a selection on the page becomes the query. */
-  open(): void {
-    const selected = getSelection()?.toString() ?? ''
+  /** Open (or focus) the bar; a selection (on the page, or the one given: an editor's) becomes the query. */
+  open(selection?: string): void {
+    const selected = selection ?? getSelection()?.toString() ?? ''
     if (selected && !selected.includes('\n') && selected.length < 200) this.input.value = selected
     this.el.hidden = false
     this.input.focus()

@@ -12,6 +12,9 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
     devDependencies:
+      '@dskripchenko/code-editor':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@dskripchenko/diagrams':
         specifier: ^1.4.0
         version: 1.4.0
@@ -19,8 +22,8 @@ importers:
         specifier: 1.18.0
         version: 1.18.0
       '@dskripchenko/syntax':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.5.0
+        version: 0.5.0
       '@dskripchenko/terminal':
         specifier: ^0.2.0
         version: 0.2.0
@@ -69,6 +72,10 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
+  '@dskripchenko/code-editor@0.1.2':
+    resolution: {integrity: sha512-rhpAUqgQ2q4/sKLzOgqLGknlN01H5geY9TZHvtspD/WqrXlrH7KwRE4mov/rrE68HDX4xjwrDFU5UWHxZEcSFg==}
+    engines: {node: '>=20'}
+
   '@dskripchenko/diagrams@1.4.0':
     resolution: {integrity: sha512-5IF96MS+QKkEZNecMwRBw0IFmFqLh9tJ5q084R0rLAidmjlxXXahZr5QvUwkIcO2Omo4k/O8vcY06m8vndj93A==}
     engines: {node: '>=20'}
@@ -77,8 +84,8 @@ packages:
     resolution: {integrity: sha512-5VTmJ6XC0tqrpi8i+UCD9D6raaUypDENfXzA9O1I9NBGXd3KCC83I+On3NcuVFnASv+QPb5cgU/Gwy6/dhoL1w==}
     engines: {node: '>=20'}
 
-  '@dskripchenko/syntax@0.3.0':
-    resolution: {integrity: sha512-Zhd+DmN2S40wewixKf0sN4daj0UPjH4+dSeryKC64WNIwbV9gIo9dfcSWvO90D8dac4Wl7teejPeeFH+VsF27w==}
+  '@dskripchenko/syntax@0.5.0':
+    resolution: {integrity: sha512-rpea99C5y+oVqbUAlXWqavFJVvPjfQQhuwpiU1XVv7n+putN1jqn2RR3bTShvtAp8ZRxUYAzGRmo8OAhQ3p+1Q==}
     engines: {node: '>=20'}
 
   '@dskripchenko/terminal@0.2.0':
@@ -2095,11 +2102,15 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
+  '@dskripchenko/code-editor@0.1.2':
+    dependencies:
+      '@dskripchenko/syntax': 0.5.0
+
   '@dskripchenko/diagrams@1.4.0': {}
 
   '@dskripchenko/embed@1.18.0': {}
 
-  '@dskripchenko/syntax@0.3.0': {}
+  '@dskripchenko/syntax@0.5.0': {}
 
   '@dskripchenko/terminal@0.2.0': {}
 

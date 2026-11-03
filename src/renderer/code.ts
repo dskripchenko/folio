@@ -23,8 +23,8 @@ import { mark, matchesIn, unmark, type WithFindTarget } from './find'
 
 /** Drawn whole — every line in the page, folding, checking — up to here; past it, only the lines in view. */
 const WHOLE = { bytes: 2 * 1024 * 1024, lines: 20_000 }
-/** Edited as text up to here; a bigger file is read. */
-export const READ_ONLY_BYTES = 5 * 1024 * 1024
+/** Edited as text up to here (the code editor takes 50 MB and a million lines); a bigger file is read. */
+export const READ_ONLY_BYTES = 64 * 1024 * 1024
 /** A line's height and the list's padding, in pixels: `.code-lines` is 12.5px/1.6. */
 const ROW = 20
 const PAD = 10

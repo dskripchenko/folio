@@ -7,6 +7,25 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+- Text files, diagram notations and AsyncAPI are edited in folio's own code
+  editor (`@dskripchenko/code-editor`): highlighted as they are typed,
+  folded, a data file checked while it is written; VS Code's keys —
+  brackets and quotes that close themselves, comments, moving and copying
+  lines, several cursors, completion from the file's words.
+- The indentation of a file in a project comes from its `.editorconfig`, else
+  from the file itself.
+- The status line of a file in the code editor: the line and column, the
+  indentation, the line breaks and the language.
+- Go to a line: `Ctrl+G` on every system (also among the commands).
+- The find bar searches a file in the code editor whole and marks the
+  matches in it.
+
+### Changed
+- Files up to 64 MB are edited (5 MB before); a bigger one is read.
+- Off a Mac the next and the previous match are `F3` and `Shift+F3`, as in
+  VS Code: `Ctrl+G` goes to a line there.
+
 ## [1.0.0] - 2026-11-03
 
 The first release: portable builds for macOS, Windows and Linux.

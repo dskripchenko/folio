@@ -154,6 +154,8 @@ export interface FolioBridge {
   writeBuffer(buffer: BufferData): void
   dropBuffer(id: string): void
   disk(path: string): Promise<{ text: string; hash: string } | null>
+  /** The `.editorconfig` files on the way up to a file, by their directory. */
+  editorConfigs(path: string): Promise<Record<string, string>>
   save(path: string, text: string, baseline: string | null, force: boolean): Promise<SaveResult>
   saveAs(text: string, name: string, dir: string | null): Promise<SaveResult>
   confirmClose(name: string): Promise<'save' | 'discard' | 'cancel'>

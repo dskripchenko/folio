@@ -7,9 +7,10 @@
  */
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
-import { canEdit, editorOf, READ_ONLY_BYTES, viewOf, type ViewOptions } from './formats'
+import { editorConfigFor, indentOptions, type CodeEditor } from '@dskripchenko/code-editor'
+import { canEdit, editorOf, READ_ONLY_BYTES, viewOf, type SourceEditorElement, type ViewOptions } from './formats'
 import type { CodeState } from './code'
-import { domTarget, fieldTarget, selectInField, type FindTarget, type WithFindTarget } from './find'
+import { domTarget, editorTarget, fieldTarget, selectInField, type FindTarget, type WithFindTarget } from './find'
 import { FindBar, type FindText, type Retarget } from './findBar'
 import { GoToFile, type GoToFileText } from './goToFile'
 import { SearchPanel, type SearchText } from './searchPanel'
@@ -33,7 +34,7 @@ import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outl
 import { CommandPalette, type Command, type PaletteText } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
-type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
+type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'goToLine' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
 import type { GitRefusal, UpdateState, Version, WorkspaceView } from './bridge'
 
 const TEXT = {
@@ -83,11 +84,11 @@ const TEXT = {
     tasks: { title: 'Tasks', close: 'Close', open: 'Open', all: 'All', overdue: 'Overdue', today: 'Today', later: 'Later', noDate: 'No date', done: 'Done', none: 'No tasks here: write - [ ] in a note.', changed: 'The note has changed meanwhile: look again.' } as TasksText,
     outline: { title: 'Outline', close: 'Close', none: 'No headings in this note.' } as OutlineText,
     slides: { close: 'End the show (Esc)', pdf: 'The slides as PDF', counter: '{n} / {total}' } as SlidesText,
-    status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}' } as StatusText,
+    status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}', spaces: 'Spaces: {n}', tabs: 'Tab: {n}', plain: 'Plain text' } as StatusText,
     spellcheck: 'Check spelling',
     update: { check: 'Check for updates', checking: 'Looking for a new version…', latest: 'folio {v} is the latest version.', downloading: 'Downloading folio {v}…', ready: 'folio {v} is downloaded: it takes over when folio closes.', restart: 'Restart to update to {v}', auto: 'Look for updates daily', failed: 'No update: {error}', source: 'folio run from its source is updated with git, not here.' },
     spellcheckFetch: 'Check spelling (fetches dictionaries)',
-    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
+    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', goToLine: 'Go to line…', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
@@ -139,11 +140,11 @@ const TEXT = {
     tasks: { title: 'Задачи', close: 'Закрыть', open: 'Открытые', all: 'Все', overdue: 'Просрочено', today: 'Сегодня', later: 'Позже', noDate: 'Без даты', done: 'Сделано', none: 'Задач нет: напишите - [ ] в заметке.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as TasksText,
     outline: { title: 'Оглавление', close: 'Закрыть', none: 'В этой заметке нет заголовков.' } as OutlineText,
     slides: { close: 'Завершить показ (Esc)', pdf: 'Слайды в PDF', counter: '{n} / {total}' } as SlidesText,
-    status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}' } as StatusText,
+    status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}', spaces: 'Пробелы: {n}', tabs: 'Табуляция: {n}', plain: 'Простой текст' } as StatusText,
     spellcheck: 'Проверять орфографию',
     update: { check: 'Проверить обновления', checking: 'Ищем новую версию…', latest: 'folio {v} — последняя версия.', downloading: 'Скачиваем folio {v}…', ready: 'folio {v} скачан: он заменит эту версию, когда folio закроется.', restart: 'Перезапустить и обновить до {v}', auto: 'Проверять обновления раз в день', failed: 'Обновление не удалось: {error}', source: 'folio, запущенный из исходников, обновляется через git, а не здесь.' },
     spellcheckFetch: 'Проверять орфографию (скачает словари)',
-    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
+    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', goToLine: 'Перейти к строке…', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
@@ -393,12 +394,19 @@ function render(tab: Tab): void {
   if (tab.view === 'read' || !canEdit(format)) {
     tab.pane.append(viewOf(format, tab.text, viewOptions(tab, true)))
   } else if (format !== 'markdown') {
-    tab.pane.append(
-      editorOf(format, tab.text, viewOptions(tab, true), (text) => {
-        tab.text = text
-        edited(tab)
-      }),
-    )
+    const el = editorOf(format, tab.text, viewOptions(tab, true), (text) => {
+      tab.text = text
+      edited(tab)
+    })
+    tab.pane.append(el)
+    // A file in a project with `.editorconfig`: its indentation (else the editor guesses from the text).
+    const editor = (el as SourceEditorElement).folioEditor
+    const path = tab.path
+    if (editor && path)
+      void folio.editorConfigs(path).then((files) => {
+        const indent = indentOptions(editorConfigFor(path, files))
+        if (indent.indentUnit || indent.tabSize) editor.configure(indent)
+      })
   } else {
     const base = tab.doc?.base
     // The editor's toolbar floats over the page, at hand however far down the text goes; the modes are the rail's.
@@ -476,7 +484,7 @@ function modesOf(tab: Tab | null): Set<ViewMode> {
   if (!tab || (tab.error && !tab.buffer && tab.saved !== null)) return new Set()
   const format = formatOf(tab)
   if (format === 'markdown') return new Set(['read', 'visual', 'source', 'split'])
-  // A big file is read, not edited: a text box of 100 MB is no editor.
+  // A very big file is read, not edited (the code view goes to 200 MB, the editor to 64).
   return new Set(canEdit(format) && tab.text.length <= READ_ONLY_BYTES ? ['read', 'visual'] : ['read'])
 }
 
@@ -712,6 +720,8 @@ function syncStatus(): void {
   syncOutline()
   const tab = active
   if (!statusBar) return
+  const editor = tab && !tab.version ? codeEditorOf(tab) : null
+  if (editor) return statusBar.showEditor(editor)
   if (!tab || tab.version || (formatOf(tab) !== 'markdown' && formatOf(tab) !== 'text')) return statusBar.show(null)
   const field = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility()) ?? null
   statusBar.show({ text: tab.text, field: field && document.activeElement === field ? field : null })
@@ -726,7 +736,20 @@ function edited(tab: Tab): void {
   tab.timer = setTimeout(() => flush(tab), BUFFER_DELAY)
 }
 
+/** The source editor's last change, taken now if it waits for typing to pause (a big file). */
+function pull(tab: Tab): void {
+  tab.pane.querySelector<SourceEditorElement>('.source-editor')?.folioFlush?.()
+}
+
+/** The code editor the tab is edited in, when it is the one in view. */
+function codeEditorOf(tab: Tab | null): CodeEditor | null {
+  if (!tab) return null
+  const box = tab.pane.querySelector<SourceEditorElement>('.source-editor')
+  return box?.folioEditor && box.checkVisibility() ? box.folioEditor : null
+}
+
 function flush(tab: Tab): void {
+  pull(tab)
   if (tab.timer) clearTimeout(tab.timer)
   tab.timer = null
   if (isDirty(tab)) {
@@ -1005,6 +1028,7 @@ function savedAs(tab: Tab, result: Extract<SaveResult, { saved: OpenResult }>): 
 }
 
 async function save(tab: Tab, as: boolean): Promise<boolean> {
+  pull(tab)
   if (tab.timer) flush(tab)
   const dir = tab.doc?.folder ?? sharedDir
   const result: SaveResult =
@@ -1314,6 +1338,7 @@ viewEl.addEventListener('drop', async (event) => {
 
 /** One field target per text field: it frames its match and follows the field's scroll. */
 const fieldTargets = new WeakMap<HTMLTextAreaElement, FindTarget>()
+const editorTargets = new WeakMap<CodeEditor, FindTarget>()
 
 /** What the bar searches: a view's own target, the field being edited, or the page as drawn. */
 function findTarget(): Retarget {
@@ -1323,6 +1348,12 @@ function findTarget(): Retarget {
   if (!tab) return { target: null }
   const code = tab.pane.querySelector<WithFindTarget>('.code-view')
   if (code?.folioFind) return { target: code.folioFind, own: true }
+  const editor = codeEditorOf(tab)
+  if (editor) {
+    let target = editorTargets.get(editor)
+    if (!target) editorTargets.set(editor, (target = editorTarget(editor)))
+    return { target, own: true, onClose: () => editor.focus() }
+  }
   const area = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility())
   if (area) {
     let target = fieldTargets.get(area)
@@ -1333,6 +1364,14 @@ function findTarget(): Retarget {
 }
 
 const findBar = new FindBar(t.find, findTarget, viewEl)
+
+/** The find bar, the code editor's selected text (one line) as its query. */
+function openFind(): void {
+  const editor = codeEditorOf(active)
+  const main = editor?.state.selection.main
+  const text = editor && main && !main.empty ? editor.state.doc.slice(main.from, main.to) : undefined
+  findBar.open(text)
+}
 document.querySelector('.content')!.append(findBar.el)
 const goToFile = new GoToFile(t.goToFile, () => folio.allFiles(), (f) => void folio.openEntry(f.root, f.path).then((result) => add(result)))
 document.body.append(goToFile.el)
@@ -1420,7 +1459,8 @@ function commands(): Command[] {
     { id: 'unbookmark', group: c.notes, title: c.unbookmark, icon: 'star', when: () => !!active?.path && bookmarked(active.path), run: () => void folio.bookmark(active!.path!, false) },
     { id: 'template-insert', group: c.notes, title: c.insertTemplate, icon: 'note', when: () => !!active && formatOf(active) === 'markdown' && !active.version, run: () => void chooseTemplate((path) => void insertTemplate(path)) },
     { id: 'template-new', group: c.notes, title: c.newFromTemplate, icon: 'note', run: () => void chooseTemplate((path) => void noteFromTemplate(path)) },
-    { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: has, run: () => findBar.open() },
+    { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: has, run: () => openFind() },
+    { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'find-in-files', group: c.edit, title: c.findInFiles, keys: `${mod}⇧F`, icon: 'search', run: () => void searchPanel.open() },
     ...MODES.map(([m, name]): Command => ({ id: `mode-${m}`, group: view, title: t.modeNames[m], icon: name, when: () => modesOf(active).has(m) && modeOf(active!) !== m, run: () => setMode(active, m) })),
     { id: 'beside', group: view, title: t.openBeside, keys: `${mod}\\`, icon: 'panelRight', when: () => !!active && active !== beside && tabs.length > 1, run: () => active && openBeside(active) },
@@ -1528,6 +1568,8 @@ document.addEventListener('selectionchange', () => {
   if (document.activeElement instanceof HTMLTextAreaElement) syncStatus()
 })
 document.addEventListener('focusin', () => syncStatus())
+// The code editor's caret moved.
+document.addEventListener('dsk:selection', () => syncStatus())
 void folio.spellcheck().then((on) => (spellOn = on))
 
 // Updates: where a check is; what it found is said when it was asked for, or when a version is ready.
@@ -1570,7 +1612,7 @@ const consolePanel = new ConsolePanel(
     openFile: (path, line) => void openAt(path, line),
     pathOf: (file) => folio.pathOf(file),
     platform: folio.platform,
-    find: () => findBar.open(),
+    find: () => openFind(),
   },
   () => syncRail(),
 )
@@ -1594,7 +1636,7 @@ darkQuery.addEventListener('change', consoleTheme)
 folio.onToggleConsole(() => consolePanel.toggle(null))
 folio.onConsoleHere((path) => void consolePanel.open(path as string))
 
-folio.onFind((what) => (what === 'next' ? findBar.step(1) : what === 'previous' ? findBar.step(-1) : what === 'files' ? void searchPanel.open() : findBar.open()))
+folio.onFind((what) => (what === 'next' ? findBar.step(1) : what === 'previous' ? findBar.step(-1) : what === 'files' ? void searchPanel.open() : openFind()))
 
 // Shortcuts: the window handles them (the menus only show them), the same on every system.
 window.addEventListener(
@@ -1622,6 +1664,13 @@ window.addEventListener(
       present()
       return
     }
+    // F3 off a Mac, as in VS Code: the next match (Shift: the previous).
+    if (event.key === 'F3' && folio.platform !== 'darwin' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault()
+      event.stopPropagation()
+      findBar.step(event.shiftKey ? -1 : 1)
+      return
+    }
     const mod = folio.platform === 'darwin' ? event.metaKey : event.ctrlKey
     if (!mod || event.altKey) return
     const key = event.key.toLowerCase()
@@ -1642,7 +1691,7 @@ window.addEventListener(
         if (event.shiftKey) toggleHistory()
       },
       b: () => sidebar.toggleCollapsed(),
-      f: () => (event.shiftKey ? void searchPanel.open() : findBar.open()),
+      f: () => (event.shiftKey ? void searchPanel.open() : openFind()),
       t: () => void goToFile.open(),
       k: () => palette.open(),
       d: () => {
@@ -1650,7 +1699,8 @@ window.addEventListener(
       },
       // The active document beside the main view, or the side view closed.
       '\\': () => (beside ? closeBeside() : active && openBeside(active)),
-      g: () => findBar.step(event.shiftKey ? -1 : 1),
+      // Cmd+G on macOS; elsewhere Ctrl+G is the editor's (go to line) and F3 finds the next match.
+      ...(folio.platform === 'darwin' ? { g: () => findBar.step(event.shiftKey ? -1 : 1) } : {}),
     }
     const fn = act[key]
     if (!fn || (key !== 's' && key !== 'h' && key !== 'p' && key !== 'g' && key !== 'f' && key !== 'd' && event.shiftKey) || ((key === 'h' || key === 'd') && !event.shiftKey)) return
