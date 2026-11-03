@@ -592,3 +592,8 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .changes-modified .changes-kind { color: #9a6700; }
 .changes-deleted .changes-kind { color: #cf222e; }
 @media print { .changes-panel { display: none !important; } }
+.git-peek { position: fixed; z-index: 70; max-width: 560px; max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); font-size: 12px; }
+.git-peek-head { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line); color: var(--muted); }
+.git-peek-head span { flex: 1; }
+.git-peek-revert { padding: 2px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--tab); color: var(--fg); font: inherit; cursor: pointer; }
+.git-peek-old { margin: 0; padding: 6px 10px; background: color-mix(in srgb, #cf222e 10%, transparent); font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }

@@ -581,3 +581,13 @@ export async function abortMerge(root: string): Promise<void> {
   }
   endMerge(root)
 }
+
+/** A file's text in the commit HEAD names; null without a commit or for a file it does not have. */
+export async function headText(root: string, path: string): Promise<string | null> {
+  try {
+    const head = await git.resolveRef({ fs, dir: root, ref: 'HEAD' })
+    return await textAt(root, path, head)
+  } catch {
+    return null
+  }
+}

@@ -354,6 +354,18 @@ folgt dem sichtbaren Dokument und sieht neu nach, wenn sich die Platte ändert.
 In einem Code-Projekt entstehen Commits so: ein Speichern committet dort nie
 von selbst.
 
+### Änderungen im Rand, wer eine Zeile geändert hat
+
+Eine Datei unter Git, im Code-Editor bearbeitet, markiert beim Tippen ihre
+Änderungen gegenüber dem letzten Commit neben den Zeilennummern: ein grüner
+Balken für hinzugefügte Zeilen, ein blauer für geänderte, eine rote Kerbe, wo
+Zeilen gelöscht wurden. Ein Klick auf eine Marke zeigt, wie die Zeilen waren,
+mit **Zurücksetzen**, um diese Änderung zurückzunehmen. **Wer hat jede Zeile
+geändert (blame)** unter den Befehlen fügt eine Spalte neben den Nummern hinzu
+— der Autor und wie lange her, beim Darüberfahren die Nachricht des Commits,
+Autor und Datum; derselbe Befehl nimmt sie wieder weg. Es nutzt das Git des
+Systems, wenn es eines gibt, sonst liest folio die Geschichte der Datei selbst.
+
 ### Branches und Synchronisieren
 
 - **Branches**: Der Branch-Name im Panel öffnet die Liste — zu einem anderen

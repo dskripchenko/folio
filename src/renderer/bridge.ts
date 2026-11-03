@@ -172,6 +172,10 @@ export interface FolioBridge {
   gitCommit(path: string, message: string): Promise<string | null>
   /** The changes of the repository holding a path (ADR-002, I1); null outside git. */
   gitChanges(path: string): Promise<ChangesView | null>
+  /** A file's text in the last commit; null outside git or for a file git does not have. */
+  gitHeadText(path: string): Promise<string | null>
+  /** Who last changed each line (oid null: not committed yet); null outside git. */
+  gitBlame(path: string): Promise<{ oid: string | null; author: string; email: string; time: number; summary: string }[] | null>
   gitStage(root: string, paths: string[]): Promise<boolean>
   gitUnstage(root: string, paths: string[]): Promise<boolean>
   /** Asks first; true when the changes were thrown away. */

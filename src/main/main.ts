@@ -5,6 +5,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } 
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
 import { changesOf, commitStaged, discardFile, stageFiles, unstageFiles } from './changes'
+import { blameOf } from './blame'
 import {
   abortMerge,
   aheadBehind,
@@ -27,6 +28,7 @@ import {
   statusUnder,
   switchBranch,
   textAt,
+  headText,
 } from './git'
 import { Logins } from './logins'
 import { folderDocuments, pdfName, pdfOptions, printToPdfOptions, SLIDES_PDF } from './pdf'
@@ -1109,6 +1111,23 @@ ipcMain.handle('git:auto', async (_e, path: unknown, on: unknown) => {
   else if (owner?.kind === 'shared') workspace.setSharedAutoCommit(on)
   return gitInfo(path)
 })
+/** Who last changed each line of a file (the system git when there is one); null outside git. */
+ipcMain.handle('git:blame', async (_e, path: unknown) => {
+  if (typeof path !== 'string') return null
+  const root = await repoOf(path)
+  if (!root) return null
+  return blameOf(root, path, await (systemGit ??= findSystemGit()))
+})
+let systemGit: Promise<string | null> | null = null
+
+/** A file's text in the last commit (for its changes in the gutter); null outside git or for a file git does not have. */
+ipcMain.handle('git:head-text', async (_e, path: unknown) => {
+  if (typeof path !== 'string') return null
+  const root = await repoOf(path)
+  if (!root) return null
+  return headText(root, path)
+})
+
 // Changes (ADR-002, I1): the repository's index and working folder, as source control shows them.
 ipcMain.handle('git:changes', async (_e, path: unknown) => {
   if (typeof path !== 'string') return null
