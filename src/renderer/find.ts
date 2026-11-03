@@ -201,3 +201,36 @@ export function selectInField(area: HTMLTextAreaElement, pattern: RegExp | null,
   area.focus()
   area.setSelectionRange(m[0], m[1])
 }
+
+/** The methods of the code editor the bar drives (`@dskripchenko/code-editor`). */
+interface SearchableEditor {
+  setSearch(query: { search: string; regexp: boolean; caseSensitive: boolean } | null): void
+  searchMatches(limit?: number): { from: number; to: number }[]
+  setSelection(anchor: number, head?: number): void
+  dispatch(spec: { selection?: unknown; scrollIntoView?: boolean; userEvent?: string }): unknown
+}
+
+/**
+ * The code editor as a target: it marks the matches in view itself (a big
+ * file is never drawn whole), the current one selected and scrolled to.
+ */
+export function editorTarget(editor: SearchableEditor): FindTarget {
+  let matches: { from: number; to: number }[] = []
+  return {
+    search(pattern) {
+      // The bar's pattern as the editor's query: the same source and flags (`gu`, `i` without case).
+      editor.setSearch({ search: pattern.source, regexp: true, caseSensitive: !pattern.flags.includes('i') })
+      matches = editor.searchMatches(MAX_MATCHES)
+      return matches.length
+    },
+    show(index, reveal = true) {
+      const m = matches[index]
+      if (!m) return
+      if (reveal) editor.setSelection(m.from, m.to)
+    },
+    clear() {
+      editor.setSearch(null)
+      matches = []
+    },
+  }
+}

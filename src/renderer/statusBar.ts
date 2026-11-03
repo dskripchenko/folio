@@ -3,7 +3,15 @@
  * characters, minutes to read it), and in the Markdown source where the caret
  * is (line and column).
  */
+import { languages } from '@dskripchenko/syntax'
 import { plural } from './searchPanel'
+
+/** A language's name for people (`TypeScript`), by its id or alias. */
+function languageName(language: string | null): string | null {
+  if (!language) return null
+  const l = language.toLowerCase()
+  return languages().find((x) => x.id === l || x.aliases.includes(l))?.name ?? null
+}
 
 export interface StatusText {
   words: [string, string, string] | [string, string]
@@ -12,6 +20,20 @@ export interface StatusText {
   read: string
   /** `Ln {line}, Col {col}` */
   caret: string
+  /** `Spaces: {n}`, `Tab: {n}`: what Tab inserts in the code editor. */
+  spaces: string
+  tabs: string
+  /** The language of a text with none. */
+  plain: string
+}
+
+/** What the status line shows of a code editor (`@dskripchenko/code-editor`). */
+interface EditorLike {
+  readonly state: { doc: { lineAt(pos: number): { index: number; from: number } }; selection: { main: { head: number } } }
+  readonly indentation: { tabSize: number; indentUnit: string }
+  readonly language: string | null
+  readonly selection: { anchor: number; head: number }[]
+  readonly lineBreak: '\n' | '\r\n'
 }
 
 /** Words and characters of a document's text, its front matter, code fences and markup left out. */
@@ -42,6 +64,25 @@ export class StatusBar {
 
   setText(text: StatusText): void {
     this.text = text
+  }
+
+  /**
+   * A file edited in the code editor: where the caret is, what Tab inserts,
+   * the line breaks and the language (as in a code editor's status line).
+   */
+  showEditor(editor: EditorLike): void {
+    this.el.hidden = false
+    const { doc, selection } = editor.state
+    const head = selection.main.head
+    const line = doc.lineAt(head)
+    const { indentUnit, tabSize } = editor.indentation
+    const parts = [
+      this.text.caret.replace('{line}', String(line.index + 1)).replace('{col}', String(head - line.from + 1)),
+      indentUnit === '\t' ? this.text.tabs.replace('{n}', String(tabSize)) : this.text.spaces.replace('{n}', String(indentUnit.length)),
+      editor.lineBreak === '\r\n' ? 'CRLF' : 'LF',
+      languageName(editor.language) ?? this.text.plain,
+    ]
+    this.el.textContent = parts.join(' · ')
   }
 
   /** The document in view: its text, and the source field when it is the one being written in. */

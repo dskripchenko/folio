@@ -85,10 +85,14 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     await expect(doc.locator('dsk-diagram svg.dg')).toContainText('Review', { timeout: 15_000 })
     await viewMode(win, 'visual')
     const source = doc.getByTestId('source')
-    await expect(source).toHaveValue('flowchart LR\n  Draft --> Review\n')
-    await source.click()
+    // The code editor: its text, the key presses into it.
+    await expect.poll(() => source.locator('.dsk-code-editor').evaluate((el) => (el.parentElement!.parentElement as HTMLElement & { folioEditor: { value: string } }).folioEditor.value)).toBe('flowchart LR\n  Draft --> Review\n')
+    await source.locator('.dsk-code-editor__content').click()
     await win.keyboard.press(`${mod}+End`)
-    await win.keyboard.type('  Review --> Published\n')
+    await win.keyboard.type('  Review --> Published')
+    // Enter keeps the indent on the new line; Backspace takes it back.
+    await win.keyboard.press('Enter')
+    await win.keyboard.press('Backspace')
     await expect(doc.getByTestId('preview').locator('svg.dg')).toContainText('Published')
     await expect(win.getByRole('tab', { name: /flow\.mmd/ })).toHaveClass(/dirty/)
     await win.keyboard.press(`${mod}+s`)

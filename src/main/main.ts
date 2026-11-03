@@ -289,8 +289,9 @@ function buildMenu(): void {
         { role: 'selectAll' },
         { type: 'separator' },
         { label: L().find, accelerator: 'CmdOrCtrl+F', registerAccelerator: false, click: () => send('menu:find', 'open') },
-        { label: L().findNext, accelerator: 'CmdOrCtrl+G', registerAccelerator: false, click: () => send('menu:find', 'next') },
-        { label: L().findPrevious, accelerator: 'CmdOrCtrl+Shift+G', registerAccelerator: false, click: () => send('menu:find', 'previous') },
+        // As in VS Code: Cmd+G on macOS, F3 elsewhere (Ctrl+G there goes to a line).
+        { label: L().findNext, accelerator: process.platform === 'darwin' ? 'Cmd+G' : 'F3', registerAccelerator: false, click: () => send('menu:find', 'next') },
+        { label: L().findPrevious, accelerator: process.platform === 'darwin' ? 'Cmd+Shift+G' : 'Shift+F3', registerAccelerator: false, click: () => send('menu:find', 'previous') },
         { type: 'separator' },
         { label: L().findInFiles, accelerator: 'CmdOrCtrl+Shift+F', registerAccelerator: false, click: () => send('menu:find', 'files') },
       ],
@@ -1306,6 +1307,30 @@ ipcMain.on('buf:drop', (_e, id: unknown) => {
   if (typeof id === 'string') buffers.remove(id)
 })
 /** The file's text on disk and its hash; null when it is gone. */
+/**
+ * The `.editorconfig` files on the way up from a file, by their directory —
+ * up to one that says `root = true`, or the top of the disk. Only files of
+ * that name are read.
+ */
+ipcMain.handle('doc:editorconfig', (_e, path: unknown) => {
+  if (typeof path !== 'string' || !isAbsolute(path)) return {}
+  const out: Record<string, string> = {}
+  let dir = dirname(path)
+  for (let i = 0; i < 64; i++) {
+    try {
+      const text = readFileSync(join(dir, '.editorconfig'), 'utf8')
+      out[dir] = text
+      if (/^\s*root\s*=\s*true\s*$/im.test(text.split(/^\s*\[/m)[0] ?? '')) break
+    } catch {
+      /* none here */
+    }
+    const up = dirname(dir)
+    if (up === dir) break
+    dir = up
+  }
+  return out
+})
+
 ipcMain.handle('doc:disk', (_e, path: unknown) => {
   if (typeof path !== 'string') return null
   try {

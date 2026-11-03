@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('folio', {
   writeBuffer: (buffer: Record<string, unknown>) => ipcRenderer.send('buf:write', buffer),
   dropBuffer: (id: string) => ipcRenderer.send('buf:drop', id),
   disk: (path: string) => ipcRenderer.invoke('doc:disk', path),
+  editorConfigs: (path: string) => ipcRenderer.invoke('doc:editorconfig', path),
   hash: (text: string) => ipcRenderer.invoke('doc:hash', text),
   save: (path: string, text: string, baseline: string | null, force: boolean) => ipcRenderer.invoke('doc:save', path, text, baseline, force),
   saveAs: (text: string, name: string, dir: string | null) => ipcRenderer.invoke('doc:save-as', text, name, dir),

@@ -26,9 +26,10 @@
     "dist": "pnpm build && electron-builder --publish never"
   },
   "devDependencies": {
+    "@dskripchenko/code-editor": "^0.1.1",
     "@dskripchenko/diagrams": "^1.4.0",
     "@dskripchenko/embed": "1.18.0",
-    "@dskripchenko/syntax": "^0.3.0",
+    "@dskripchenko/syntax": "^0.5.0",
     "@dskripchenko/terminal": "^0.2.0",
     "@eslint/js": "10.0.1",
     "@fontsource/stix-two-math": "5.3.0",

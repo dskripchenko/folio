@@ -70,8 +70,20 @@ Dateien in einem Dokument öffnen sie ebenfalls.
 | OpenAPI / Swagger (`.yaml`, `.yml`, `.json`) | `<dsk-openapi>`, die Referenz | seinem visuellen Editor mit Quelle und Vorschau |
 | AsyncAPI (`.yaml`, `.yml`, `.json`) | `<dsk-asyncapi>` | Quelle neben einer Live-Vorschau |
 | `.mmd`, `.puml`, `.dot`, `.gv`, `.d2`, `.dbml`, `.dsl`, `.wardley` | `<dsk-diagram>`, die Syntax nach der Endung | Quelle neben einer Live-Vorschau |
-| Code, Daten, Logs, Konfiguration — jede Textdatei einer bekannten Sprache (17 Programmiersprachen, JSON, XML, Logs, TOML, INI, `.env`, CSV, diff, Dockerfile, Makefile, …) | nummerierte Zeilen in den Farben ihrer Sprache (`@dskripchenko/syntax`; die Sprache nach Name, Endung oder `#!`-Zeile); eine Datendatei (JSON, YAML, XML, TOML, CSV, INI, `.env`) wird geprüft — Fehler an ihren Zeilen markiert, ein Zähler im Kopf springt zu ihnen; Blöcke falten über die Pfeile neben den Nummern; eine große Datei (über 2 MB oder 20 000 Zeilen, bis 200 MB) zeichnet nur die sichtbaren Zeilen und ist über 5 MB nur lesbar; ein Log filtert nach Stufe (ein Stacktrace bleibt bei seinem Eintrag) und folgt, am Ende gelesen, dem Geschriebenen | die Quelle |
-| anderer Text | als Text | die Quelle |
+| Code, Daten, Logs, Konfiguration — jede Textdatei einer bekannten Sprache (17 Programmiersprachen, JSON, XML, Logs, TOML, INI, `.env`, CSV, diff, Dockerfile, Makefile, …) | nummerierte Zeilen in den Farben ihrer Sprache (`@dskripchenko/syntax`; die Sprache nach Name, Endung oder `#!`-Zeile); eine Datendatei (JSON, YAML, XML, TOML, CSV, INI, `.env`) wird geprüft — Fehler an ihren Zeilen markiert, ein Zähler im Kopf springt zu ihnen; Blöcke falten über die Pfeile neben den Nummern; eine große Datei (über 2 MB oder 20 000 Zeilen, bis 200 MB) zeichnet nur die sichtbaren Zeilen und ist über 64 MB nur lesbar; ein Log filtert nach Stufe (ein Stacktrace bleibt bei seinem Eintrag) und folgt, am Ende gelesen, dem Geschriebenen | der Code-Editor |
+| anderer Text | als Text | der Code-Editor |
+
+Der **Code-Editor** (`@dskripchenko/code-editor`) bearbeitet jede Textdatei,
+die Notation eines Diagramms und AsyncAPI neben ihrer Vorschau: hervorgehoben
+beim Tippen, gefaltet über die Pfeile neben den Nummern, eine Datendatei beim
+Schreiben geprüft. Seine Tasten sind die von VS Code — Klammern und
+Anführungszeichen schließen sich selbst, `Cmd/Ctrl+/` kommentiert Zeilen,
+`Alt+↑/↓` verschiebt sie, `Cmd/Ctrl+D` fügt das nächste Vorkommen zu den
+Cursorn hinzu, `Ctrl+Leertaste` vervollständigt aus den Wörtern der Datei. Die
+Einrückung kommt aus der `.editorconfig` des Projekts, sonst aus der Datei
+selbst; die Statuszeile zeigt Zeile und Spalte, die Einrückung, die
+Zeilenumbrüche (LF oder CRLF, wie sie kamen) und die Sprache. Dateien bis
+64 MB werden bearbeitet; eine größere wird gelesen.
 
 YAML und JSON werden an einem Schlüssel `openapi`, `swagger` oder `asyncapi`
 auf oberster Ebene erkannt; der Baum listet YAML-Dateien und JSON-Dateien mit
@@ -429,7 +441,8 @@ Pfade.
 | `Cmd/Strg+\` | das Dokument neben der Hauptansicht, oder die Seitenansicht schließen |
 | `Cmd/Strg+Umschalt+F` | in den Dateien suchen |
 | `Cmd/Strg+F` | im Dokument suchen |
-| `Cmd/Strg+G`, `Cmd/Strg+Umschalt+G` | der nächste Treffer, der vorige |
+| `Cmd+G`, `Cmd+Umschalt+G` (macOS); `F3`, `Umschalt+F3` | der nächste Treffer, der vorige |
+| `Strg+G` | zu einer Zeile gehen, im Code-Editor (auf jedem System) |
 
 ## Suchen
 
@@ -477,8 +490,9 @@ Umschalt+Enter gehen sie durch, der Zähler zeigt, wo man ist. **Aa** beachtet
 die Groß-/Kleinschreibung, **ab** sucht ganze Wörter (jeder Schrift), **.\***
 nimmt einen regulären Ausdruck. Lesen und der visuelle Editor durchsuchen die
 Seite, wie sie gezeichnet ist — ein Treffer läuft nie von einem Absatz in den
-nächsten, und die Seite selbst bleibt unberührt; die Markdown-Quelle und als
-Text bearbeitete Dateien durchsuchen das Feld, und Escape lässt den aktuellen
+nächsten, und die Seite selbst bleibt unberührt; die Markdown-Quelle durchsucht
+ihr Feld und eine Datei im Code-Editor ihren ganzen Text, die Treffer darin
+markiert, und Escape lässt den aktuellen
 Treffer dort ausgewählt; eine große Datei wird ganz durchsucht, nicht nur die
 sichtbaren Zeilen. Ändert sich die Seite unter der Leiste — eine Bearbeitung,
 die Datei auf der Festplatte —, wird erneut gesucht.

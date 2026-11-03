@@ -67,8 +67,19 @@ them too.
 | OpenAPI / Swagger (`.yaml`, `.yml`, `.json`) | `<dsk-openapi>`, the reference | its visual editor, with source and preview |
 | AsyncAPI (`.yaml`, `.yml`, `.json`) | `<dsk-asyncapi>` | the source beside a live preview |
 | `.mmd`, `.puml`, `.dot`, `.gv`, `.d2`, `.dbml`, `.dsl`, `.wardley` | `<dsk-diagram>`, the syntax by the extension | the source beside a live preview |
-| code, data, logs, configuration — every text file with a known language (17 programming languages, JSON, XML, logs, TOML, INI, `.env`, CSV, diff, Dockerfile, Makefile, …) | numbered lines in the colours of its language (`@dskripchenko/syntax`; the language by name, extension or `#!` line); a data file (JSON, YAML, XML, TOML, CSV, INI, `.env`) checked — errors marked at their lines, a count in the head steps through them; blocks fold by the arrows beside the numbers; a big file (over 2 MB or 20 000 lines, up to 200 MB) draws only the lines in view and is read-only past 5 MB; a log filters by level (a stack trace stays with its entry) and, read at its end, follows what is written | the source |
-| other text | as text | the source |
+| code, data, logs, configuration — every text file with a known language (17 programming languages, JSON, XML, logs, TOML, INI, `.env`, CSV, diff, Dockerfile, Makefile, …) | numbered lines in the colours of its language (`@dskripchenko/syntax`; the language by name, extension or `#!` line); a data file (JSON, YAML, XML, TOML, CSV, INI, `.env`) checked — errors marked at their lines, a count in the head steps through them; blocks fold by the arrows beside the numbers; a big file (over 2 MB or 20 000 lines, up to 200 MB) draws only the lines in view and is read-only past 64 MB; a log filters by level (a stack trace stays with its entry) and, read at its end, follows what is written | the code editor |
+| other text | as text | the code editor |
+
+The **code editor** (`@dskripchenko/code-editor`) edits every text file, a
+diagram's notation and AsyncAPI beside their preview: highlighted as it is
+typed, folded by the arrows beside the numbers, a data file checked while it
+is written. Its keys are VS Code's — brackets and quotes close themselves,
+`Cmd/Ctrl+/` comments lines, `Alt+↑/↓` moves them, `Cmd/Ctrl+D` adds the next
+occurrence to the cursors, `Ctrl+Space` completes from the words of the file.
+The indentation comes from the project's `.editorconfig`, else from the file
+itself; the status line shows the line and column, the indentation, the line
+breaks (LF or CRLF, kept as they came) and the language. Files up to 64 MB
+are edited; a bigger one is read.
 
 YAML and JSON are recognised by a top-level `openapi`, `swagger` or
 `asyncapi` key; the tree lists YAML files and JSON files named like an API
@@ -393,7 +404,8 @@ relative paths.
 | `Cmd/Ctrl+\` | the document beside the main view, or the side view closed |
 | `Cmd/Ctrl+Shift+F` | search the files |
 | `Cmd/Ctrl+F` | find in the document |
-| `Cmd/Ctrl+G`, `Cmd/Ctrl+Shift+G` | the next match, the previous |
+| `Cmd+G`, `Cmd+Shift+G` (macOS); `F3`, `Shift+F3` | the next match, the previous |
+| `Ctrl+G` | go to a line, in the code editor (on every system) |
 
 Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
 `file:plan` (a value in quotes may have spaces); with no text left, a filter
@@ -436,9 +448,9 @@ marked, the current one brought into view; Enter and Shift+Enter step through
 them, the count shows where you are. **Aa** matches case, **ab** whole words
 (of any script), **.\*** takes a regular expression. Reading and the visual
 editor search the page as drawn — a match never runs from one paragraph into
-the next, and the page itself is not touched; the Markdown source and files
-edited as text search the field, and Escape leaves the current match selected
-there; a big file is searched whole, not only the lines in view. A page that
+the next, and the page itself is not touched; the Markdown source searches its
+field and a file in the code editor its whole text, the matches marked in it, and
+Escape leaves the current match selected there; a big file is searched whole, not only the lines in view. A page that
 changes under the bar — an edit, the file changed on disk — is searched again.
 
 ## Consoles
