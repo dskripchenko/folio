@@ -28,6 +28,7 @@ import { TagsPanel, type TagsText } from './tagsPanel'
 import { HoverPreview } from './hoverPreview'
 import { watchEmbeds } from './embeds'
 import { TasksPanel, type TasksText } from './tasksPanel'
+import { ChangesPanel, type ChangesText } from './changesPanel'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
 import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
@@ -82,6 +83,7 @@ const TEXT = {
     tags: { title: 'Tags', close: 'Close', filter: 'Filter tags', none: 'No such tag', noTags: 'No tags in this project yet: write #tag in a note, or tags: in its properties.' } as TagsText,
     graph: { title: 'Graph', close: 'Close', local: 'This note', all: 'All', empty: 'No notes here yet.' } as GraphText,
     tasks: { title: 'Tasks', close: 'Close', open: 'Open', all: 'All', overdue: 'Overdue', today: 'Today', later: 'Later', noDate: 'No date', done: 'Done', none: 'No tasks here: write - [ ] in a note.', changed: 'The note has changed meanwhile: look again.' } as TasksText,
+    changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
     outline: { title: 'Outline', close: 'Close', none: 'No headings in this note.' } as OutlineText,
     slides: { close: 'End the show (Esc)', pdf: 'The slides as PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}', spaces: 'Spaces: {n}', tabs: 'Tab: {n}', plain: 'Plain text' } as StatusText,
@@ -138,6 +140,7 @@ const TEXT = {
     tags: { title: 'Теги', close: 'Закрыть', filter: 'Найти тег', none: 'Нет такого тега', noTags: 'В этом проекте пока нет тегов: напишите #тег в заметке или tags: в её свойствах.' } as TagsText,
     graph: { title: 'Граф', close: 'Закрыть', local: 'Эта заметка', all: 'Все', empty: 'Заметок здесь пока нет.' } as GraphText,
     tasks: { title: 'Задачи', close: 'Закрыть', open: 'Открытые', all: 'Все', overdue: 'Просрочено', today: 'Сегодня', later: 'Позже', noDate: 'Без даты', done: 'Сделано', none: 'Задач нет: напишите - [ ] в заметке.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as TasksText,
+    changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
     outline: { title: 'Оглавление', close: 'Закрыть', none: 'В этой заметке нет заголовков.' } as OutlineText,
     slides: { close: 'Завершить показ (Esc)', pdf: 'Слайды в PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}', spaces: 'Пробелы: {n}', tabs: 'Табуляция: {n}', plain: 'Простой текст' } as StatusText,
@@ -161,6 +164,7 @@ let tagsPanel: TagsPanel | null = null
 let graphPanel: GraphPanel | null = null
 /** The tasks of the project in view. */
 let tasksPanel: TasksPanel | null = null
+let changesPanel: ChangesPanel | null = null
 /** The status line under the page. */
 let statusBar: StatusBar | null = null
 /** The outline of the note in view. */
@@ -231,6 +235,7 @@ function applyText(): void {
   tagsPanel?.setText(t.tags)
   graphPanel?.setText(t.graph)
   tasksPanel?.setText(t.tasks)
+  changesPanel?.setText(t.changes)
   outlinePanel?.setText(t.outline)
   statusBar?.setText(t.status)
   syncStatus()
@@ -243,7 +248,7 @@ function applyText(): void {
 }
 
 function isOpened(r: OpenResult | null): r is Opened {
-  return r !== null && !('error' in r)
+  return r !== null && !('error' in r) && !('external' in r)
 }
 
 async function sha256(text: string): Promise<string> {
@@ -546,6 +551,7 @@ function buildRail(): void {
     iconButton('tag', t.tags.title, () => tagsPanel?.setVisible(!tagsPanel.visible), 'toggle-tags'),
     iconButton('graph', t.graph.title, () => graphPanel?.setVisible(!graphPanel.visible), 'toggle-graph'),
     iconButton('tasks', t.tasks.title, () => tasksPanel?.setVisible(!tasksPanel.visible), 'toggle-tasks'),
+    iconButton('commit', `${t.changes.title} (Ctrl+⇧G)`, () => changesPanel?.setVisible(!changesPanel.visible), 'toggle-changes'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
     iconButton('pdf', `${t.exportPdf} (${mod}⇧P)`, () => exportActive(), 'rail-pdf'),
@@ -586,6 +592,11 @@ function syncRail(): void {
   if (op) {
     op.setAttribute('aria-pressed', String(!!outlinePanel?.visible))
     op.classList.toggle('on', !!outlinePanel?.visible)
+  }
+  const ch = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-changes"]')
+  if (ch) {
+    ch.setAttribute('aria-pressed', String(!!changesPanel?.visible))
+    ch.classList.toggle('on', !!changesPanel?.visible)
   }
   const kp = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-tasks"]')
   if (kp) {
@@ -651,6 +662,14 @@ function openSettings(anchor: HTMLElement): void {
 /** The note a tab shows, for the links panel: a Markdown file, its text as in the tab. */
 function noteOf(tab: Tab | null): { path: string; text: () => string } | null {
   return tab?.path && formatOf(tab) === 'markdown' && !tab.version ? { path: tab.path, text: () => tab.text } : null
+}
+
+let changesTimer: ReturnType<typeof setTimeout> | null = null
+/** The changes panel looked at again once the disk is quiet. */
+function changesSoon(): void {
+  if (!changesPanel?.visible) return
+  if (changesTimer) clearTimeout(changesTimer)
+  changesTimer = setTimeout(() => void changesPanel?.refresh(), 400)
 }
 
 let linksTimer: ReturnType<typeof setTimeout> | null = null
@@ -797,6 +816,7 @@ function activate(tab: Tab | null): void {
   tagsPanel?.show(tab?.path ?? null)
   graphPanel?.show(tab?.path ?? null)
   tasksPanel?.show(tab?.path ?? null)
+  changesPanel?.show(tab?.path ?? null)
   syncStatus()
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
@@ -929,6 +949,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
 
 /** A file to show: a tab of its own, or the one it already has. */
 async function add(result: OpenResult, focus = true): Promise<void> {
+  if ('external' in result) return
   const existing = tabs.find((tab) => tab.path === result.path)
   if (existing) {
     if (focus) activate(existing)
@@ -1120,6 +1141,7 @@ function toggleHistory(): void {
 folio.onToggleHistory(() => toggleHistory())
 folio.onCommitted((value) => {
   const { path } = value as { path: string }
+  void changesPanel?.refresh()
   if (active?.path === path) void history.refresh()
   sidebar.refreshStatus()
 })
@@ -1187,6 +1209,7 @@ folio.onFsRemoved((value) => {
 // A file changed on disk: a clean tab takes it, an edited one is told (nothing is overwritten).
 folio.onFsChanged(async (value) => {
   linksSoon()
+  changesSoon()
   const files = new Set((value as Changes[]).flatMap((c) => c.files))
   for (const tab of tabs) {
     if (!tab.path || !files.has(tab.path)) continue
@@ -1400,7 +1423,7 @@ async function newKind(kind: 'kanban' | 'calendar' | 'board'): Promise<void> {
 /** Today's daily note, or the one before / after the open one's day. */
 async function openDaily(step: 0 | -1 | 1): Promise<void> {
   const result = await folio.dailyOpen(isDaily() ? active!.path : null, step)
-  if (!isOpened(result) && result.error === 'none') return notify(t.commands.noDaily)
+  if ('error' in result && result.error === 'none') return notify(t.commands.noDaily)
   await add(result)
 }
 
@@ -1474,6 +1497,7 @@ function commands(): Command[] {
     { id: 'links', group: view, title: t.links.title, icon: 'links', run: () => linksPanel?.setVisible(!linksPanel.visible) },
     { id: 'tags', group: view, title: t.tags.title, icon: 'tag', run: () => tagsPanel?.setVisible(!tagsPanel.visible) },
     { id: 'tasks', group: view, title: t.tasks.title, icon: 'tasks', run: () => tasksPanel?.setVisible(!tasksPanel.visible) },
+    { id: 'changes', group: view, title: t.changes.title, keys: 'Ctrl+⇧G', icon: 'commit', run: () => changesPanel?.setVisible(!changesPanel.visible) },
     { id: 'graph', group: view, title: t.graph.title, icon: 'graph', run: () => graphPanel?.setVisible(!graphPanel.visible) },
     ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),
   ]
@@ -1529,6 +1553,21 @@ graphPanel = new GraphPanel(
 )
 document.querySelector('.content')!.insertBefore(graphPanel.el, document.querySelector('.history'))
 graphPanel.show(null)
+
+changesPanel = new ChangesPanel(
+  t.changes,
+  {
+    load: (path) => (path ? folio.gitChanges(path) : Promise.resolve(null)),
+    stage: async (root, paths) => void (await folio.gitStage(root, paths)),
+    unstage: async (root, paths) => void (await folio.gitUnstage(root, paths)),
+    discard: (root, path) => folio.gitDiscard(root, path),
+    commit: (root, message) => folio.gitCommitStaged(root, message),
+    open: (root, path) => void folio.open(`${root}/${path}`).then((result) => add(result)),
+  },
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(changesPanel.el, document.querySelector('.history'))
+changesPanel.show(null)
 
 tasksPanel = new TasksPanel(
   t.tasks,
@@ -1664,6 +1703,13 @@ window.addEventListener(
     if (event.key === 'F5' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && isNote()) {
       event.preventDefault()
       present()
+      return
+    }
+    // Ctrl+Shift+G on every system, as in VS Code: the changes (source control).
+    if (event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey && event.code === 'KeyG') {
+      event.preventDefault()
+      event.stopPropagation()
+      changesPanel?.setVisible(!changesPanel.visible)
       return
     }
     // F3 off a Mac, as in VS Code: the next match (Shift: the previous).
@@ -1825,7 +1871,7 @@ void folio.startup().then(async ({ tabs: restored, active: activeIndex, locale, 
       makeTab({
         path: b.path,
         doc,
-        error: r.doc && !isOpened(r.doc) ? r.doc.error : null,
+        error: r.doc && 'error' in r.doc ? r.doc.error : null,
         text: b.text,
         // The file as it is now, or what the edit started from when the file is gone.
         saved: b.path === null ? null : doc ? doc.text : '',

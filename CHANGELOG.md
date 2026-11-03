@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+- Projects of notes and of code (ADR-002, I1): the kind is guessed when a
+  project is added (a `package.json`, `go.mod`, `Cargo.toml`… or a repository
+  with no notes) and changed in its menu. A code project lists every file, its
+  dot files too, opens a file that is not text in the system's program, and
+  never commits a save on its own.
+- `.gitignore` (with `.git/info/exclude` and the global excludes file) is
+  followed in the tree, going to a file and searching, live as it is written.
+- The **Changes** panel (`Ctrl+Shift+G` on every system, as in VS Code): the
+  changed and the staged files, staged and unstaged a file at a time or all
+  at once, a file's changes thrown away (asked first), a message and Commit
+  (`Cmd/Ctrl+Enter`).
+
 ## [1.1.0] - 2026-11-03
 
 Code and other text files in folio's own code editor.

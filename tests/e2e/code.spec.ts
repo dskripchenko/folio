@@ -25,9 +25,8 @@ test('code, data and logs: listed in the tree, shown numbered in the colours of 
     const project = win.getByTestId('projects').locator('.project', { hasText: 'service' })
     await project.locator('.project-row').click()
     const tree = project.locator('.tree')
-    // Text files with a language are listed (a #! line names it); a binary file is not.
-    for (const name of ['src', 'package.json', 'app.log', 'README.md']) await expect(tree.locator('.row', { hasText: name })).toBeVisible()
-    await expect(tree.locator('.row', { hasText: 'image.bin' })).toHaveCount(0)
+    // A project of code (it has package.json) lists every file, as code editors do: a binary one too.
+    for (const name of ['src', 'package.json', 'app.log', 'README.md', 'image.bin']) await expect(tree.locator('.row', { hasText: name })).toBeVisible()
 
     // A link from a document opens the source in folio.
     await tree.locator('.row', { hasText: 'README.md' }).click()

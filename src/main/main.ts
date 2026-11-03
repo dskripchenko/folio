@@ -1,9 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell } from 'electron'
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
+import { changesOf, commitStaged, discardFile, stageFiles, unstageFiles } from './changes'
 import {
   abortMerge,
   aheadBehind,
@@ -34,13 +35,15 @@ import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
 import { documentOfUrl, DocumentError, filesFromArgv, openDocument, type OpenedDocument } from './documents'
-import { DIAGRAM_SYNTAX, MARKDOWN_EXT, OPENABLE_EXT } from './formats'
+import { DIAGRAM_SYNTAX, MARKDOWN_EXT, OPENABLE_EXT, opensInFolio } from './formats'
 import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { Session } from './session'
 import { labels } from './i18n'
 import { listDir } from './tree'
+import { Ignores } from './ignore'
+import { visibilityOf, type ProjectKind } from './visibility'
 import { FileIndex } from './fileIndex'
 import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry, saveAttachment } from './fileOps'
 import { Consoles } from './pty'
@@ -102,10 +105,27 @@ let gate: NetworkGate | null = null
 /** Native menus speak the system's language; known once the app is ready. */
 const L = () => labels(app.isReady() ? app.getLocale() : 'en')
 const fileIndex = new FileIndex()
+const ignores = new Ignores()
 const watcher = new Watcher((changes) => {
-  for (const c of changes) fileIndex.changed(c.root, c.files)
+  for (const c of changes) {
+    // A `.gitignore` written: what is shown under the whole root may change.
+    if (ignores.changed(c.files)) {
+      fileIndex.forget(c.root)
+      ;(c as typeof c & { all?: boolean }).all = true
+    }
+    fileIndex.changed(c.root, c.files)
+  }
   send('fs:changed', changes)
 })
+
+/** A folder's kind: its project's (Shared and other folders are notes). */
+function kindOfDir(dir: string): ProjectKind {
+  const owner = workspace.ownerOf(dir)
+  return owner?.kind === 'project' ? (owner.project.kind ?? 'notes') : 'notes'
+}
+
+/** What the tree, going to a file and searching see under a root's folder. */
+const visibility = (dir: string) => visibilityOf(dir, kindOfDir(dir), ignores)
 let win: BrowserWindow | null = null
 
 /** Documents' windows have a session of their own: the main process's requests are not theirs. */
@@ -377,7 +397,9 @@ ipcMain.handle('ws:set-shared', async (_e, reset: unknown) => {
 })
 ipcMain.handle('tree:list', (_e, root: unknown, rel: unknown, all: unknown) => {
   const dir = typeof root === 'string' ? roots.dir(root) : undefined
-  return dir === undefined || typeof rel !== 'string' ? null : listDir(dir, rel, all === true)
+  if (dir === undefined || typeof rel !== 'string') return null
+  // A code project lists every file, as code editors do; a notes project the ones folio opens.
+  return listDir(dir, rel, all === true || kindOfDir(dir) === 'code', visibility(dir))
 })
 /** Shared and the visible projects, each a root: what going to a file and searching cover. */
 function sources(): { root: string; label: string | null; dir: string }[] {
@@ -393,7 +415,7 @@ function sources(): { root: string; label: string | null; dir: string }[] {
 /** Every file folio opens in Shared and the visible projects: for going to a file by name. */
 ipcMain.handle('files:all', async () => {
   const out: { root: string; label: string | null; path: string; kind: string }[] = []
-  for (const s of sources()) for (const f of await fileIndex.files(s.root, s.dir)) out.push({ root: s.root, label: s.label, path: f.path, kind: f.kind })
+  for (const s of sources()) for (const f of await fileIndex.files(s.root, s.dir, visibility(s.dir))) out.push({ root: s.root, label: s.label, path: f.path, kind: f.kind })
   return out
 })
 
@@ -417,7 +439,7 @@ ipcMain.handle('search:run', async (e, id: unknown, query: unknown, options: unk
   const files: SearchFile[] = []
   for (const s of sources()) {
     if (scope !== 'all' && scope !== s.root) continue
-    for (const f of await fileIndex.files(s.root, s.dir)) if (pathPasses(q, f.path)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
+    for (const f of await fileIndex.files(s.root, s.dir, visibility(s.dir))) if (pathPasses(q, f.path)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
   }
   return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id, {
     ...(q.tags.length > 0 ? { accept: (text: string) => tagsPass(q, tagsOf(text)) } : {}),
@@ -500,8 +522,30 @@ ipcMain.on('search:cancel', () => {
 })
 ipcMain.handle('tree:open', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
-  return file === null ? { error: 'Not a file of this folder', path: String(rel) } : open(file)
+  if (file === null) return { error: 'Not a file of this folder', path: String(rel) }
+  // A file that is not text (a picture, an archive, a build's output) goes to the system's program for it.
+  if (!opensInFolio(file) && isBinary(file)) {
+    void shell.openPath(file)
+    return { external: true, path: file }
+  }
+  return open(file)
 })
+
+/** Whether a file holds bytes no text has (a NUL among its first 8 KB), as git tells binary files. */
+function isBinary(file: string): boolean {
+  try {
+    const fd = openSync(file, 'r')
+    try {
+      const buf = Buffer.alloc(8192)
+      const n = readSync(fd, buf, 0, buf.length, 0)
+      return buf.subarray(0, n).includes(0)
+    } finally {
+      closeSync(fd)
+    }
+  } catch {
+    return false
+  }
+}
 // Files and folders from the tree: made, renamed, moved, copied, put in the trash.
 
 /** An operation's error as a word the window shows ('exists', 'characters'…). */
@@ -950,6 +994,20 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
     { label: L().group, click: () => send('ws:edit', { id: project.id, field: 'group' }) },
     { label: project.hidden ? L().show : L().hide, click: () => update({ hidden: !project.hidden }) },
     { type: 'separator' },
+    // Notes or code: what the tree shows, and whether a save commits (a code project commits by hand).
+    ...(['notes', 'code'] as const).map((kind) => ({
+      label: kind === 'notes' ? L().kindNotes : L().kindCode,
+      type: 'radio' as const,
+      checked: (project.kind ?? 'notes') === kind,
+      click: () => {
+        if ((project.kind ?? 'notes') === kind) return
+        update({ kind })
+        const root = roots.register(project.path)
+        fileIndex.forget(root)
+        send('fs:changed', [{ root, dirs: [], files: [], all: true }])
+      },
+    })),
+    { type: 'separator' },
     { label: L().newNoteHere, click: () => send('tree:create', { root: roots.register(project.path), dir: '', kind: 'note' }) },
     { label: L().newFolder, click: () => send('tree:create', { root: roots.register(project.path), dir: '', kind: 'folder' }) },
     { type: 'separator' },
@@ -993,7 +1051,8 @@ async function gitInfo(path: string) {
     autoCommit: workspace.autoCommits(path),
     // History can be started in the file's project or Shared folder.
     canStart: root === null && owner !== null,
-    canAutoCommit: owner !== null,
+    // A code project commits by hand (ADR-002, I1).
+    canAutoCommit: owner !== null && kindOfDir(path) !== 'code',
   }
 }
 
@@ -1050,6 +1109,59 @@ ipcMain.handle('git:auto', async (_e, path: unknown, on: unknown) => {
   else if (owner?.kind === 'shared') workspace.setSharedAutoCommit(on)
   return gitInfo(path)
 })
+// Changes (ADR-002, I1): the repository's index and working folder, as source control shows them.
+ipcMain.handle('git:changes', async (_e, path: unknown) => {
+  if (typeof path !== 'string') return null
+  const root = await repoOf(path)
+  if (!root) return null
+  return { root, branch: await branchOf(root), ...(await changesOf(root)) }
+})
+/** The repository's root as asked for: one folio knows of (a project's or Shared's), never any folder. */
+async function changesRoot(root: unknown): Promise<string | null> {
+  if (typeof root !== 'string' || !isAbsolute(root)) return null
+  return (await repoOf(root)) === root && workspace.ownerOf(root) !== null ? root : null
+}
+const repoPaths = (paths: unknown): string[] | null =>
+  Array.isArray(paths) && paths.every((p) => typeof p === 'string' && !p.split('/').includes('..')) ? (paths as string[]) : null
+ipcMain.handle('git:stage', async (_e, root: unknown, paths: unknown) => {
+  const dir = await changesRoot(root)
+  const files = repoPaths(paths)
+  if (!dir || !files) return false
+  await stageFiles(dir, files)
+  return true
+})
+ipcMain.handle('git:unstage', async (_e, root: unknown, paths: unknown) => {
+  const dir = await changesRoot(root)
+  const files = repoPaths(paths)
+  if (!dir || !files) return false
+  await unstageFiles(dir, files)
+  return true
+})
+/** A file's changes thrown away, after asking: it cannot be undone. */
+ipcMain.handle('git:discard', async (_e, root: unknown, path: unknown) => {
+  const dir = await changesRoot(root)
+  const files = repoPaths([path])
+  if (!dir || !files || !win) return false
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning',
+    buttons: [L().discardConfirm, L().cancel],
+    defaultId: 1,
+    cancelId: 1,
+    message: L().discardQuestion.replace('{name}', basename(files[0]!)),
+    detail: L().discardDetail,
+  })
+  if (response !== 0) return false
+  await discardFile(dir, files[0]!)
+  return true
+})
+ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown) => {
+  const dir = await changesRoot(root)
+  if (!dir || typeof message !== 'string' || message.trim() === '' || mergeHead(dir)) return null
+  const oid = await commitStaged(dir, message.trim(), authorOf(dir, fallbackAuthor()))
+  if (oid) send('git:committed', { path: dir })
+  return oid
+})
+
 /** Commit the file now, with a message of one's own. */
 ipcMain.handle('git:commit', async (_e, path: unknown, message: unknown) => {
   if (typeof path !== 'string' || typeof message !== 'string' || message.trim() === '') return null

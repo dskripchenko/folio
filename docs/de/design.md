@@ -111,6 +111,19 @@ Dateien, die folio öffnet, Ordner zuerst, und folgen der Festplatte: eine
 anderswo hinzugefügte, geänderte oder gelöschte Datei erscheint sofort, ein
 offenes Dokument wird neu gezeichnet. `Cmd/Strg+B` blendet die Leiste aus.
 
+Ein Projekt ist eines aus **Notizen** oder aus **Code** — beim Hinzufügen
+erraten (ein `package.json`, `composer.json`, `go.mod`, `Cargo.toml` … oben,
+oder ein Git-Repository ohne Notizen neben seiner README macht es zu Code) und in
+seinem Menü umgestellt. Ein Code-Projekt listet jede Datei, auch die mit Punkt
+(`.github`, `.editorconfig`), und eine Datei, die kein Text ist, öffnet sich im
+Programm des Systems; ein Speichern wird dort nie von selbst committet —
+Commits entstehen von Hand. In einem Ordner unter Git bleibt, was `.gitignore`
+(mit `.git/info/exclude` und der globalen Ausschlussdatei des Benutzers)
+ausschließt, aus dem Baum, dem Gehe-zu-Datei und der Suche heraus, und der Baum
+folgt einer `.gitignore`, während sie geschrieben wird; ein Ordner ohne Git
+behält folios eigene Liste von Werkzeugordnern (`node_modules`, `vendor`,
+`dist` …).
+
 ### Dateien und Ordner
 
 Der Baum legt Dateien auch an und ändert sie: **Neue Notiz** und **Neuer
@@ -326,6 +339,21 @@ Commit dessen, was da ist.
 git steckt in folio (isomorphic-git, reines JavaScript), das funktioniert also
 auch ohne installiertes git.
 
+### Änderungen
+
+`Strg+Umschalt+G` auf jedem System (oder der Commit-Knopf in der rechten
+Leiste) öffnet **Änderungen**, wie die Quellcodeverwaltung eines Code-Editors:
+die im Arbeitsordner geänderten Dateien und die für den nächsten Commit
+vorgemerkten, jede mit ihrem Buchstaben (**A** hinzugefügt, **M** geändert,
+**D** gelöscht, **U** nicht verfolgt). Eine Datei kommt mit ihrem `+` und `−`
+in den Index und wieder heraus (oder alle auf einmal aus der Überschrift der
+Gruppe), ihre Änderungen werden mit dem Pfeil verworfen — nach einer Frage, es
+lässt sich nicht rückgängig machen —, und ihr Name öffnet sie. Eine Nachricht
+und **Commit** (oder `Cmd/Strg+Enter`) committen das Vorgemerkte. Die Leiste
+folgt dem sichtbaren Dokument und sieht neu nach, wenn sich die Platte ändert.
+In einem Code-Projekt entstehen Commits so: ein Speichern committet dort nie
+von selbst.
+
 ### Branches und Synchronisieren
 
 - **Branches**: Der Branch-Name im Panel öffnet die Liste — zu einem anderen
@@ -443,6 +471,7 @@ Pfade.
 | `Cmd/Strg+F` | im Dokument suchen |
 | `Cmd+G`, `Cmd+Umschalt+G` (macOS); `F3`, `Umschalt+F3` | der nächste Treffer, der vorige |
 | `Strg+G` | zu einer Zeile gehen, im Code-Editor (auf jedem System) |
+| `Strg+Umschalt+G` | die Änderungen: vormerken, committen (auf jedem System) |
 
 ## Suchen
 

@@ -759,7 +759,8 @@ export class Sidebar {
       const dirs = new Set(c.dirs)
       for (const box of this.containers()) {
         for (const ul of box.querySelectorAll<HTMLElement>(`ul.tree[data-root="${c.root}"]`)) {
-          if (dirs.has(ul.dataset.rel ?? '')) await this.fill(ul)
+          // `all`: what is shown under the root changed (a `.gitignore`, the project's kind).
+          if (c.all || dirs.has(ul.dataset.rel ?? '')) await this.fill(ul)
         }
       }
     }

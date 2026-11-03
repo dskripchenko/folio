@@ -29,7 +29,8 @@ test('the packaged program: widgets offline, a console, a PDF, its data beside i
     const win = await electronApp.firstWindow()
     expect(await electronApp.evaluate(({ app }) => app.isPackaged)).toBe(true)
     const doc = win.locator('article.doc:not([hidden])')
-    await expect(doc.locator('h1', { hasText: 'Everything' })).toBeVisible()
+    // A packaged program's first start is cold (an AppImage unpacked, the fonts read): longer than a test's default wait.
+    await expect(doc.locator('h1', { hasText: 'Everything' })).toBeVisible({ timeout: 30_000 })
     await expect(doc.locator('svg.dg')).toHaveCount(3, { timeout: 60_000 })
     await expect(doc.locator('.oa-bk', { hasText: 'List orders' })).toBeVisible({ timeout: 60_000 })
     await expect(doc.getByRole('img', { name: 'Order handling' })).toBeVisible({ timeout: 60_000 })

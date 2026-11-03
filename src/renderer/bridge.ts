@@ -1,3 +1,5 @@
+import type { ChangesView } from './changesPanel'
+
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
 export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'board' | 'text'
@@ -43,7 +45,8 @@ export interface Opened {
   owner: 'shared' | 'project' | 'file'
   project: string | null
 }
-export type OpenResult = Opened | { error: string; path: string }
+/** Opened; refused (an error tab); or handed to the system's program (a file that is not text). */
+export type OpenResult = Opened | { error: string; path: string } | { external: true; path: string }
 
 export type EditorMode = 'visual' | 'source' | 'split'
 
@@ -130,6 +133,8 @@ export interface Changes {
   root: string
   dirs: string[]
   files: string[]
+  /** Everything under the root may show otherwise (a `.gitignore` changed, the project's kind). */
+  all?: boolean
 }
 
 type Listener = (cb: (value: unknown) => void) => () => void
@@ -165,6 +170,13 @@ export interface FolioBridge {
   gitStart(path: string): Promise<GitInfo | null>
   gitAuto(path: string, on: boolean): Promise<GitInfo | null>
   gitCommit(path: string, message: string): Promise<string | null>
+  /** The changes of the repository holding a path (ADR-002, I1); null outside git. */
+  gitChanges(path: string): Promise<ChangesView | null>
+  gitStage(root: string, paths: string[]): Promise<boolean>
+  gitUnstage(root: string, paths: string[]): Promise<boolean>
+  /** Asks first; true when the changes were thrown away. */
+  gitDiscard(root: string, path: string): Promise<boolean>
+  gitCommitStaged(root: string, message: string): Promise<string | null>
   gitBranchCreate(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitBranchSwitch(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitRemote(path: string, url: string): Promise<{ ok: true } | GitRefusal>

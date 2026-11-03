@@ -30,7 +30,8 @@ export class Watcher {
       const w = watch(dir, { recursive: true }, (_event, name) => {
         if (name === null) return
         const rel = String(name).split(/[\\/]/).filter((p) => p !== '')
-        if (rel.some((p) => p.startsWith('.') || p === 'node_modules')) return
+        // Tooling and hidden folders are not watched — but a `.gitignore` is: what is shown follows it.
+        if (rel.some((p, i) => p === '.git' || p === 'node_modules' || (p.startsWith('.') && !(i === rel.length - 1 && p === '.gitignore')))) return
         const entry = this.pending.get(id) ?? { dirs: new Set<string>(), files: new Set<string>() }
         entry.dirs.add(rel.slice(0, -1).join('/'))
         entry.files.add(join(dir, ...rel))

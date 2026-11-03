@@ -104,6 +104,18 @@ The trees list folders and the files folio opens, folders first, and follow the
 disk: a file added, changed or removed elsewhere shows at once, and an open
 document is drawn again. `Cmd/Ctrl+B` hides the sidebar.
 
+A project is of **notes** or of **code** — guessed when it is added (a
+`package.json`, `composer.json`, `go.mod`, `Cargo.toml`… at its top, or a git
+repository with no notes beside its README makes it code) and changed in its
+menu. A project of code lists every file, its dot files too (`.github`,
+`.editorconfig`), and a file that is not text opens in the system's program;
+a save there is never committed on its own — commits are made by hand. In a
+folder under git, what `.gitignore` leaves out (with `.git/info/exclude` and
+the user's global excludes file) is left out of the tree, going to a file and
+searching, and the tree follows a `.gitignore` as it is written; a folder
+without git keeps folio's own list of tooling folders (`node_modules`,
+`vendor`, `dist`…).
+
 ### Files and folders
 
 The tree makes and changes files too: **New Note** and **New Folder** in a
@@ -299,6 +311,19 @@ a repository on branch `main` and a first commit of what is there.
 git is inside folio (isomorphic-git, pure JavaScript), so this works on a
 machine without git.
 
+### Changes
+
+`Ctrl+Shift+G` on every system (or the commit button on the right rail) opens
+**Changes**, as a code editor's source control: the files changed in the
+working folder and the ones staged for the next commit, each with its letter
+(**A**dded, **M**odified, **D**eleted, **U**ntracked). A file goes into the
+index and out of it with its `+` and `−` (or all of them at once from the
+group's heading), its changes are thrown away with the arrow — asked first,
+it cannot be undone — and its name opens it. A message and **Commit** (or
+`Cmd/Ctrl+Enter`) commit what is staged. The panel follows the document in
+view and looks again as the disk changes. In a project of code this is how
+commits are made: a save there never commits on its own.
+
 ### Branches and sync
 
 - **Branches**: the branch name in the panel opens the list — switch to one, or
@@ -406,6 +431,7 @@ relative paths.
 | `Cmd/Ctrl+F` | find in the document |
 | `Cmd+G`, `Cmd+Shift+G` (macOS); `F3`, `Shift+F3` | the next match, the previous |
 | `Ctrl+G` | go to a line, in the code editor (on every system) |
+| `Ctrl+Shift+G` | the changes: staged, committed (on every system) |
 
 Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
 `file:plan` (a value in quotes may have spaces); with no text left, a filter
