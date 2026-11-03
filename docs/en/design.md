@@ -104,6 +104,15 @@ The trees list folders and the files folio opens, folders first, and follow the
 disk: a file added, changed or removed elsewhere shows at once, and an open
 document is drawn again. `Cmd/Ctrl+B` hides the sidebar.
 
+In the code editor a file's **symbols** — functions, classes, methods, types,
+constants; a config's keys and sections — are read as it is typed: the
+**Outline** (right rail) lists them, the one holding the caret marked, a click
+going to it; breadcrumbs above the text show the file's project and folders,
+then the symbols holding the caret; `Cmd/Ctrl+Shift+O` goes to a symbol of the
+file by name and `Cmd/Ctrl+Alt+O` to one of every visible project (its file
+opened in the editor at it). Completion offers the projects' names besides the
+file's own words.
+
 A project is of **notes** or of **code** — guessed when it is added (a
 `package.json`, `composer.json`, `go.mod`, `Cargo.toml`… at its top, or a git
 repository with no notes beside its README makes it code) and changed in its
@@ -443,6 +452,7 @@ relative paths.
 | `Cmd+G`, `Cmd+Shift+G` (macOS); `F3`, `Shift+F3` | the next match, the previous |
 | `Ctrl+G` | go to a line, in the code editor (on every system) |
 | `Ctrl+Shift+G` | the changes: staged, committed (on every system) |
+| `Cmd/Ctrl+Shift+O`, `Cmd/Ctrl+Alt+O` | a symbol of the file, of the projects |
 
 Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
 `file:plan` (a value in quotes may have spaces); with no text left, a filter

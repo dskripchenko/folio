@@ -86,7 +86,7 @@ test('diagram files and API descriptions open directly, drawn by their elements,
     await viewMode(win, 'visual')
     const source = doc.getByTestId('source')
     // The code editor: its text, the key presses into it.
-    await expect.poll(() => source.locator('.dsk-code-editor').evaluate((el) => (el.parentElement!.parentElement as HTMLElement & { folioEditor: { value: string } }).folioEditor.value)).toBe('flowchart LR\n  Draft --> Review\n')
+    await expect.poll(() => source.locator('.dsk-code-editor').evaluate((el) => (el.closest(".source-editor") as HTMLElement & { folioEditor: { value: string } }).folioEditor.value)).toBe('flowchart LR\n  Draft --> Review\n')
     await source.locator('.dsk-code-editor__content').click()
     await win.keyboard.press(`${mod}+End`)
     await win.keyboard.type('  Review --> Published')

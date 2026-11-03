@@ -22,8 +22,8 @@ importers:
         specifier: 1.18.0
         version: 1.18.0
       '@dskripchenko/syntax':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: link:../syntax
+        version: link:../syntax
       '@dskripchenko/terminal':
         specifier: ^0.2.0
         version: 0.2.0

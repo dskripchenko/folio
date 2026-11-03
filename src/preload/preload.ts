@@ -81,6 +81,7 @@ contextBridge.exposeInMainWorld('folio', {
     return () => ipcRenderer.removeListener('console:exit', handler)
   },
   allFiles: () => ipcRenderer.invoke('files:all'),
+  projectSymbols: () => ipcRenderer.invoke('symbols:project'),
   searchScopes: () => ipcRenderer.invoke('search:scopes'),
   search: (id: number, query: string, options: Record<string, boolean>, scope: string) => ipcRenderer.invoke('search:run', id, query, options, scope),
   cancelSearch: () => ipcRenderer.send('search:cancel'),

@@ -6,6 +6,7 @@ import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
 import { changesOf, commitStaged, discardFile, stageFiles, unstageFiles } from './changes'
 import { blameOf } from './blame'
+import { SymbolIndex, type SourceFile } from './symbolIndex'
 import {
   abortMerge,
   aheadBehind,
@@ -413,6 +414,17 @@ function sources(): { root: string; label: string | null; dir: string }[] {
     return { root, label: source.label, dir }
   })
 }
+
+/** The symbols of every visible project's code: going to a symbol across projects, completing names. */
+const symbolIndex = new SymbolIndex()
+ipcMain.handle('symbols:project', async () => {
+  const files: SourceFile[] = []
+  for (const s of sources()) {
+    if (s.label === null) continue
+    for (const f of await fileIndex.files(s.root, s.dir, visibility(s.dir))) if (f.kind === 'code') files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
+  }
+  return symbolIndex.symbolsOf(files)
+})
 
 /** Every file folio opens in Shared and the visible projects: for going to a file by name. */
 ipcMain.handle('files:all', async () => {

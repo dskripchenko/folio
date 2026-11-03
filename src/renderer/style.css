@@ -234,6 +234,14 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
 .doc .plain-text { margin: 0; padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--tab); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .source-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; height: calc(100vh - 150px); }
 .source-editor.alone { grid-template-columns: minmax(0, 1fr); }
+.source-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.source-main .source { flex: 1; }
+.code-crumbs { display: flex; flex-wrap: nowrap; gap: 2px; align-items: center; min-height: 22px; padding: 0 8px; overflow: hidden; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.code-crumbs .crumb + .crumb::before { content: '›'; margin: 0 4px; opacity: 0.6; }
+.code-crumbs .crumb-file { color: var(--fg); }
+.code-crumbs button.crumb { padding: 0; border: 0; background: none; color: var(--fg); font: inherit; cursor: pointer; }
+.code-crumbs button.crumb:hover { text-decoration: underline; }
+.symbol-sign { display: inline-block; width: 16px; margin-right: 6px; color: var(--accent); font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
 .source-editor .source { box-sizing: border-box; width: 100%; height: 100%; min-height: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
 /* The code editor in folio's colours; the tokens' colours are the code view's (syntax's THEME_CSS). */
 .source-editor .dsk-code-editor { --dsk-code-editor-bg: var(--bg); --dsk-code-editor-fg: var(--fg); --dsk-code-editor-gutter-fg: var(--muted, #8c959f); --dsk-code-editor-font-size: 13px; --dsk-code-editor-line-height: 20px; }

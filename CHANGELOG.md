@@ -30,6 +30,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - **Who changed each line (blame)** among the commands: a column of authors
   and dates by the line numbers (the system git when there is one, else the
   file's history read by folio).
+- Code navigation (ADR-002, I2): a file's symbols in the **Outline**, the
+  one holding the caret marked; breadcrumbs above the code editor;
+  `Cmd/Ctrl+Shift+O` goes to a symbol of the file, `Cmd/Ctrl+Alt+O` to one of
+  every visible project; completion offers the projects' names.
 
 ## [1.1.0] - 2026-11-03
 

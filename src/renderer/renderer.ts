@@ -7,7 +7,7 @@
  */
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
-import { editorConfigFor, indentOptions, type CodeEditor } from '@dskripchenko/code-editor'
+import { editorConfigFor, indentOptions, type CodeEditor, type CompletionSource } from '@dskripchenko/code-editor'
 import { canEdit, editorOf, READ_ONLY_BYTES, viewOf, type SourceEditorElement, type ViewOptions } from './formats'
 import type { CodeState } from './code'
 import { domTarget, editorTarget, fieldTarget, selectInField, type FindTarget, type WithFindTarget } from './find'
@@ -30,6 +30,8 @@ import { watchEmbeds } from './embeds'
 import { TasksPanel, type TasksText } from './tasksPanel'
 import { ChangesPanel, type ChangesText } from './changesPanel'
 import { GitMarks, type GitMarksText } from './gitMarks'
+import { CodeNav, type NavItem } from './codeNav'
+import { SymbolPalette, type SymbolPaletteText } from './symbolPalette'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
 import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
@@ -86,6 +88,7 @@ const TEXT = {
     tasks: { title: 'Tasks', close: 'Close', open: 'Open', all: 'All', overdue: 'Overdue', today: 'Today', later: 'Later', noDate: 'No date', done: 'Done', none: 'No tasks here: write - [ ] in a note.', changed: 'The note has changed meanwhile: look again.' } as TasksText,
     changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
     gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
+    symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
     blame: 'Who changed each line (blame)',
     notCommitted: 'Not committed yet',
     outline: { title: 'Outline', close: 'Close', none: 'No headings in this note.' } as OutlineText,
@@ -146,6 +149,7 @@ const TEXT = {
     tasks: { title: 'Задачи', close: 'Закрыть', open: 'Открытые', all: 'Все', overdue: 'Просрочено', today: 'Сегодня', later: 'Позже', noDate: 'Без даты', done: 'Сделано', none: 'Задач нет: напишите - [ ] в заметке.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as TasksText,
     changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
     gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
+    symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
     blame: 'Кто менял каждую строку (blame)',
     notCommitted: 'Ещё не закоммичено',
     outline: { title: 'Оглавление', close: 'Закрыть', none: 'В этой заметке нет заголовков.' } as OutlineText,
@@ -172,6 +176,7 @@ let graphPanel: GraphPanel | null = null
 /** The tasks of the project in view. */
 let tasksPanel: TasksPanel | null = null
 let changesPanel: ChangesPanel | null = null
+let symbolPalette: SymbolPalette | null = null
 /** The status line under the page. */
 let statusBar: StatusBar | null = null
 /** The outline of the note in view. */
@@ -243,6 +248,7 @@ function applyText(): void {
   graphPanel?.setText(t.graph)
   tasksPanel?.setText(t.tasks)
   changesPanel?.setText(t.changes)
+  symbolPalette?.setText(t.symbols)
   outlinePanel?.setText(t.outline)
   statusBar?.setText(t.status)
   syncStatus()
@@ -307,7 +313,7 @@ function formatOf(tab: Tab): Format {
 }
 
 function viewOptions(tab: Tab, main = false): ViewOptions {
-  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main, code: main ? tab.code : undefined }
+  return { base: tab.doc?.base, name: tab.doc?.name ?? titleOf(tab), main, code: main ? tab.code : undefined, completion: projectCompletion }
 }
 
 /** A version from the history: as it was, its changes against now, or the two side by side. */
@@ -416,6 +422,9 @@ function render(tab: Tab): void {
     const path = tab.path
     // A file under git: its changes against the last commit, in the gutter.
     if (editor && path) void watchChanges(editor, path)
+    // Its symbols: the outline, the breadcrumbs, going to one by name.
+    const crumbs = (el as SourceEditorElement).folioCrumbs
+    if (editor && crumbs) navs.set(editor, new CodeNav(editor, editor.language, crumbs, placeOf(tab), () => syncOutline()))
     if (editor && path)
       void folio.editorConfigs(path).then((files) => {
         const indent = indentOptions(editorConfigFor(path, files))
@@ -698,6 +707,13 @@ function linksSoon(): void {
 function syncOutline(): void {
   if (!outlinePanel?.visible) return
   const tab = active
+  // A file in the code editor: its symbols, the one holding the caret marked.
+  const nav = tab && !tab.version ? navOf(tab) : null
+  if (nav) {
+    outlinePanel.showItems(nav.items)
+    outlinePanel.mark(nav.current())
+    return
+  }
   outlinePanel.show(tab && !tab.version && formatOf(tab) === 'markdown' ? tab.text : null)
   markSection()
 }
@@ -727,6 +743,10 @@ function markSection(): void {
 function goToHeading(heading: Heading, index: number): void {
   const tab = active
   if (!tab) return
+  if (heading.kind) {
+    navOf(tab)?.go(heading as NavItem)
+    return
+  }
   const field = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility())
   if (field) {
     const at = tab.text.split('\n').slice(0, heading.line).join('\n').length + (heading.line > 0 ? 1 : 0)
@@ -762,6 +782,76 @@ function edited(tab: Tab): void {
   if (tab === active) linksSoon()
   if (tab.timer) clearTimeout(tab.timer)
   tab.timer = setTimeout(() => flush(tab), BUFFER_DELAY)
+}
+
+/** The symbols of the files in code editors, by editor. */
+const navs = new Map<CodeEditor, CodeNav>()
+
+/** The code editor in view's symbols, the ones of editors taken off the page let go. */
+function navOf(tab: Tab | null): CodeNav | null {
+  for (const [editor, nav] of navs)
+    if (!editor.dom.isConnected) {
+      nav.destroy()
+      navs.delete(editor)
+    }
+  const editor = codeEditorOf(tab)
+  return editor ? (navs.get(editor) ?? null) : null
+}
+
+/** Where a file is, for its breadcrumbs: its project (or Shared), its folders, its name. */
+function placeOf(tab: Tab): string[] {
+  const doc = tab.doc
+  if (!doc) return [titleOf(tab)]
+  const rel = decodeURIComponent(doc.base.replace(/^folio:\/\/app\/r\/[^/]+\/?/, '')).split('/').filter(Boolean)
+  return [doc.project ?? (doc.owner === 'shared' ? t.sidebar.shared : doc.folder.split(/[\\/]/).pop() ?? ''), ...rel, doc.name]
+}
+
+/** Names from the projects' symbols, for the code editor's completion (read again at most once a minute). */
+let projectNames: { at: number; names: Promise<{ name: string; kind: string; container: string }[]> } | null = null
+const projectCompletion: CompletionSource = async ({ prefix }) => {
+  if (prefix.length < 2) return null
+  if (!projectNames || Date.now() - projectNames.at > 60_000) {
+    projectNames = {
+      at: Date.now(),
+      names: folio.projectSymbols().then((list) => {
+        const seen = new Map<string, { name: string; kind: string; container: string }>()
+        for (const s of list) if (!seen.has(s.name)) seen.set(s.name, s)
+        return [...seen.values()]
+      }),
+    }
+  }
+  const lower = prefix.toLowerCase()
+  return (await projectNames.names)
+    .filter((s) => s.name.toLowerCase().startsWith(lower) && s.name !== prefix)
+    .slice(0, 40)
+    .map((s) => ({ label: s.name, kind: s.kind, detail: s.container || s.kind }))
+}
+
+/** Going to a symbol: of the file in the code editor, or of every project. */
+function goToSymbol(scope: 'file' | 'project'): void {
+  if (scope === 'file') {
+    const nav = navOf(active)
+    if (!nav) return
+    void symbolPalette?.open(
+      'file',
+      async () => nav.items.map((i) => ({ name: i.text, kind: i.kind, container: i.container, line: i.line, column: i.column })),
+      (s) => nav.go(s),
+    )
+    return
+  }
+  void symbolPalette?.open(
+    'project',
+    async () => (await folio.projectSymbols()).map((s) => ({ name: s.name, kind: s.kind, container: s.container, line: s.line, column: s.column, file: { root: s.root, label: s.label, path: s.path } })),
+    (s) =>
+      void folio.openEntry(s.file!.root, s.file!.path).then(async (result) => {
+        await add(result)
+        const tab = active
+        if (!tab) return
+        // Code is gone to in the editor.
+        if (tab.view !== 'edit' && canEdit(formatOf(tab))) toggleEditTo(tab, 'edit')
+        requestAnimationFrame(() => codeEditorOf(tab)?.goToLine(s.line + 1, s.column))
+      }),
+  )
 }
 
 /** The editors showing their changes against the last commit, by the file they edit. */
@@ -1465,6 +1555,8 @@ function findTarget(): Retarget {
 }
 
 const findBar = new FindBar(t.find, findTarget, viewEl)
+symbolPalette = new SymbolPalette(t.symbols)
+document.body.append(symbolPalette.el)
 
 /** The find bar, the code editor's selected text (one line) as its query. */
 function openFind(): void {
@@ -1562,6 +1654,8 @@ function commands(): Command[] {
     { id: 'template-new', group: c.notes, title: c.newFromTemplate, icon: 'note', run: () => void chooseTemplate((path) => void noteFromTemplate(path)) },
     { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: has, run: () => openFind() },
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
+    { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },
+    { id: 'symbol-project', group: c.edit, title: t.symbols.project, keys: `${mod}⌥O`, icon: 'search', run: () => goToSymbol('project') },
     { id: 'find-in-files', group: c.edit, title: c.findInFiles, keys: `${mod}⇧F`, icon: 'search', run: () => void searchPanel.open() },
     ...MODES.map(([m, name]): Command => ({ id: `mode-${m}`, group: view, title: t.modeNames[m], icon: name, when: () => modesOf(active).has(m) && modeOf(active!) !== m, run: () => setMode(active, m) })),
     { id: 'beside', group: view, title: t.openBeside, keys: `${mod}\\`, icon: 'panelRight', when: () => !!active && active !== beside && tabs.length > 1, run: () => active && openBeside(active) },
@@ -1787,6 +1881,14 @@ window.addEventListener(
       event.preventDefault()
       event.stopPropagation()
       changesPanel?.setVisible(!changesPanel.visible)
+      return
+    }
+    // Cmd/Ctrl+Shift+O: a symbol of the file; Cmd/Ctrl+Alt+O: of the projects (as in VS Code).
+    const modKey = folio.platform === 'darwin' ? event.metaKey : event.ctrlKey
+    if (modKey && event.code === 'KeyO' && (event.shiftKey || event.altKey) && !(event.shiftKey && event.altKey)) {
+      event.preventDefault()
+      event.stopPropagation()
+      goToSymbol(event.shiftKey ? 'file' : 'project')
       return
     }
     // F3 off a Mac, as in VS Code: the next match (Shift: the previous).

@@ -111,6 +111,16 @@ Dateien, die folio öffnet, Ordner zuerst, und folgen der Festplatte: eine
 anderswo hinzugefügte, geänderte oder gelöschte Datei erscheint sofort, ein
 offenes Dokument wird neu gezeichnet. `Cmd/Strg+B` blendet die Leiste aus.
 
+Im Code-Editor werden die **Symbole** einer Datei — Funktionen, Klassen,
+Methoden, Typen, Konstanten; Schlüssel und Abschnitte einer Konfiguration —
+beim Tippen gelesen: die **Gliederung** (rechte Leiste) listet sie, das Symbol
+mit der Einfügemarke markiert, ein Klick springt hin; Brotkrumen über dem Text
+zeigen Projekt und Ordner der Datei, dann die Symbole um die Einfügemarke;
+`Cmd/Strg+Umschalt+O` springt zu einem Symbol der Datei nach Namen,
+`Cmd/Strg+Alt+O` zu einem jedes sichtbaren Projekts (seine Datei im Editor dort
+geöffnet). Die Vervollständigung bietet die Namen der Projekte neben den
+Wörtern der Datei.
+
 Ein Projekt ist eines aus **Notizen** oder aus **Code** — beim Hinzufügen
 erraten (ein `package.json`, `composer.json`, `go.mod`, `Cargo.toml` … oben,
 oder ein Git-Repository ohne Notizen neben seiner README macht es zu Code) und in
@@ -484,6 +494,7 @@ Pfade.
 | `Cmd+G`, `Cmd+Umschalt+G` (macOS); `F3`, `Umschalt+F3` | der nächste Treffer, der vorige |
 | `Strg+G` | zu einer Zeile gehen, im Code-Editor (auf jedem System) |
 | `Strg+Umschalt+G` | die Änderungen: vormerken, committen (auf jedem System) |
+| `Cmd/Strg+Umschalt+O`, `Cmd/Strg+Alt+O` | ein Symbol der Datei, der Projekte |
 
 ## Suchen
 

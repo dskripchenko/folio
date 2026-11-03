@@ -216,6 +216,8 @@ export interface FolioBridge {
   replace(query: string, options: Record<string, boolean>, replacement: string, files: string[]): Promise<{ files: number; replacements: number; commits: number } | { error: string }>
   onSearchHits(callback: (id: number, batch: unknown) => void): () => void
   allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'other' }[]>
+  /** The symbols of every visible project's code (ADR-002, I2). */
+  projectSymbols(): Promise<{ root: string; label: string | null; path: string; name: string; kind: string; container: string; line: number; column: number }[]>
   onPrint: Listener
   exportPdf(target: object, options: Record<string, unknown>): Promise<{ saved: string } | { canceled: true } | { error: string }>
   onExportPdf: Listener

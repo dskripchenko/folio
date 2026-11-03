@@ -4,7 +4,7 @@
  * (never parsed as markup). The view is used for the document, a version
  * from the history and the two sides of a comparison alike.
  */
-import { CodeEditor } from '@dskripchenko/code-editor'
+import { CodeEditor, type CompletionSource } from '@dskripchenko/code-editor'
 import { languageOf } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
 import { codeView, type CodeState } from './code'
@@ -62,6 +62,8 @@ export interface ViewOptions {
   main?: boolean
   /** What the code view keeps over redraws (the levels a log hides). */
   code?: CodeState
+  /** Names the code editor offers besides the file's own words (the project's symbols). */
+  completion?: CompletionSource
 }
 
 /** The document drawn, read-only. */
@@ -157,7 +159,7 @@ export function editorOf(format: Format, text: string, o: ViewOptions, changed: 
 }
 
 /** A source editor's element: the editor in it, and its text taken now when a change is still pending. */
-export type SourceEditorElement = HTMLElement & { folioEditor?: CodeEditor; folioFlush?: () => void }
+export type SourceEditorElement = HTMLElement & { folioEditor?: CodeEditor; folioFlush?: () => void; folioCrumbs?: HTMLElement }
 
 /** Up to this many characters the text is taken on every change; a bigger one once typing pauses (a 50 MB string per key is not free). */
 const EAGER_CHARS = 1_000_000
@@ -171,10 +173,18 @@ function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (te
   const box: SourceEditorElement = document.createElement('div')
   box.className = 'source-editor'
   box.dataset.testid = 'source-editor'
+  // The breadcrumbs above the text, the text below them.
+  const main = document.createElement('div')
+  main.className = 'source-main'
+  const crumbs = document.createElement('nav')
+  crumbs.className = 'code-crumbs'
+  crumbs.dataset.testid = 'crumbs'
   const host = document.createElement('div')
   host.className = 'source'
   host.dataset.testid = 'source'
-  box.append(host)
+  main.append(crumbs, host)
+  box.append(main)
+  box.folioCrumbs = crumbs
   const preview = format === 'diagram' || format === 'asyncapi'
   let pane: HTMLElement | null = null
   if (preview) {
@@ -198,6 +208,7 @@ function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (te
   const editor = new CodeEditor(host, {
     value: text,
     language: languageFor(format, o.name, text) ?? undefined,
+    ...(o.completion ? { completion: o.completion } : {}),
     onChange: (e) => {
       if (e.state.doc.length <= EAGER_CHARS) return take()
       if (pending) clearTimeout(pending)
