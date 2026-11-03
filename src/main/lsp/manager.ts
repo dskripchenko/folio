@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { realpathSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { basename } from 'node:path'
+import { realish } from '../paths'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Connection } from './rpc'
 import { findServer, languageIdOf, userPath, type FoundServer } from './servers'
@@ -13,18 +13,12 @@ import { findServer, languageIdOf, userPath, type FoundServer } from './servers'
  * three times at most, its files opened in it again.
  */
 
-/** A path as the file system has it (a symlinked folder, /var on macOS, resolved); a new file's by its folder. */
-export function realPath(path: string): string {
-  try {
-    return realpathSync.native(path)
-  } catch {
-    try {
-      return join(realpathSync.native(dirname(path)), basename(path))
-    } catch {
-      return path
-    }
-  }
-}
+/**
+ * A path as folio names it (a symlinked folder, /var on macOS, resolved; a new
+ * file by its folder) — the same as the workspace's, so a path a server names
+ * meets the tab and the project it belongs to.
+ */
+export const realPath = (path: string): string => realish(path)
 
 const URI_KEYS = new Set(['uri', 'targetUri', 'oldUri', 'newUri'])
 

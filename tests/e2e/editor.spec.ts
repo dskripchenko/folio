@@ -35,7 +35,7 @@ test('a source file in the code editor: highlighted, indented by .editorconfig, 
     await editor.locator('.dsk-code-editor__content').click()
     await win.keyboard.press(`${mod}+Home`)
     const status = win.getByTestId('status')
-    await expect(status).toHaveText(/^(Ln|Стр) 1, (Col|кол) 1 · (Spaces|Пробелы): 3 · LF · TypeScript$/)
+    await expect(status).toHaveText(/^(Ln|Стр) 1, (Col|кол) 1 · (Spaces|Пробелы): 3 · LF · TypeScript( · .+)?$/)
 
     // Enter after a brace: a step of three spaces deeper.
     await win.keyboard.press('End')

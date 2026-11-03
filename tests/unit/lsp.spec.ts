@@ -33,7 +33,7 @@ describe('the files a server names', () => {
     writeFileSync(join(real, 'a.js'), '')
     symlinkSync(real, join(dir, 'link'))
     const linked = pathToFileURL(join(dir, 'link', 'a.js')).href
-    const truth = pathToFileURL(join(realpathSync.native(real), 'a.js')).href
+    const truth = pathToFileURL(join(realpathSync(real), 'a.js')).href
     const out = realUris({
       locations: [{ uri: linked, range: {} }],
       edit: { changes: { [linked]: [{ newText: 'uri' }] }, documentChanges: [{ textDocument: { uri: linked } }] },

@@ -104,7 +104,7 @@ const TEXT = {
     changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
     gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
-    lsp: { none: 'No language server: {install}', untrusted: '{server}: the project is not trusted', failed: '{server} did not start', log: 'Language server output', definitions: 'Definitions', references: 'References' },
+    lsp: { none: 'no language server', install: 'To understand the code, install a language server: {install}', untrusted: '{server}: the project is not trusted', failed: '{server} did not start', log: 'Language server output', definitions: 'Definitions', references: 'References' },
     problems: { title: 'Problems', close: 'Close', none: 'No problems. A task\'s errors and warnings come here.', from: 'From the task {task}' } as ProblemsText,
     tasks2: { run: 'Run a task', none: 'No tasks here: scripts of package.json or composer.json, Makefile targets, justfile recipes, or .folio/settings.json.' },
     blame: 'Who changed each line (blame)',
@@ -168,7 +168,7 @@ const TEXT = {
     changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
     gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
-    lsp: { none: 'Нет языкового сервера: {install}', untrusted: '{server}: проекту не доверяют', failed: '{server} не запустился', log: 'Вывод языкового сервера', definitions: 'Определения', references: 'Ссылки' },
+    lsp: { none: 'без языкового сервера', install: 'Чтобы folio понимал код, поставьте языковой сервер: {install}', untrusted: '{server}: проекту не доверяют', failed: '{server} не запустился', log: 'Вывод языкового сервера', definitions: 'Определения', references: 'Ссылки' },
     problems: { title: 'Проблемы', close: 'Закрыть', none: 'Проблем нет. Сюда попадают ошибки и предупреждения задач.', from: 'Из задачи {task}' } as ProblemsText,
     tasks2: { run: 'Запустить задачу', none: 'Задач нет: скрипты package.json или composer.json, цели Makefile, рецепты justfile или .folio/settings.json.' },
     blame: 'Кто менял каждую строку (blame)',
@@ -969,7 +969,7 @@ function folioKey(event: KeyboardEvent): boolean {
 
 const lspBindings = new Map<CodeEditor, LspBinding>()
 /** What the status line says of an editor's server: its name, or why there is none. */
-const lspStatus = new Map<CodeEditor, string>()
+const lspStatus = new Map<CodeEditor, { text: string; hint?: string }>()
 /** The servers' last diagnostics of each file, as they sent them (for code actions). */
 const lspDiagnostics = new Map<string, { range: LspRange; severity?: number; message: string; source?: string; code?: unknown }[]>()
 
@@ -1007,7 +1007,7 @@ async function attachLsp(editor: CodeEditor, path: string): Promise<void> {
   if (r.status === 'ok') {
     const b = new LspBinding(editor, path, r.server, r.capabilities, folio, r.real)
     lspBindings.set(editor, b)
-    lspStatus.set(editor, r.server)
+    lspStatus.set(editor, { text: r.server })
     // Typed while the server was starting: the server gets the text as it is now.
     const now = editor.value.replace(/\r\n/g, '\n')
     if (now !== sent) {
@@ -1017,8 +1017,12 @@ async function attachLsp(editor: CodeEditor, path: string): Promise<void> {
     navs.get(editor)?.refresh()
     markLspDiagnostics(path)
   } else if (r.status === 'none') {
-    if (r.install) lspStatus.set(editor, t.lsp.none.replace('{install}', r.install))
-  } else lspStatus.set(editor, r.status === 'untrusted' ? t.lsp.untrusted.replace('{server}', r.server) : t.lsp.failed.replace('{server}', r.server))
+    if (r.install) lspStatus.set(editor, { text: t.lsp.none, hint: t.lsp.install.replace('{install}', r.install) })
+  } else
+    lspStatus.set(editor, {
+      text: r.status === 'untrusted' ? t.lsp.untrusted.replace('{server}', r.server) : t.lsp.failed.replace('{server}', r.server),
+      ...(r.status === 'failed' ? { hint: r.error } : {}),
+    })
   syncStatus()
 }
 

@@ -10,6 +10,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [1.2.0] - 2026-11-03
 
 ### Fixed
+- Language servers on Windows: a rename's edits to closed files are written
+  (a server's paths are compared the way folio's own are, short names kept).
 - A formatter (or a language server) gone before reading what it was sent no
   longer raises an error in folio: its exit code tells what happened.
 - The code editor measures its lines again when the page changes their height
