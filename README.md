@@ -27,7 +27,7 @@ From the [latest release](https://github.com/dskripchenko/folio/releases/latest)
 
 | System | Archive | How to run |
 |---|---|---|
-| macOS, Apple Silicon | `folio-<version>-mac-arm64.zip` | unpack, open `folio.app` (the first time: context menu → Open) |
+| macOS, Apple Silicon | `folio-<version>-mac-arm64.zip` | unpack into a folder of its own, open `folio.app` (the first time: see [below](#honest-limits)) |
 | macOS, Intel | `folio-<version>-mac-x64.zip` | the same |
 | Windows x64 | `folio-<version>-win-x64.zip` | unpack into a folder you can write to, run `folio.exe` |
 | Linux x64 | `folio-<version>-linux-x64.AppImage` | `chmod +x` it and run it |
@@ -87,12 +87,16 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 
 - **Size.** Electron brings its own Chromium: about 130 MB an archive. "Light"
   here means no installation, services or traces in the system, not megabytes.
-- **No publisher's signature.** macOS says it cannot check the developer: open
-  folio from its context menu (Open) the first time, or remove the quarantine
-  with `xattr -dr com.apple.quarantine folio.app`. Windows SmartScreen says
-  "unknown publisher": More info → Run anyway. What each archive is can be
-  checked by its `.sha256` and its provenance
-  (`gh attestation verify <archive> --repo dskripchenko/folio`).
+- **No publisher's signature.** macOS says it cannot verify the developer, or
+  that folio "is damaged", the first time it is opened from a browser
+  download. Either open it once, then **System Settings → Privacy & Security
+  → Open Anyway** (on macOS 15 and later the context menu's Open no longer
+  does this), or remove the quarantine in Terminal:
+  `xattr -dr com.apple.quarantine folio.app`. An archive fetched with `curl`
+  carries no quarantine and opens at once; updates folio downloads itself
+  don't either. Windows SmartScreen says "unknown publisher": More info → Run
+  anyway. What each archive is can be checked by its `.sha256` and its
+  provenance (`gh attestation verify <archive> --repo dskripchenko/folio`).
 - **Linux.** An AppImage needs FUSE 2 (`libfuse2`), or run it with
   `--appimage-extract-and-run`. Where unprivileged user namespaces are
   restricted (Ubuntu 24.04 and later), Chromium's sandbox cannot start: allow
