@@ -55,14 +55,12 @@ test('the changes panel: a save is not committed in a code project; staged, comm
     writeFileSync(join(proj, 'src', 'b.ts'), 'broken\n')
     await expect(unstaged.getByTestId('change')).toHaveCount(2)
     const b = unstaged.locator('[data-path="src/b.ts"]')
-    await b.hover()
     await b.getByTestId('change-discard').click()
     await expect(unstaged.getByTestId('change')).toHaveCount(1)
     expect(readFileSync(join(proj, 'src', 'b.ts'), 'utf8')).toBe('export const b = 2\n')
 
     // Staged, then committed with a message by Cmd/Ctrl+Enter.
     const a = unstaged.locator('[data-path="src/a.ts"]')
-    await a.hover()
     await a.getByTestId('change-stage').click()
     await expect(panel.getByTestId('changes-staged').getByTestId('change')).toHaveCount(1)
     await panel.getByTestId('changes-message').fill('Add c')

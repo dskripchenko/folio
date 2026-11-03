@@ -324,6 +324,17 @@ it cannot be undone — and its name opens it. A message and **Commit** (or
 view and looks again as the disk changes. In a project of code this is how
 commits are made: a save there never commits on its own.
 
+### Changes in the gutter, who changed a line
+
+A file under git edited in the code editor marks its changes against the last
+commit beside the line numbers as they are typed: a green bar for added lines,
+a blue one for changed lines, a red notch where lines were deleted. A click on
+a mark shows what the lines were, with **Revert** to take that change back.
+**Who changed each line (blame)** among the commands adds a column by the
+numbers — the author and how long ago, the commit's message, author and date
+on hover; the same command takes it away. It uses the system git when there
+is one, else reads the file's history itself.
+
 ### Branches and sync
 
 - **Branches**: the branch name in the panel opens the list — switch to one, or

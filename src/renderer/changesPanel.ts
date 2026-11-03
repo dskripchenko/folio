@@ -60,6 +60,8 @@ export class ChangesPanel {
   private readonly list: HTMLElement
   private path: string | null = null
   private view: ChangesView | null = null
+  /** What the list shows, so a look that finds the same leaves it (and the pointer's place in it) alone. */
+  private drawn = ''
   private seq = 0
 
   constructor(
@@ -103,6 +105,7 @@ export class ChangesPanel {
 
   setText(text: ChangesText): void {
     this.text = text
+    this.drawn = ''
     this.el.querySelector('.changes-title')!.textContent = text.title
     this.message.placeholder = text.message
     this.commitButton.textContent = text.commit
@@ -136,6 +139,9 @@ export class ChangesPanel {
     if (seq !== this.seq) return
     this.view = view
     this.commitButton.disabled = !view || view.staged.length === 0
+    const key = JSON.stringify(view)
+    if (key === this.drawn) return
+    this.drawn = key
     if (!view) {
       this.list.replaceChildren(this.note(this.text.noRepo))
       return

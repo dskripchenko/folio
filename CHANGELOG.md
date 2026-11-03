@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+- A note's preview no longer starts its note over when the pointer comes
+  back onto the link while the note is still being read: on a slow machine it
+  could never show.
+
 ### Added
 - Projects of notes and of code (ADR-002, I1): the kind is guessed when a
   project is added (a `package.json`, `go.mod`, `Cargo.toml`… or a repository
@@ -19,6 +24,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   changed and the staged files, staged and unstaged a file at a time or all
   at once, a file's changes thrown away (asked first), a message and Commit
   (`Cmd/Ctrl+Enter`).
+- A file under git edited in the code editor marks its changes against the
+  last commit in the gutter as they are typed; a click on a mark shows what
+  the lines were and takes the change back.
+- **Who changed each line (blame)** among the commands: a column of authors
+  and dates by the line numbers (the system git when there is one, else the
+  file's history read by folio).
 
 ## [1.1.0] - 2026-11-03
 

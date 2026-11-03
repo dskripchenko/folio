@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld('folio', {
   gitAuto: (path: string, on: boolean) => ipcRenderer.invoke('git:auto', path, on),
   gitCommit: (path: string, message: string) => ipcRenderer.invoke('git:commit', path, message),
   gitChanges: (path: string) => ipcRenderer.invoke('git:changes', path),
+  gitHeadText: (path: string) => ipcRenderer.invoke('git:head-text', path),
+  gitBlame: (path: string) => ipcRenderer.invoke('git:blame', path),
   gitStage: (root: string, paths: string[]) => ipcRenderer.invoke('git:stage', root, paths),
   gitUnstage: (root: string, paths: string[]) => ipcRenderer.invoke('git:unstage', root, paths),
   gitDiscard: (root: string, path: string) => ipcRenderer.invoke('git:discard', root, path),

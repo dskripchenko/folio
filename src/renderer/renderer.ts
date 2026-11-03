@@ -29,6 +29,7 @@ import { HoverPreview } from './hoverPreview'
 import { watchEmbeds } from './embeds'
 import { TasksPanel, type TasksText } from './tasksPanel'
 import { ChangesPanel, type ChangesText } from './changesPanel'
+import { GitMarks, type GitMarksText } from './gitMarks'
 import { GraphPanel, type GraphText } from './graphPanel'
 import { StatusBar, type StatusText } from './statusBar'
 import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outline'
@@ -84,6 +85,9 @@ const TEXT = {
     graph: { title: 'Graph', close: 'Close', local: 'This note', all: 'All', empty: 'No notes here yet.' } as GraphText,
     tasks: { title: 'Tasks', close: 'Close', open: 'Open', all: 'All', overdue: 'Overdue', today: 'Today', later: 'Later', noDate: 'No date', done: 'Done', none: 'No tasks here: write - [ ] in a note.', changed: 'The note has changed meanwhile: look again.' } as TasksText,
     changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
+    gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
+    blame: 'Who changed each line (blame)',
+    notCommitted: 'Not committed yet',
     outline: { title: 'Outline', close: 'Close', none: 'No headings in this note.' } as OutlineText,
     slides: { close: 'End the show (Esc)', pdf: 'The slides as PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['word', 'words'], chars: ['character', 'characters'], read: '~{n} min to read', caret: 'Ln {line}, Col {col}', spaces: 'Spaces: {n}', tabs: 'Tab: {n}', plain: 'Plain text' } as StatusText,
@@ -141,6 +145,9 @@ const TEXT = {
     graph: { title: 'Граф', close: 'Закрыть', local: 'Эта заметка', all: 'Все', empty: 'Заметок здесь пока нет.' } as GraphText,
     tasks: { title: 'Задачи', close: 'Закрыть', open: 'Открытые', all: 'Все', overdue: 'Просрочено', today: 'Сегодня', later: 'Позже', noDate: 'Без даты', done: 'Сделано', none: 'Задач нет: напишите - [ ] в заметке.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as TasksText,
     changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
+    gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
+    blame: 'Кто менял каждую строку (blame)',
+    notCommitted: 'Ещё не закоммичено',
     outline: { title: 'Оглавление', close: 'Закрыть', none: 'В этой заметке нет заголовков.' } as OutlineText,
     slides: { close: 'Завершить показ (Esc)', pdf: 'Слайды в PDF', counter: '{n} / {total}' } as SlidesText,
     status: { words: ['слово', 'слова', 'слов'], chars: ['знак', 'знака', 'знаков'], read: '~{n} мин чтения', caret: 'Стр {line}, кол {col}', spaces: 'Пробелы: {n}', tabs: 'Табуляция: {n}', plain: 'Простой текст' } as StatusText,
@@ -407,6 +414,8 @@ function render(tab: Tab): void {
     // A file in a project with `.editorconfig`: its indentation (else the editor guesses from the text).
     const editor = (el as SourceEditorElement).folioEditor
     const path = tab.path
+    // A file under git: its changes against the last commit, in the gutter.
+    if (editor && path) void watchChanges(editor, path)
     if (editor && path)
       void folio.editorConfigs(path).then((files) => {
         const indent = indentOptions(editorConfigFor(path, files))
@@ -753,6 +762,72 @@ function edited(tab: Tab): void {
   if (tab === active) linksSoon()
   if (tab.timer) clearTimeout(tab.timer)
   tab.timer = setTimeout(() => flush(tab), BUFFER_DELAY)
+}
+
+/** The editors showing their changes against the last commit, by the file they edit. */
+const gitMarks = new Map<CodeEditor, { path: string; marks: GitMarks }>()
+
+async function watchChanges(editor: CodeEditor, path: string): Promise<void> {
+  const committed = await folio.gitHeadText(path)
+  if (committed === null || !editor.dom.isConnected) return
+  const marks = new GitMarks(editor, committed, () => t.gitMarks)
+  gitMarks.set(editor, { path, marks })
+}
+
+/** The editors showing who changed each line. */
+const blamed = new Set<CodeEditor>()
+
+/** Who changed each line of the file in the code editor, as a column by the numbers; again: taken away. */
+async function toggleBlame(): Promise<void> {
+  const editor = codeEditorOf(active)
+  const path = active?.path
+  if (!editor || !path) return
+  if (blamed.has(editor)) {
+    blamed.delete(editor)
+    editor.setAnnotations(null)
+    return
+  }
+  blamed.add(editor)
+  await showBlame(editor, path)
+}
+
+async function showBlame(editor: CodeEditor, path: string): Promise<void> {
+  const lines = await folio.gitBlame(path)
+  if (!lines || !blamed.has(editor)) return
+  const ago = new Intl.RelativeTimeFormat(lang, { numeric: 'auto', style: 'narrow' })
+  const when = (time: number): string => {
+    const days = Math.round((time * 1000 - Date.now()) / 86_400_000)
+    if (days > -1) return ago.format(Math.round((time * 1000 - Date.now()) / 3_600_000), 'hour')
+    if (days > -45) return ago.format(days, 'day')
+    if (days > -545) return ago.format(Math.round(days / 30), 'month')
+    return ago.format(Math.round(days / 365), 'year')
+  }
+  const date = new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' })
+  editor.setAnnotations(
+    lines.map((l, line) =>
+      l.oid
+        ? {
+            line,
+            text: `${l.author.split(/\s+/)[0] ?? ''} · ${when(l.time)}`,
+            title: `${l.summary}\n${l.author} <${l.email}>, ${date.format(new Date(l.time * 1000))}\n${l.oid.slice(0, 8)}`,
+          }
+        : { line, text: '—', title: t.notCommitted },
+    ),
+  )
+}
+
+/** A commit made: the editors count their marks from it; the ones taken off the page let go. */
+async function committedAgain(): Promise<void> {
+  for (const [editor, { path, marks }] of gitMarks) {
+    if (!editor.dom.isConnected) {
+      marks.destroy()
+      gitMarks.delete(editor)
+      continue
+    }
+    const committed = await folio.gitHeadText(path)
+    if (committed !== null) marks.setCommitted(committed)
+    if (blamed.has(editor)) void showBlame(editor, path)
+  }
 }
 
 /** The source editor's last change, taken now if it waits for typing to pause (a big file). */
@@ -1142,6 +1217,7 @@ folio.onToggleHistory(() => toggleHistory())
 folio.onCommitted((value) => {
   const { path } = value as { path: string }
   void changesPanel?.refresh()
+  void committedAgain()
   if (active?.path === path) void history.refresh()
   sidebar.refreshStatus()
 })
@@ -1497,6 +1573,7 @@ function commands(): Command[] {
     { id: 'links', group: view, title: t.links.title, icon: 'links', run: () => linksPanel?.setVisible(!linksPanel.visible) },
     { id: 'tags', group: view, title: t.tags.title, icon: 'tag', run: () => tagsPanel?.setVisible(!tagsPanel.visible) },
     { id: 'tasks', group: view, title: t.tasks.title, icon: 'tasks', run: () => tasksPanel?.setVisible(!tasksPanel.visible) },
+    { id: 'blame', group: view, title: t.blame, icon: 'history', when: () => !!codeEditorOf(active), run: () => void toggleBlame() },
     { id: 'changes', group: view, title: t.changes.title, keys: 'Ctrl+⇧G', icon: 'commit', run: () => changesPanel?.setVisible(!changesPanel.visible) },
     { id: 'graph', group: view, title: t.graph.title, icon: 'graph', run: () => graphPanel?.setVisible(!graphPanel.visible) },
     ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),

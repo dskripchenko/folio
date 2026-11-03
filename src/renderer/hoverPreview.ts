@@ -38,6 +38,8 @@ export class HoverPreview {
   /** Where the pointer was when it came onto the link. */
   private point = { x: 0, y: 0 }
   private leaving: ReturnType<typeof setTimeout> | null = null
+  /** The link whose note is being read (between the wait and the preview). */
+  private loading: HTMLAnchorElement | null = null
   private note: Peeked | null = null
   private seq = 0
 
@@ -63,7 +65,8 @@ export class HoverPreview {
     area.addEventListener('mouseover', (e) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
       // The pointer still over the same link (moving over its own parts): the wait goes on.
-      if (!a || a === this.shownFor || a === this.waitingFor) return
+      // The same link again while its note is read: the read goes on, it is not started over.
+      if (!a || a === this.shownFor || a === this.waitingFor || a === this.loading) return
       const link = linkOf(a)
       if (!link) return
       // In the editor a link is text being written: the preview only with ⌘ / Ctrl.
@@ -81,6 +84,11 @@ export class HoverPreview {
         if (this.pending) clearTimeout(this.pending)
         this.pending = null
         this.waitingFor = null
+      }
+      // Left before its note came: no preview for it.
+      if (a === this.loading) {
+        this.loading = null
+        this.seq++
       }
       // The link it was shown for, or that link drawn again (the document redrawn meanwhile).
       if (a === this.shownFor || (this.shownFor && !this.shownFor.isConnected)) this.leaveSoon()
@@ -104,7 +112,9 @@ export class HoverPreview {
     this.pending = null
     this.waitingFor = null
     const seq = ++this.seq
+    this.loading = a
     const note = await this.deps.peek(this.deps.fromOf(a), link)
+    if (this.loading === a) this.loading = null
     if (seq !== this.seq || !note) return
     // The document drawn again meanwhile (a slow first draw): the same link, now under the pointer.
     if (!a.isConnected) {
@@ -162,6 +172,7 @@ export class HoverPreview {
     this.pending = null
     this.leaving = null
     this.waitingFor = null
+    this.loading = null
     this.seq++
   }
 }
