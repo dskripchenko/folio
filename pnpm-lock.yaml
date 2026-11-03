@@ -13,8 +13,8 @@ importers:
         version: 1.1.0
     devDependencies:
       '@dskripchenko/code-editor':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.1.2
+        version: 0.1.2
       '@dskripchenko/diagrams':
         specifier: ^1.4.0
         version: 1.4.0
@@ -72,8 +72,8 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@dskripchenko/code-editor@0.1.1':
-    resolution: {integrity: sha512-16j1Fjd5d67wgqNHWu17awlKRGiSCcAbRtYaxf4zsfl647EanpqX+wjFcoewL5RRYfwqY1kDYB3MdiWHZMB4YA==}
+  '@dskripchenko/code-editor@0.1.2':
+    resolution: {integrity: sha512-rhpAUqgQ2q4/sKLzOgqLGknlN01H5geY9TZHvtspD/WqrXlrH7KwRE4mov/rrE68HDX4xjwrDFU5UWHxZEcSFg==}
     engines: {node: '>=20'}
 
   '@dskripchenko/diagrams@1.4.0':
@@ -2102,7 +2102,7 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@dskripchenko/code-editor@0.1.1':
+  '@dskripchenko/code-editor@0.1.2':
     dependencies:
       '@dskripchenko/syntax': 0.5.0
 

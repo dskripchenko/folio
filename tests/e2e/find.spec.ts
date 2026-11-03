@@ -59,11 +59,11 @@ test('find in the page: every match marked, stepped through, options; the page i
     await win.getByTestId('find-input').fill('order')
     writeFileSync(doc, '# Orders\n\nOne order.\n')
     await expect(win.getByTestId('find-count')).toHaveText(/(of|из) 2$/)
-    // Escape closes and clears; Cmd+G opens it again.
+    // Escape closes and clears; Cmd+G (F3 off a Mac, where Ctrl+G goes to a line) opens it again.
     await win.getByTestId('find-input').press('Escape')
     await expect(bar).toBeHidden()
     expect(await marks(win)).toEqual([0, 0])
-    await win.keyboard.press(`${mod}+g`)
+    await win.keyboard.press(process.platform === 'darwin' ? 'Meta+g' : 'F3')
     await expect(bar).toBeVisible()
     await expect(win.getByTestId('find-count')).toHaveText(/(of|из) 2$/)
   } finally {
