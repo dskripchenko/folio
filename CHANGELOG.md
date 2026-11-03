@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+- A note's preview no longer starts its note over when the pointer comes
+  back onto the link while the note is still being read: on a slow machine it
+  could never show.
+
 ### Added
 - Projects of notes and of code (ADR-002, I1): the kind is guessed when a
   project is added (a `package.json`, `go.mod`, `Cargo.toml`… or a repository

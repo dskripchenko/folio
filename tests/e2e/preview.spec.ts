@@ -21,7 +21,8 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
       expect(async () => {
         await pane.locator('h1').first().hover()
         await link.hover()
-        await expect(preview).toBeVisible({ timeout: 1500 })
+        // The wait (half a second) and the note read: a slow machine takes longer.
+        await expect(preview).toBeVisible({ timeout: 4000 })
       }).toPass({ timeout: 15000 })
 
     // A rest on the [[link]]: the note, at the heading it names.
