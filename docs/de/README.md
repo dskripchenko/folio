@@ -4,7 +4,7 @@ Eine Desktop-App zum Lesen, Bearbeiten und Drucken von Markdown mit lebenden
 Diagrammen, API-Referenzen und Editoren — unter macOS, Windows und Linux, ohne
 Installation.
 
-> Status: **1.0** — das Archiv für Ihr System liegt in der [neuesten Version](https://github.com/dskripchenko/folio/releases/latest).
+> Status: **1.1** — das Archiv für Ihr System liegt in der [neuesten Version](https://github.com/dskripchenko/folio/releases/latest).
 
 - [Wie es funktioniert](design.md) — die Fenster, was ein Dokument darf, wo die
   Daten liegen

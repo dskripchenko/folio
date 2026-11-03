@@ -37,6 +37,8 @@ test('files from the tree: made, renamed, moved by dragging, put in the trash; o
 
     // A folder; a name that cannot be one is refused in place.
     await menu('tree:create', { root, dir: '', kind: 'folder' })
+    // The new field, not the last one: it takes the focus once drawn.
+    await expect(name).toBeFocused()
     await name.fill('a/b')
     await name.press('Enter')
     await expect(name).toHaveClass(/invalid/)

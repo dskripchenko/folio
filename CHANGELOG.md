@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-03
+
+Code and other text files in folio's own code editor.
+
 ### Added
 - Text files, diagram notations and AsyncAPI are edited in folio's own code
   editor (`@dskripchenko/code-editor`): highlighted as they are typed,
@@ -20,6 +24,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Go to a line: `Ctrl+G` on every system (also among the commands).
 - The find bar searches a file in the code editor whole and marks the
   matches in it.
+
+### Fixed
+- A note's preview no longer closes under a resting pointer when the browser
+  reports a leave that did not happen (the preview drawn again under it), nor
+  stays open after leaving a link the document drew again.
+- A row in a subfolder of the tree keeps the focus when a folder above it is
+  drawn again (the disk reporting a move late): Delete and F2 still reach it.
+- The divider between two documents ends where it is let go: the last moves of
+  a fast drag are no longer lost.
 
 ### Changed
 - Files up to 64 MB are edited (5 MB before); a bigger one is read.
@@ -250,5 +263,6 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/dskripchenko/folio/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/dskripchenko/folio/releases/tag/v1.0.0

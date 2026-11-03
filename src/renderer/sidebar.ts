@@ -64,6 +64,8 @@ export class Sidebar {
   private readonly deferred = new Set<HTMLElement>()
   /** Each list's latest listing asked for: an answer to an older one is dropped. */
   private readonly fills = new WeakMap<HTMLElement, number>()
+  /** A focused row whose folder was drawn again from above: it gets the focus back once its own list is drawn. */
+  private refocus: string | null = null
   private readonly sep: string
 
   constructor(private readonly o: Options) {
@@ -438,7 +440,19 @@ export class Sidebar {
       ul.append(li)
     }
     for (const entry of entries) ul.append(this.entry(root, rootPath, entry))
-    if (focused !== undefined) ul.querySelector<HTMLElement>(`:scope > li > .row[data-rel="${CSS.escape(focused)}"]`)?.focus()
+    if (focused !== undefined) {
+      const row = ul.querySelector<HTMLElement>(`:scope > li > .row[data-rel="${CSS.escape(focused)}"]`)
+      // A row of a folder below, drawn again later (its list comes from the disk): it takes the focus back then.
+      if (row) row.focus()
+      else this.refocus = focused
+    }
+    if (this.refocus !== null && (document.activeElement === null || document.activeElement === document.body)) {
+      const row = ul.querySelector<HTMLElement>(`:scope > li > .row[data-rel="${CSS.escape(this.refocus)}"]`)
+      if (row) {
+        row.focus()
+        this.refocus = null
+      }
+    }
     this.setActive(this.activeFile)
     void this.decorate(ul)
   }

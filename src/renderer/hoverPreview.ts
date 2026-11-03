@@ -82,7 +82,8 @@ export class HoverPreview {
         this.pending = null
         this.waitingFor = null
       }
-      if (a === this.shownFor) this.leaveSoon()
+      // The link it was shown for, or that link drawn again (the document redrawn meanwhile).
+      if (a === this.shownFor || (this.shownFor && !this.shownFor.isConnected)) this.leaveSoon()
     })
   }
 
@@ -146,7 +147,13 @@ export class HoverPreview {
 
   private leaveSoon(): void {
     if (this.leaving) clearTimeout(this.leaving)
-    this.leaving = setTimeout(() => this.hide(), LEAVE)
+    this.leaving = setTimeout(() => {
+      this.leaving = null
+      // A leave the browser reports while the pointer is still over the preview or its link (content
+      // drawn again under a resting pointer): not a leave.
+      if (this.el.matches(':hover') || this.shownFor?.matches(':hover')) return
+      this.hide()
+    }, LEAVE)
   }
 
   private cancel(): void {
