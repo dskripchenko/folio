@@ -111,6 +111,19 @@ Dateien, die folio öffnet, Ordner zuerst, und folgen der Festplatte: eine
 anderswo hinzugefügte, geänderte oder gelöschte Datei erscheint sofort, ein
 offenes Dokument wird neu gezeichnet. `Cmd/Strg+B` blendet die Leiste aus.
 
+Ein Projekt ist eines aus **Notizen** oder aus **Code** — beim Hinzufügen
+erraten (ein `package.json`, `composer.json`, `go.mod`, `Cargo.toml` … oben,
+oder ein Git-Repository ohne Notizen neben seiner README macht es zu Code) und in
+seinem Menü umgestellt. Ein Code-Projekt listet jede Datei, auch die mit Punkt
+(`.github`, `.editorconfig`), und eine Datei, die kein Text ist, öffnet sich im
+Programm des Systems; ein Speichern wird dort nie von selbst committet —
+Commits entstehen von Hand. In einem Ordner unter Git bleibt, was `.gitignore`
+(mit `.git/info/exclude` und der globalen Ausschlussdatei des Benutzers)
+ausschließt, aus dem Baum, dem Gehe-zu-Datei und der Suche heraus, und der Baum
+folgt einer `.gitignore`, während sie geschrieben wird; ein Ordner ohne Git
+behält folios eigene Liste von Werkzeugordnern (`node_modules`, `vendor`,
+`dist` …).
+
 ### Dateien und Ordner
 
 Der Baum legt Dateien auch an und ändert sie: **Neue Notiz** und **Neuer

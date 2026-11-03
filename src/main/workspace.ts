@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs'
+import { detectKind, type ProjectKind } from './visibility'
 import { basename, join, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { readJson, writeJson } from './jsonFile'
@@ -16,8 +17,10 @@ export interface Project {
   group?: string
   pinned?: boolean
   hidden?: boolean
-  /** Commit a saved file of this folder to its git history (ADR-001, stage 4). */
+  /** Commit a saved file of this folder to its git history (ADR-001, stage 4); never in a code project. */
   autoCommit?: boolean
+  /** Notes or code (ADR-002, I1): guessed when the project is added, changed from its menu. */
+  kind?: ProjectKind
 }
 
 export interface WorkspaceData {
@@ -53,6 +56,11 @@ export class Workspace {
       ...(typeof loaded.updates === 'boolean' ? { updates: loaded.updates } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
+    }
+    // Projects from before kinds: guessed once, then kept.
+    if (this.data.projects.some((p) => p.kind === undefined)) {
+      for (const p of this.data.projects) p.kind ??= detectKind(p.path)
+      this.save()
     }
   }
 
@@ -153,7 +161,7 @@ export class Workspace {
   /** Whether a saved file is committed: its folder (project or Shared) says so. */
   autoCommits(file: string): boolean {
     const owner = this.ownerOf(file)
-    if (owner?.kind === 'project') return owner.project.autoCommit === true
+    if (owner?.kind === 'project') return owner.project.autoCommit === true && owner.project.kind !== 'code'
     if (owner?.kind === 'shared') return this.sharedAutoCommit()
     return false
   }
@@ -166,7 +174,7 @@ export class Workspace {
     const full = resolve(path)
     const existing = this.data.projects.find((p) => resolve(p.path) === full)
     if (existing) return { ...existing }
-    const project: Project = { id: randomUUID(), name: name ?? basename(full), path: full }
+    const project: Project = { id: randomUUID(), name: name ?? basename(full), path: full, kind: detectKind(full) }
     this.data.projects.push(project)
     this.save()
     return { ...project }

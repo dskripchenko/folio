@@ -243,7 +243,7 @@ function applyText(): void {
 }
 
 function isOpened(r: OpenResult | null): r is Opened {
-  return r !== null && !('error' in r)
+  return r !== null && !('error' in r) && !('external' in r)
 }
 
 async function sha256(text: string): Promise<string> {
@@ -929,6 +929,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
 
 /** A file to show: a tab of its own, or the one it already has. */
 async function add(result: OpenResult, focus = true): Promise<void> {
+  if ('external' in result) return
   const existing = tabs.find((tab) => tab.path === result.path)
   if (existing) {
     if (focus) activate(existing)
@@ -1400,7 +1401,7 @@ async function newKind(kind: 'kanban' | 'calendar' | 'board'): Promise<void> {
 /** Today's daily note, or the one before / after the open one's day. */
 async function openDaily(step: 0 | -1 | 1): Promise<void> {
   const result = await folio.dailyOpen(isDaily() ? active!.path : null, step)
-  if (!isOpened(result) && result.error === 'none') return notify(t.commands.noDaily)
+  if ('error' in result && result.error === 'none') return notify(t.commands.noDaily)
   await add(result)
 }
 
@@ -1825,7 +1826,7 @@ void folio.startup().then(async ({ tabs: restored, active: activeIndex, locale, 
       makeTab({
         path: b.path,
         doc,
-        error: r.doc && !isOpened(r.doc) ? r.doc.error : null,
+        error: r.doc && 'error' in r.doc ? r.doc.error : null,
         text: b.text,
         // The file as it is now, or what the edit started from when the file is gone.
         saved: b.path === null ? null : doc ? doc.text : '',

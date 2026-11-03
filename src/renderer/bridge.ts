@@ -43,7 +43,8 @@ export interface Opened {
   owner: 'shared' | 'project' | 'file'
   project: string | null
 }
-export type OpenResult = Opened | { error: string; path: string }
+/** Opened; refused (an error tab); or handed to the system's program (a file that is not text). */
+export type OpenResult = Opened | { error: string; path: string } | { external: true; path: string }
 
 export type EditorMode = 'visual' | 'source' | 'split'
 
@@ -130,6 +131,8 @@ export interface Changes {
   root: string
   dirs: string[]
   files: string[]
+  /** Everything under the root may show otherwise (a `.gitignore` changed, the project's kind). */
+  all?: boolean
 }
 
 type Listener = (cb: (value: unknown) => void) => () => void

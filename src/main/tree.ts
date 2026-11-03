@@ -1,7 +1,9 @@
 import { readdirSync, type Dirent } from 'node:fs'
 import { languageOf } from '@dskripchenko/syntax'
 import { formatByName } from './formats'
+import { join } from 'node:path'
 import { resolveInside } from './paths'
+import type { Visibility } from './visibility'
 
 /** What folio does with a file: reads it, draws it (stage 5), shows it highlighted (code, data, logs), or only lists it. */
 export type Kind = 'markdown' | 'diagram' | 'code' | 'other'
@@ -37,7 +39,7 @@ export function kindOf(name: string): Kind {
  * sort (`2` before `10`); hidden files and tooling folders are left out, and
  * with `all` off only the files folio can open.
  */
-export function listDir(root: string, rel: string, all = false): Entry[] | null {
+export function listDir(root: string, rel: string, all = false, visibility?: Visibility): Entry[] | null {
   const dir = rel === '' ? resolveInside(root, '.') : resolveInside(root, rel)
   if (dir === null) return null
   let items: Dirent[]
@@ -50,8 +52,9 @@ export function listDir(root: string, rel: string, all = false): Entry[] | null 
   const prefix = rel === '' ? '' : rel.replace(/\/+$/, '') + '/'
   const out: Entry[] = []
   for (const item of items) {
-    if (item.name.startsWith('.') || SKIP.has(item.name)) continue
-    if (item.isDirectory()) {
+    const isDir = item.isDirectory()
+    if (visibility ? !visibility.listed(item.name, join(dir, item.name), isDir) : item.name.startsWith('.') || SKIP.has(item.name)) continue
+    if (isDir) {
       out.push({ name: item.name, path: prefix + item.name, type: 'dir' })
     } else if (item.isFile()) {
       const kind = kindOf(item.name)

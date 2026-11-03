@@ -104,6 +104,18 @@ The trees list folders and the files folio opens, folders first, and follow the
 disk: a file added, changed or removed elsewhere shows at once, and an open
 document is drawn again. `Cmd/Ctrl+B` hides the sidebar.
 
+A project is of **notes** or of **code** — guessed when it is added (a
+`package.json`, `composer.json`, `go.mod`, `Cargo.toml`… at its top, or a git
+repository with no notes beside its README makes it code) and changed in its
+menu. A project of code lists every file, its dot files too (`.github`,
+`.editorconfig`), and a file that is not text opens in the system's program;
+a save there is never committed on its own — commits are made by hand. In a
+folder under git, what `.gitignore` leaves out (with `.git/info/exclude` and
+the user's global excludes file) is left out of the tree, going to a file and
+searching, and the tree follows a `.gitignore` as it is written; a folder
+without git keeps folio's own list of tooling folders (`node_modules`,
+`vendor`, `dist`…).
+
 ### Files and folders
 
 The tree makes and changes files too: **New Note** and **New Folder** in a
