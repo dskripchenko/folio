@@ -73,6 +73,8 @@ function run(spec: Run, cwd: string, input: string | null, timeout = 20_000): Pr
       clearTimeout(timer)
       finish(code === 0 ? out : null)
     })
+    // A tool that exits before reading all of it (a failure): the pipe breaks, its exit code tells.
+    child.stdin.on('error', () => {})
     if (input !== null) child.stdin.end(input)
     else child.stdin.end()
   })

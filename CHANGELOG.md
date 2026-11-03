@@ -10,6 +10,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [1.2.0] - 2026-11-03
 
 ### Fixed
+- A formatter (or a language server) gone before reading what it was sent no
+  longer raises an error in folio: its exit code tells what happened.
 - The code editor measures its lines again when the page changes their height
   (the edit mode's larger lines): a click, a hover and going to a definition
   far down a file land on the line under the pointer.

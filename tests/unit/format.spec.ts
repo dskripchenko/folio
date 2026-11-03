@@ -25,6 +25,8 @@ describe('formatting on save', () => {
     expect(await formatText(dir, join(dir, 'a.txt'), 'hello\n')).toBe('HELLO\n')
     settings({ formatOnSave: true, formatter: 'false' })
     expect(await formatText(dir, join(dir, 'a.txt'), 'hello\n')).toBeNull()
+    // Gone before reading a big text: the broken pipe is not an error of folio's.
+    expect(await formatText(dir, join(dir, 'a.txt'), 'hello\n'.repeat(200_000))).toBeNull()
   })
 
   it.skipIf(process.platform === 'win32')('the project’s own prettier for the files it formats; pint on a copy beside the file', async () => {

@@ -163,6 +163,8 @@ class ServerClient {
     this.conn = conn
     proc.stdout?.on('data', (b: Buffer) => conn.receive(b))
     proc.stderr?.on('data', (b: Buffer) => this.note(b.toString('utf8')))
+    // A server gone mid-write breaks the pipe: its exit is handled, the write is not an error of folio's.
+    proc.stdin?.on('error', (e) => this.note(`[folio] ${e.message}\n`))
     proc.on('error', (e) => this.note(`[folio] ${e.message}\n`))
     proc.on('exit', (code) => this.exited(code))
     this.manager.wire(this, conn)
