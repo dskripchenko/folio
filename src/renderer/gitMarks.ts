@@ -80,6 +80,8 @@ export interface GitMarksText {
 /** Keeps an editor's marks up to date with its text, and answers a click on one. */
 export class GitMarks {
   private hunks: Hunk[] = []
+  /** The marks last set: the same again changes nothing (the gutter is not drawn again under the pointer). */
+  private shown = ''
   private timer: ReturnType<typeof setTimeout> | null = null
   private popover: HTMLElement | null = null
   private readonly off: (() => void)[] = []
@@ -120,7 +122,11 @@ export class GitMarks {
   private update(): void {
     this.timer = null
     this.hunks = hunksOf(this.committed, this.editor.value)
-    this.editor.setGutterMarks(marksOf(this.hunks), 'git')
+    const marks = marksOf(this.hunks)
+    const key = JSON.stringify(marks)
+    if (key === this.shown) return
+    this.shown = key
+    this.editor.setGutterMarks(marks, 'git')
   }
 
   private close(): void {
