@@ -22,7 +22,8 @@ test('formulas and highlights: drawn in reading and in the visual editor, the Ma
     await expect(pane.locator('mark')).toHaveText('remember it')
     await expect(pane.locator('p', { hasText: 'tickets cost $5 or $10.' })).toBeVisible()
     // The math font is there (folio carries one), so the fences stretch to the fraction.
-    expect(await win.evaluate(() => document.fonts.check('16px "STIX Two Math"'))).toBe(true)
+    // Loaded when first used: waited for, not assumed.
+    await expect.poll(() => win.evaluate(() => document.fonts.load('16px "STIX Two Math"').then(() => document.fonts.check('16px "STIX Two Math"')))).toBe(true)
     const sizes = await pane.locator('math[display="block"]').evaluate((m) => ({ fence: m.querySelector('mo[fence]')!.getBoundingClientRect().height, frac: m.querySelector('mfrac')!.getBoundingClientRect().height }))
     expect(sizes.fence).toBeGreaterThanOrEqual(sizes.frac * 0.9)
 

@@ -1299,7 +1299,9 @@ splitEl.addEventListener('pointerdown', (event) => {
     shareViews(share)
     prefs.set('mainShare', share)
   }
-  const up = (): void => {
+  // The release counts as a move: the last moves may have been merged away.
+  const up = (e: PointerEvent): void => {
+    move(e)
     splitEl.classList.remove('dragging')
     splitEl.removeEventListener('pointermove', move)
     splitEl.removeEventListener('pointerup', up)

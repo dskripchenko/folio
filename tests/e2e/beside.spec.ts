@@ -46,7 +46,7 @@ test('documents side by side: one beside the main view, each in use by a click, 
     await win.mouse.down()
     await win.mouse.move(split.x + 150, split.y + 100, { steps: 5 })
     await win.mouse.up()
-    expect((await main.boundingBox())!.width).toBeGreaterThan(before + 100)
+    await expect.poll(async () => (await main.boundingBox())!.width).toBeGreaterThan(before + 100)
 
     // Cmd/Ctrl+\: the side view closed, beta back among the main view's tabs.
     await win.keyboard.press(`${mod}+Backslash`)

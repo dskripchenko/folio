@@ -25,6 +25,15 @@ Code and other text files in folio's own code editor.
 - The find bar searches a file in the code editor whole and marks the
   matches in it.
 
+### Fixed
+- A note's preview no longer closes under a resting pointer when the browser
+  reports a leave that did not happen (the preview drawn again under it), nor
+  stays open after leaving a link the document drew again.
+- A row in a subfolder of the tree keeps the focus when a folder above it is
+  drawn again (the disk reporting a move late): Delete and F2 still reach it.
+- The divider between two documents ends where it is let go: the last moves of
+  a fast drag are no longer lost.
+
 ### Changed
 - Files up to 64 MB are edited (5 MB before); a bigger one is read.
 - Off a Mac the next and the previous match are `F3` and `Shift+F3`, as in
