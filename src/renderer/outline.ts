@@ -17,6 +17,8 @@ export interface Heading {
   text: string
   /** Its line in the source (from 0). */
   line: number
+  /** A symbol of code (`class`, `method`…); a heading has none. */
+  kind?: string
 }
 
 /** A note's headings: `#` lines and underlined ones, outside code and front matter. */
@@ -109,7 +111,11 @@ export class OutlinePanel {
 
   /** The note in view (its text), or none. */
   show(text: string | null): void {
-    const next = text === null ? [] : headingsOf(text)
+    this.showItems(text === null ? [] : headingsOf(text))
+  }
+
+  /** Items of their own: a code file's symbols. */
+  showItems(next: Heading[]): void {
     if (JSON.stringify(next) === JSON.stringify(this.headings)) return
     this.headings = next
     this.draw()
@@ -138,7 +144,14 @@ export class OutlinePanel {
         b.className = 'outline-item'
         b.dataset.testid = 'outline-item'
         b.style.paddingLeft = `${12 + (h.level - top) * 14}px`
-        b.textContent = h.text
+        if (h.kind) {
+          const sign = document.createElement('span')
+          sign.className = `symbol-sign symbol-${h.kind}`
+          sign.textContent = h.kind[0]!.toUpperCase()
+          sign.title = h.kind
+          b.append(sign)
+        }
+        b.append(h.text)
         b.classList.toggle('on', i === this.current)
         b.addEventListener('click', () => this.deps.go(h, i))
         return b

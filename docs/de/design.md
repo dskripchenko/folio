@@ -111,6 +111,76 @@ Dateien, die folio öffnet, Ordner zuerst, und folgen der Festplatte: eine
 anderswo hinzugefügte, geänderte oder gelöschte Datei erscheint sofort, ein
 offenes Dokument wird neu gezeichnet. `Cmd/Strg+B` blendet die Leiste aus.
 
+Im Code-Editor werden die **Symbole** einer Datei — Funktionen, Klassen,
+Methoden, Typen, Konstanten; Schlüssel und Abschnitte einer Konfiguration —
+beim Tippen gelesen: die **Gliederung** (rechte Leiste) listet sie, das Symbol
+mit der Einfügemarke markiert, ein Klick springt hin; Brotkrumen über dem Text
+zeigen Projekt und Ordner der Datei, dann die Symbole um die Einfügemarke;
+`Cmd/Strg+Umschalt+O` springt zu einem Symbol der Datei nach Namen,
+`Cmd/Strg+Alt+O` zu einem jedes sichtbaren Projekts (seine Datei im Editor dort
+geöffnet). Die Vervollständigung bietet die Namen der Projekte neben den
+Wörtern der Datei.
+
+**Aufgaben** (`Cmd/Strg+Umschalt+B` oder *Eine Aufgabe ausführen* unter den
+Befehlen) sind die des Projekts: die Skripte von `package.json` (mit dem
+Paketmanager, den die Lock-Datei nennt) und `composer.json`, die Ziele eines
+`Makefile`, die Rezepte einer `justfile` und die Aufgaben aus
+`.folio/settings.json`; die zuletzt ausgeführten zuerst. Eine Aufgabe läuft in
+einem eigenen Konsolen-Tab mit ihrem Namen, der mit ihr endet. Ihre Ausgabe wird
+nach **Problemen** gelesen — `Pfad:Zeile:Spalte: Meldung` (gcc, clang, go, ruff,
+mypy, pytest, eslints Unix-Form), tsc, eslints Stylish-Blöcke, rustc, psalm —,
+gezeigt in der Leiste **Probleme** (rechte Leiste, öffnet sich, wenn eine
+Aufgabe welche findet), jedes ein Weg zu seiner Stelle und im Code-Editor
+unterstrichen.
+
+Ein Code-Projekt kann **beim Speichern formatieren** mit seinem eigenen
+Formatierer — prettier (das des Projekts), pint, gofmt, ruff, rustfmt, black
+oder einem eigenen Befehl, der den Text von stdin liest —, wenn
+`.folio/settings.json` es verlangt; nur was der Formatierer änderte, wird
+geändert, in einem Schritt rückgängig zu machen.
+
+`.folio/settings.json` oben in einem Projekt enthält seine eigenen
+Einstellungen, von Hand geschrieben (und mit ihm committet, wenn seine Leute
+wollen):
+
+```json
+{
+  "kind": "code",
+  "indentUnit": "  ",
+  "tabSize": 2,
+  "formatOnSave": true,
+  "formatter": "prettier",
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }],
+  "lsp": { "php": ["phpactor", "language-server"], "python": false }
+}
+```
+
+Die Art gilt vor der erratenen, die Einrückung vor der von `.editorconfig`.
+Eigene Tasten stehen in `folio-data/keybindings.json`, ohne Fenster dafür:
+`[{ "key": "Mod-Shift-d", "command": "copyLineDown" }, { "key": "Mod-Alt-p",
+"command": "folio.problems" }]` — die Befehle des Code-Editors mit ihren Namen,
+die von folio mit `folio.` und der ID ihres Befehls; im Editor gelten seine
+vor folios Kürzeln.
+
+**Sprachserver** (LSP) verstehen den Code im Editor, wo einer auf dem Rechner
+ist: `typescript-language-server`, `intelephense` oder `phpactor`, `pyright`
+oder `pylsp`, `gopls`, `rust-analyzer`, `clangd` — folio bringt keinen mit. Eine
+Datei einer Sprache startet ihren Server für das Projekt (beendet einige
+Minuten nach dem Schließen ihrer letzten Datei); der eigene des Projekts
+(`node_modules/.bin`, `vendor/bin`, `.venv/bin`) läuft erst, wenn dem Projekt
+vertraut wird — einmal gefragt. Dann werden Probleme beim Tippen unterstrichen
+und unter **Probleme** gelistet; ruht der Zeiger auf einem Namen, sagt er, was
+er ist; `F12` oder `Cmd/Ctrl`+Klick geht zu seiner Definition, `Shift+F12`
+listet seine Verweise, `F2` benennt ihn im ganzen Projekt um (offene Dateien in
+ihren Tabs geändert, je ein Rückgängig), `Cmd/Ctrl+.` bietet die Korrekturen des
+Servers; die Vervollständigung nimmt zuerst die Einträge des Servers, die
+Parameter eines Aufrufs erscheinen nach `(` (`Cmd/Ctrl+Shift+Space`), Gliederung
+und Brotkrumen kommen vom Server. Die Statuszeile nennt den Server oder was zu
+installieren ist; *Ausgabe des Sprachservers* unter den Befehlen zeigt sein
+Protokoll. `"lsp"` in `.folio/settings.json` gibt einer Sprache einen eigenen
+Befehl oder mit `false` keinen; `"formatter": "lsp"` formatiert beim Speichern
+mit dem Server.
+
 Ein Projekt ist eines aus **Notizen** oder aus **Code** — beim Hinzufügen
 erraten (ein `package.json`, `composer.json`, `go.mod`, `Cargo.toml` … oben,
 oder ein Git-Repository ohne Notizen neben seiner README macht es zu Code) und in
@@ -484,6 +554,8 @@ Pfade.
 | `Cmd+G`, `Cmd+Umschalt+G` (macOS); `F3`, `Umschalt+F3` | der nächste Treffer, der vorige |
 | `Strg+G` | zu einer Zeile gehen, im Code-Editor (auf jedem System) |
 | `Strg+Umschalt+G` | die Änderungen: vormerken, committen (auf jedem System) |
+| `Cmd/Strg+Umschalt+O`, `Cmd/Strg+Alt+O` | ein Symbol der Datei, der Projekte |
+| `Cmd/Strg+Umschalt+B` | eine Aufgabe des Projekts ausführen |
 
 ## Suchen
 

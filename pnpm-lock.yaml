@@ -13,8 +13,8 @@ importers:
         version: 1.1.0
     devDependencies:
       '@dskripchenko/code-editor':
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: ^0.3.0
+        version: 0.3.0
       '@dskripchenko/diagrams':
         specifier: ^1.4.0
         version: 1.4.0
@@ -22,8 +22,8 @@ importers:
         specifier: 1.18.0
         version: 1.18.0
       '@dskripchenko/syntax':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.6.0
+        version: 0.6.0
       '@dskripchenko/terminal':
         specifier: ^0.2.0
         version: 0.2.0
@@ -72,8 +72,8 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@dskripchenko/code-editor@0.2.0':
-    resolution: {integrity: sha512-iXL63690kYfh2vRgLWUH6b2zh1wv1CkSiy7tgkelyhQ9iD8I06xdYXUu6dZhdsGnFTU+rs0pi2pKHqGr6X3RdA==}
+  '@dskripchenko/code-editor@0.3.0':
+    resolution: {integrity: sha512-UyD1SYxXfs3fVRlbCFs2fRnhdTLp5HcmYck3h3oWu9owuwJL3cjXdUc1PYNPsbF8CODTGaUecfQPFYr3qMk3lQ==}
     engines: {node: '>=20'}
 
   '@dskripchenko/diagrams@1.4.0':
@@ -86,6 +86,10 @@ packages:
 
   '@dskripchenko/syntax@0.5.0':
     resolution: {integrity: sha512-rpea99C5y+oVqbUAlXWqavFJVvPjfQQhuwpiU1XVv7n+putN1jqn2RR3bTShvtAp8ZRxUYAzGRmo8OAhQ3p+1Q==}
+    engines: {node: '>=20'}
+
+  '@dskripchenko/syntax@0.6.0':
+    resolution: {integrity: sha512-TfcUG2pJxPX4lJDzKpWvDxWqm/0T7hn4tBrxyxAWQoWczZr2Jj/WOpDx847O5LqGsZscSWaHqqeY6C3tiyp+RA==}
     engines: {node: '>=20'}
 
   '@dskripchenko/terminal@0.2.0':
@@ -2102,7 +2106,7 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@dskripchenko/code-editor@0.2.0':
+  '@dskripchenko/code-editor@0.3.0':
     dependencies:
       '@dskripchenko/syntax': 0.5.0
 
@@ -2111,6 +2115,8 @@ snapshots:
   '@dskripchenko/embed@1.18.0': {}
 
   '@dskripchenko/syntax@0.5.0': {}
+
+  '@dskripchenko/syntax@0.6.0': {}
 
   '@dskripchenko/terminal@0.2.0': {}
 

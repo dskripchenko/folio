@@ -7,12 +7,33 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
 ### Fixed
+- Language servers on Windows: a rename's edits to closed files are written
+  (a server's paths are compared the way folio's own are, short names kept).
+- A formatter (or a language server) gone before reading what it was sent no
+  longer raises an error in folio: its exit code tells what happened.
+- The code editor measures its lines again when the page changes their height
+  (the edit mode's larger lines): a click, a hover and going to a definition
+  far down a file land on the line under the pointer.
+- A completion picked with a click keeps the cursor where the item went.
 - A note's preview no longer starts its note over when the pointer comes
   back onto the link while the note is still being read: on a slow machine it
   could never show.
 
 ### Added
+- Language servers (ADR-003): where `typescript-language-server`,
+  `intelephense`/`phpactor`, `pyright`/`pylsp`, `gopls`, `rust-analyzer` or
+  `clangd` is on the machine (or in the project, once it is trusted), the
+  code editor shows its problems as they are typed (and in Problems), what a
+  name is on hover, goes to a definition (`F12`, `Cmd/Ctrl`+click), lists
+  references (`Shift+F12`), renames across the project (`F2`, one undo a tab),
+  offers its fixes (`Cmd/Ctrl+.`), completes from it, shows a call's
+  parameters and builds the outline and breadcrumbs from it. `"lsp"` in
+  `.folio/settings.json` sets a language's command or turns it off;
+  `"formatter": "lsp"` formats on save with the server; *Language server
+  output* shows its log.
 - Projects of notes and of code (ADR-002, I1): the kind is guessed when a
   project is added (a `package.json`, `go.mod`, `Cargo.toml`… or a repository
   with no notes) and changed in its menu. A code project lists every file, its
@@ -30,6 +51,23 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - **Who changed each line (blame)** among the commands: a column of authors
   and dates by the line numbers (the system git when there is one, else the
   file's history read by folio).
+- Code navigation (ADR-002, I2): a file's symbols in the **Outline**, the
+  one holding the caret marked; breadcrumbs above the code editor;
+  `Cmd/Ctrl+Shift+O` goes to a symbol of the file, `Cmd/Ctrl+Alt+O` to one of
+  every visible project; completion offers the projects' names.
+- Tasks (ADR-002, I3): `Cmd/Ctrl+Shift+B` runs a script of `package.json` or
+  `composer.json`, a `Makefile` target, a `justfile` recipe or a task of
+  `.folio/settings.json` in a console tab of its own; the ones run lately come
+  first.
+- The **Problems** panel: errors and warnings read from a task's output (tsc,
+  eslint, gcc/clang, go, rustc, ruff, mypy, pytest, psalm…), each a way to
+  its place, and underlined in the code editor.
+- Formatting on save with the project's formatter (prettier, pint, gofmt,
+  ruff, rustfmt, black, or a command of its own), when `.folio/settings.json`
+  asks for it.
+- `.folio/settings.json`: a project's kind, indentation, tasks and
+  formatting; `folio-data/keybindings.json`: keys of one's own for the code
+  editor's commands and folio's.
 
 ## [1.1.0] - 2026-11-03
 
@@ -287,6 +325,7 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/dskripchenko/folio/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/dskripchenko/folio/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/dskripchenko/folio/releases/tag/v1.0.0

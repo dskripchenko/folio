@@ -70,7 +70,8 @@ export class StatusBar {
    * A file edited in the code editor: where the caret is, what Tab inserts,
    * the line breaks and the language (as in a code editor's status line).
    */
-  showEditor(editor: EditorLike): void {
+  /** The code editor's place and kind; `server` is its language server's word, `hint` (on hover) what to do about it. */
+  showEditor(editor: EditorLike, server: { text: string; hint?: string } | null = null): void {
     this.el.hidden = false
     const { doc, selection } = editor.state
     const head = selection.main.head
@@ -81,8 +82,10 @@ export class StatusBar {
       indentUnit === '\t' ? this.text.tabs.replace('{n}', String(tabSize)) : this.text.spaces.replace('{n}', String(indentUnit.length)),
       editor.lineBreak === '\r\n' ? 'CRLF' : 'LF',
       languageName(editor.language) ?? this.text.plain,
+      ...(server ? [server.text] : []),
     ]
     this.el.textContent = parts.join(' · ')
+    this.el.title = server?.hint ?? ''
   }
 
   /** The document in view: its text, and the source field when it is the one being written in. */
@@ -99,5 +102,6 @@ export class StatusBar {
       parts.push(this.text.caret.replace('{line}', String(line)).replace('{col}', String(col)))
     }
     this.el.textContent = parts.join(' · ')
+    this.el.title = ''
   }
 }

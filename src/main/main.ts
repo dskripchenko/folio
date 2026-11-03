@@ -6,6 +6,12 @@ import { userInfo } from 'node:os'
 import { AutoCommitter } from './autoCommit'
 import { changesOf, commitStaged, discardFile, stageFiles, unstageFiles } from './changes'
 import { blameOf } from './blame'
+import { tasksOf as projectTasksOf } from './projectTasks'
+import { formatText } from './format'
+import { applyEdits, LspManager, type PositionEdit } from './lsp/manager'
+import { languageOf } from '@dskripchenko/syntax'
+import { readProjectSettings, type ProjectSettings } from './projectSettings'
+import { SymbolIndex, type SourceFile } from './symbolIndex'
 import {
   abortMerge,
   aheadBehind,
@@ -53,7 +59,7 @@ import { parseQuery, pathPasses, replaceInFiles, searchFiles, tagsPass, type Sea
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
 import { aliasIndex, aliasesOf, backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
-import { resolveInside } from './paths'
+import { real, resolveInside } from './paths'
 import { tagIndex, tagsOf } from './tags'
 import { tasksOf, toggleTask } from './tasks'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
@@ -123,7 +129,19 @@ const watcher = new Watcher((changes) => {
 /** A folder's kind: its project's (Shared and other folders are notes). */
 function kindOfDir(dir: string): ProjectKind {
   const owner = workspace.ownerOf(dir)
-  return owner?.kind === 'project' ? (owner.project.kind ?? 'notes') : 'notes'
+  if (owner?.kind !== 'project') return 'notes'
+  // The project's own settings say it first (.folio/settings.json), then what it was taken for.
+  return settingsOf(owner.project.path).kind ?? owner.project.kind ?? 'notes'
+}
+
+/** A project's settings, read again when its file changes (kept a second between looks). */
+const settingsCache = new Map<string, { at: number; value: ProjectSettings }>()
+function settingsOf(dir: string): ProjectSettings {
+  const hit = settingsCache.get(dir)
+  if (hit && Date.now() - hit.at < 1000) return hit.value
+  const value = readProjectSettings(dir)
+  settingsCache.set(dir, { at: Date.now(), value })
+  return value
 }
 
 /** What the tree, going to a file and searching see under a root's folder. */
@@ -414,6 +432,139 @@ function sources(): { root: string; label: string | null; dir: string }[] {
   })
 }
 
+// Language servers (ADR-003) ---------------------------------------------------------
+
+/** Edits a server asks for, applied by the window; its answer by id. */
+const editRequests = new Map<number, (applied: boolean) => void>()
+let editSeq = 0
+const lsp = new LspManager({
+  setting: (root, language) => settingsOf(root).lsp?.[language],
+  async trust(root, server) {
+    const project = workspace.projects().find((p) => resolve(p.path) === resolve(root))
+    if (!project) return false
+    if (project.lspTrust !== undefined) return project.lspTrust
+    if (!win) return false
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'question',
+      buttons: [L().lspTrust, L().lspDistrust],
+      defaultId: 0,
+      cancelId: 1,
+      message: L().lspTrustQuestion.replace('{project}', project.name).replace('{server}', server),
+      detail: L().lspTrustDetail,
+    })
+    workspace.updateProject(project.id, { lspTrust: response === 0 })
+    return response === 0
+  },
+  diagnostics: (path, server, list) => send('lsp:diagnostics', { path, server, list }),
+  applyEdit: (edit) =>
+    new Promise((resolveApplied) => {
+      const id = ++editSeq
+      editRequests.set(id, resolveApplied)
+      send('lsp:apply-edit', { id, edit })
+      setTimeout(() => {
+        if (editRequests.delete(id)) resolveApplied(false)
+      }, 30_000)
+    }),
+})
+ipcMain.on('lsp:applied', (_e, id: unknown, applied: unknown) => {
+  const done = typeof id === 'number' ? editRequests.get(id) : undefined
+  editRequests.delete(id as number)
+  done?.(applied === true)
+})
+/** A file opened in the code editor: its language server, in its project (none outside projects). */
+ipcMain.handle('lsp:open', async (_e, path: unknown, text: unknown) => {
+  if (typeof path !== 'string' || typeof text !== 'string' || !isAbsolute(path)) return { status: 'none', install: null }
+  const owner = workspace.ownerOf(path)
+  if (owner?.kind !== 'project') return { status: 'none', install: null }
+  const language = languageOf(path, text.slice(0, Math.max(0, text.indexOf('\n'))))
+  if (!language) return { status: 'none', install: null }
+  return lsp.open(path, owner.project.path, language, text)
+})
+ipcMain.on('lsp:change', (_e, path: unknown, edits: unknown) => {
+  if (typeof path === 'string' && Array.isArray(edits)) lsp.change(path, edits as PositionEdit[])
+})
+ipcMain.on('lsp:save', (_e, path: unknown) => typeof path === 'string' && lsp.save(path))
+ipcMain.on('lsp:close', (_e, path: unknown) => typeof path === 'string' && void lsp.close(path))
+ipcMain.handle('lsp:request', (_e, path: unknown, method: unknown, params: unknown) =>
+  typeof path === 'string' && typeof method === 'string' && /^(textDocument|completionItem|codeAction)\//.test(method)
+    ? lsp.request(path, method, (params ?? {}) as Record<string, unknown>)
+    : null,
+)
+ipcMain.handle('lsp:workspace', (_e, path: unknown, method: unknown, params: unknown) =>
+  typeof path === 'string' && (method === 'workspace/symbol' || method === 'workspace/executeCommand') ? lsp.workspaceRequest(path, method, params) : null,
+)
+ipcMain.handle('lsp:log', (_e, path: unknown) => (typeof path === 'string' ? lsp.logOf(path) : null))
+/** A server's edits to a file not open in folio: written on disk (inside a project only). */
+ipcMain.handle('lsp:edit-file', (_e, path: unknown, edits: unknown) => {
+  if (typeof path !== 'string' || !Array.isArray(edits) || workspace.ownerOf(path)?.kind !== 'project') return false
+  try {
+    const text = readFileSync(path, 'utf8')
+    writeFileSync(path, applyEdits(text, edits as PositionEdit[]))
+    return true
+  } catch {
+    return false
+  }
+})
+/** Lines of files (for references' previews): each file read once. */
+ipcMain.handle('fs:lines', (_e, items: unknown) => {
+  if (!Array.isArray(items)) return []
+  const files = new Map<string, string[] | null>()
+  return (items as { path: string; line: number }[]).map(({ path, line }) => {
+    if (typeof path !== 'string' || workspace.ownerOf(path) === null) return ''
+    if (!files.has(path)) {
+      try {
+        files.set(path, readFileSync(path, 'utf8').split(/\r?\n/))
+      } catch {
+        files.set(path, null)
+      }
+    }
+    return files.get(path)?.[line]?.trim().slice(0, 200) ?? ''
+  })
+})
+
+/** The settings of the project a file is in (`.folio/settings.json`), for its editor's indentation. */
+ipcMain.handle('project:settings', (_e, path: unknown) => {
+  const owner = typeof path === 'string' ? workspace.ownerOf(path) : null
+  return owner?.kind === 'project' ? settingsOf(owner.project.path) : {}
+})
+/** Keys of one's own (`folio-data/keybindings.json`): `[{ "key": "Mod-Shift-d", "command": "copyLineDown" }]`. */
+ipcMain.handle('keybindings:get', () => {
+  try {
+    const list = JSON.parse(readFileSync(join(data, 'keybindings.json'), 'utf8')) as unknown
+    return Array.isArray(list)
+      ? list.filter((b): b is { key: string; command: string } => !!b && typeof b.key === 'string' && typeof b.command === 'string')
+      : []
+  } catch {
+    return []
+  }
+})
+
+/** A file's text formatted before it is saved, when its project asks for it (ADR-002, I3); null otherwise. */
+ipcMain.handle('doc:format', async (_e, path: unknown, text: unknown) => {
+  if (typeof path !== 'string' || typeof text !== 'string') return null
+  const owner = workspace.ownerOf(path)
+  if (owner?.kind !== 'project') return null
+  return formatText(owner.project.path, path, text)
+})
+
+/** The tasks of the project (or Shared) a path is in (ADR-002, I3), with the folder they run in. */
+ipcMain.handle('tasks:list', (_e, path: unknown) => {
+  const owner = typeof path === 'string' ? ownerFolder(path) : null
+  if (!owner) return null
+  return { dir: owner.dir, tasks: projectTasksOf(owner.dir) }
+})
+
+/** The symbols of every visible project's code: going to a symbol across projects, completing names. */
+const symbolIndex = new SymbolIndex()
+ipcMain.handle('symbols:project', async () => {
+  const files: SourceFile[] = []
+  for (const s of sources()) {
+    if (s.label === null) continue
+    for (const f of await fileIndex.files(s.root, s.dir, visibility(s.dir))) if (f.kind === 'code') files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
+  }
+  return symbolIndex.symbolsOf(files)
+})
+
 /** Every file folio opens in Shared and the visible projects: for going to a file by name. */
 ipcMain.handle('files:all', async () => {
   const out: { root: string; label: string | null; path: string; kind: string }[] = []
@@ -488,9 +639,9 @@ const consoles = new Consoles(
   },
   join(data, 'shell-integration'),
 )
-ipcMain.handle('console:open', (_e, cwd: unknown, cols: unknown, rows: unknown) => {
+ipcMain.handle('console:open', (_e, cwd: unknown, cols: unknown, rows: unknown, command: unknown) => {
   const dir = typeof cwd === 'string' && existsSync(cwd) && statSync(cwd).isDirectory() ? cwd : workspace.shared()
-  const opened = consoles.open(dir, Number(cols) || 80, Number(rows) || 24)
+  const opened = consoles.open(dir, Number(cols) || 80, Number(rows) || 24, typeof command === 'string' && command.trim() !== '' ? command : undefined)
   return 'id' in opened ? { ...opened, cwd: dir } : opened
 })
 /** A path in a console's output (`src/a.ts:12:3`, `~/notes.md`): the file it names, from the console's folder. */
@@ -507,7 +658,8 @@ ipcMain.handle('console:resolve', (_e, cwd: unknown, text: unknown) => {
   } catch {
     return null
   }
-  return { path: file, line: m[2] ? Number(m[2]) : null, column: m[3] ? Number(m[3]) : null }
+  // The real path, as a document's: the same file is one tab, its problems its own (/var is /private/var on macOS).
+  return { path: real(file) ?? file, line: m[2] ? Number(m[2]) : null, column: m[3] ? Number(m[3]) : null }
 })
 ipcMain.on('console:input', (_e, id: unknown, data: unknown) => {
   if (typeof id === 'number' && typeof data === 'string') consoles.write(id, data)
@@ -1554,6 +1706,7 @@ app.on('before-quit', (event) => {
 
 app.on('will-quit', () => {
   watcher.close()
+  void lsp.stopAll()
   // A downloaded version takes the program's place; only a packaged one has a place to take.
   if (!app.isPackaged) return
   const result = updater.apply(process.pid)

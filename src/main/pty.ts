@@ -23,6 +23,13 @@ export function shellOf(env = process.env, platform = process.platform, exists: 
   return { file, args: /(?:ba|z|fi|k)sh$/.test(file) ? ['-l'] : [] }
 }
 
+/** A shell's arguments to run one command and end: `-l -c` for a POSIX shell, `-Command` for PowerShell. */
+export function commandArgs(shell: { file: string; args: string[] }, command: string): string[] {
+  if (/pwsh|powershell/i.test(shell.file)) return [...shell.args, '-NoProfile', '-Command', command]
+  if (/cmd(\.exe)?$/i.test(shell.file)) return ['/d', '/s', '/c', command]
+  return [...shell.args, '-c', command]
+}
+
 /**
  * node-pty's helper on macOS comes out of the package without the right to
  * run (npm and pnpm drop it): given back before the first console.
@@ -74,8 +81,11 @@ export class Consoles {
     private readonly scripts: string,
   ) {}
 
-  /** A shell in a folder; its id, or an error people can read. */
-  open(cwd: string, cols: number, rows: number): { id: number } | { error: string } {
+  /**
+   * A shell in a folder; its id, or an error people can read. With a command
+   * (a task), the shell runs it and ends with it: its exit code is the task's.
+   */
+  open(cwd: string, cols: number, rows: number, command?: string): { id: number } | { error: string } {
     if (!this.fixed) {
       fixSpawnHelper()
       this.fixed = true
@@ -85,9 +95,9 @@ export class Consoles {
     const pty = require('node-pty') as typeof import('node-pty')
     const shell = shellOf()
     const env = shellEnv(process.env)
-    const integration = integrate(shell.file, shell.args, this.scripts, env)
+    const integration = command === undefined ? integrate(shell.file, shell.args, this.scripts, env) : null
     const file = shell.file
-    const args = integration?.args ?? shell.args
+    const args = command !== undefined ? commandArgs(shell, command) : (integration?.args ?? shell.args)
     if (integration) Object.assign(env, integration.env)
     Object.assign(env, { TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'folio' })
     env.LANG ??= 'en_US.UTF-8'

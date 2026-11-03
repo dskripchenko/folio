@@ -104,6 +104,69 @@ The trees list folders and the files folio opens, folders first, and follow the
 disk: a file added, changed or removed elsewhere shows at once, and an open
 document is drawn again. `Cmd/Ctrl+B` hides the sidebar.
 
+In the code editor a file's **symbols** — functions, classes, methods, types,
+constants; a config's keys and sections — are read as it is typed: the
+**Outline** (right rail) lists them, the one holding the caret marked, a click
+going to it; breadcrumbs above the text show the file's project and folders,
+then the symbols holding the caret; `Cmd/Ctrl+Shift+O` goes to a symbol of the
+file by name and `Cmd/Ctrl+Alt+O` to one of every visible project (its file
+opened in the editor at it). Completion offers the projects' names besides the
+file's own words.
+
+**Tasks** (`Cmd/Ctrl+Shift+B`, or *Run a task* among the commands) are the
+project's own: the scripts of `package.json` (run by the package manager its
+lockfile names) and `composer.json`, the targets of a `Makefile`, the recipes of
+a `justfile`, and the tasks of `.folio/settings.json`; the ones run lately come
+first. A task runs in a console tab of its own named after it, which ends when
+it does. Its output is read for **problems** — `path:line:col: message` (gcc,
+clang, go, ruff, mypy, pytest, eslint's unix form), tsc, eslint's stylish
+blocks, rustc, psalm — shown in the **Problems** panel (right rail, opened when
+a task finds some), each a way to its place, and underlined in the code editor.
+
+A project of code may **format on save** with its own formatter — prettier
+(the project's), pint, gofmt, ruff, rustfmt, black, or a command of its own
+reading the text on stdin — when `.folio/settings.json` asks for it; only what
+the formatter changed is changed, undone as one step.
+
+`.folio/settings.json` at a project's top holds its own settings, written by
+hand (and committed with it, if its people want):
+
+```json
+{
+  "kind": "code",
+  "indentUnit": "  ",
+  "tabSize": 2,
+  "formatOnSave": true,
+  "formatter": "prettier",
+  "tasks": [{ "name": "serve", "command": "php artisan serve" }],
+  "lsp": { "php": ["phpactor", "language-server"], "python": false }
+}
+```
+
+The kind is taken over the guessed one, the indentation over `.editorconfig`'s.
+Keys of one's own go in `folio-data/keybindings.json`, without a window for
+them: `[{ "key": "Mod-Shift-d", "command": "copyLineDown" }, { "key":
+"Mod-Alt-p", "command": "folio.problems" }]` — the code editor's commands by
+their names, folio's by `folio.` and their command's id; in the editor its own
+win over folio's shortcuts.
+
+**Language servers** (LSP) understand the code in the editor where one is on
+the machine: `typescript-language-server`, `intelephense` or `phpactor`,
+`pyright` or `pylsp`, `gopls`, `rust-analyzer`, `clangd` — none ships with
+folio. A file of a language starts its server for the project (stopped a few
+minutes after its last file closes); the project's own one (`node_modules/.bin`,
+`vendor/bin`, `.venv/bin`) runs only once the project is trusted, asked once.
+Then problems are underlined as they are typed and listed in **Problems**; the
+pointer resting on a name tells what it is; `F12` or `Cmd/Ctrl`+click goes to
+its definition, `Shift+F12` lists its references, `F2` renames it across the
+project (open files changed in their tabs, one undo each), `Cmd/Ctrl+.` offers
+the server's fixes; completion takes the server's items first, a call's
+parameters show after `(` (`Cmd/Ctrl+Shift+Space`), and the outline and
+breadcrumbs come from the server. The status line names the server, or what to
+install for one; *Language server output* among the commands shows its log.
+`"lsp"` in `.folio/settings.json` gives a language a command of its own, or
+`false` to have none; `"formatter": "lsp"` formats on save with the server.
+
 A project is of **notes** or of **code** — guessed when it is added (a
 `package.json`, `composer.json`, `go.mod`, `Cargo.toml`… at its top, or a git
 repository with no notes beside its README makes it code) and changed in its
@@ -443,6 +506,8 @@ relative paths.
 | `Cmd+G`, `Cmd+Shift+G` (macOS); `F3`, `Shift+F3` | the next match, the previous |
 | `Ctrl+G` | go to a line, in the code editor (on every system) |
 | `Ctrl+Shift+G` | the changes: staged, committed (on every system) |
+| `Cmd/Ctrl+Shift+O`, `Cmd/Ctrl+Alt+O` | a symbol of the file, of the projects |
+| `Cmd/Ctrl+Shift+B` | run a task of the project |
 
 Filters narrow the files searched: `tag:work` (nested tags too), `path:notes/`,
 `file:plan` (a value in quotes may have spaces); with no text left, a filter

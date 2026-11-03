@@ -234,9 +234,25 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
 .doc .plain-text { margin: 0; padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--tab); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .source-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; height: calc(100vh - 150px); }
 .source-editor.alone { grid-template-columns: minmax(0, 1fr); }
+.source-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.source-main .source { flex: 1; }
+.code-crumbs { display: flex; flex-wrap: nowrap; gap: 2px; align-items: center; min-height: 22px; padding: 0 8px; overflow: hidden; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.code-crumbs .crumb + .crumb::before { content: '›'; margin: 0 4px; opacity: 0.6; }
+.code-crumbs .crumb-file { color: var(--fg); }
+.code-crumbs button.crumb { padding: 0; border: 0; background: none; color: var(--fg); font: inherit; cursor: pointer; }
+.code-crumbs button.crumb:hover { text-decoration: underline; }
+.symbol-sign { display: inline-block; width: 16px; margin-right: 6px; color: var(--accent); font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
 .source-editor .source { box-sizing: border-box; width: 100%; height: 100%; min-height: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
 /* The code editor in folio's colours; the tokens' colours are the code view's (syntax's THEME_CSS). */
 .source-editor .dsk-code-editor { --dsk-code-editor-bg: var(--bg); --dsk-code-editor-fg: var(--fg); --dsk-code-editor-gutter-fg: var(--muted, #8c959f); --dsk-code-editor-font-size: 13px; --dsk-code-editor-line-height: 20px; }
+/* What a language server says in the editor's tooltips: its Markdown, its code highlighted. */
+.source-editor .dsk-code-editor__tooltip { --dsk-code-editor-popup-bg: var(--raised, var(--bg)); --dsk-code-editor-popup-border: var(--line); color: var(--fg); font-size: 12.5px; }
+.lsp-doc, .lsp-signature { white-space: normal; line-height: 1.45; }
+.lsp-doc p { margin: 4px 0; }
+.lsp-doc hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
+.lsp-doc code, .lsp-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+.lsp-code { margin: 2px 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lsp-signature .lsp-code strong { color: var(--accent); }
 .source-editor .preview { min-width: 0; overflow: auto; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
 @media (max-width: 820px) { .source-editor { grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr 1fr; } }
 
@@ -597,3 +613,20 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .git-peek-head span { flex: 1; }
 .git-peek-revert { padding: 2px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--tab); color: var(--fg); font: inherit; cursor: pointer; }
 .git-peek-old { margin: 0; padding: 6px 10px; background: color-mix(in srgb, #cf222e 10%, transparent); font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+.problems-panel { width: 340px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
+.problems-panel[hidden] { display: none; }
+.problems-panel header { display: flex; align-items: center; gap: 8px; padding: 10px 10px 6px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.problems-title { flex: 1; }
+.problems-list { flex: 1; min-height: 0; overflow: auto; padding: 0 6px 12px; }
+.problems-none { margin: 6px 8px; color: var(--muted); font-size: 12px; }
+.problems-file h3 { margin: 10px 6px 4px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.problems-row { display: flex; gap: 6px; align-items: baseline; width: 100%; padding: 3px 6px; border: 0; border-radius: 5px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.problems-row:hover { background: color-mix(in srgb, var(--line) 50%, transparent); }
+.problems-row:disabled { cursor: default; opacity: 0.7; }
+.problems-sign { flex: none; font-size: 10px; }
+.problems-error .problems-sign { color: #cf222e; }
+.problems-warning .problems-sign { color: #9a6700; }
+.problems-info .problems-sign { color: #0969da; }
+.problems-message { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.problems-at { flex: none; color: var(--muted); font-size: 11px; }
+@media print { .problems-panel { display: none !important; } }
