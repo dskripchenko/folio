@@ -584,8 +584,8 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .changes-name { flex: 1; min-width: 0; display: flex; gap: 6px; padding: 2px 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
 .changes-dir { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
 .changes-deleted .changes-name > span:first-child { text-decoration: line-through; }
-.changes-actions { display: none; }
-.changes-row:hover .changes-actions, .changes-row:focus-within .changes-actions { display: flex; }
+.changes-actions { display: flex; opacity: 0; }
+.changes-row:hover .changes-actions, .changes-row:focus-within .changes-actions { opacity: 1; }
 .changes-actions .icon-button { width: 22px; height: 22px; }
 .changes-kind { width: 14px; text-align: center; font-weight: 600; font-size: 11px; }
 .changes-added .changes-kind, .changes-untracked .changes-kind { color: #1a7f37; }

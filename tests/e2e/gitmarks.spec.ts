@@ -49,7 +49,8 @@ test('changes against the last commit in the gutter: marked as typed, shown and 
     await expect(editor.locator('.dsk-code-editor__mark--modified')).toHaveCount(2)
 
     // A click on the mark: what it was, and back.
-    await editor.locator('.dsk-code-editor__mark--modified').first().click({ force: true })
+    // Clicked as a person would, waited for: the gutter may be drawn again just after typing.
+    await editor.locator('.dsk-code-editor__mark--modified').first().click()
     const peek = win.getByTestId('git-peek')
     await expect(peek).toContainText('println("hi")')
     await peek.getByTestId('git-revert').click()
