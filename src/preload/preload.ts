@@ -86,6 +86,7 @@ contextBridge.exposeInMainWorld('folio', {
   formatText: (path: string, text: string) => ipcRenderer.invoke('doc:format', path, text),
   projectSettings: (path: string) => ipcRenderer.invoke('project:settings', path),
   keybindings: () => ipcRenderer.invoke('keybindings:get'),
+  openExternal: (path: string) => ipcRenderer.invoke('file:external', path),
   lspOpen: (path: string, text: string) => ipcRenderer.invoke('lsp:open', path, text),
   lspChange: (path: string, edits: unknown[]) => ipcRenderer.send('lsp:change', path, edits),
   lspSave: (path: string) => ipcRenderer.send('lsp:save', path),

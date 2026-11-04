@@ -630,3 +630,25 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .problems-message { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .problems-at { flex: none; color: var(--muted); font-size: 11px; }
 @media print { .problems-panel { display: none !important; } }
+
+/* A picture, a video, a sound in its own tab: the whole view, its controls in a bar below. */
+.doc[data-format="image"], .doc[data-format="video"], .doc[data-format="audio"] { max-width: none; height: 100%; margin: 0; padding: 0; }
+.doc[data-format="svg"]:not([data-edit]) { max-width: none; height: 100%; margin: 0; padding: 0; }
+.media-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.media-bar { flex: none; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-top: 1px solid var(--line); background: var(--tab); font-size: 12px; }
+.media-bar button { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.media-bar button:hover { background: var(--line); }
+.media-bar [data-testid="media-external"] { margin-left: 12px; }
+.media-zoom { min-width: 52px !important; }
+/* The picture over a chequerboard (transparency shows), centred while smaller than the view. */
+.image-stage { flex: 1; min-height: 0; overflow: auto; outline: none; --check: color-mix(in srgb, var(--fg) 7%, var(--bg)); background-color: var(--bg); background-image: linear-gradient(45deg, var(--check) 25%, transparent 25%, transparent 75%, var(--check) 75%), linear-gradient(45deg, var(--check) 25%, transparent 25%, transparent 75%, var(--check) 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
+.image-canvas { display: flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 100%; min-height: 100%; width: max-content; padding: 16px; }
+.image-canvas img { display: block; flex: none; max-width: none; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12); }
+.image-stage--pan { cursor: grab; }
+.image-stage--dragging { cursor: grabbing; }
+.media-player { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; }
+.video-view .media-player > dsk-video { display: block; width: 100%; max-width: 1280px; max-height: 100%; }
+.audio-view .media-player > dsk-audio { display: block; width: 100%; max-width: 720px; }
+.media-failed { margin: auto; padding: 32px; text-align: center; color: var(--muted); }
+.media-failed button { margin-top: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; cursor: pointer; }
+.source-editor .preview .media-view { height: 100%; }

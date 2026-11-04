@@ -88,6 +88,13 @@ export class StatusBar {
     this.el.title = server?.hint ?? ''
   }
 
+  /** Parts of their own (a picture's size and bytes). */
+  showParts(parts: string[]): void {
+    this.el.hidden = false
+    this.el.textContent = parts.join(' · ')
+    this.el.title = ''
+  }
+
   /** The document in view: its text, and the source field when it is the one being written in. */
   show(doc: { text: string; field: HTMLTextAreaElement | null } | null): void {
     if (!doc) {

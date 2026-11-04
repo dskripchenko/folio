@@ -181,11 +181,26 @@ Protokoll. `"lsp"` in `.folio/settings.json` gibt einer Sprache einen eigenen
 Befehl oder mit `false` keinen; `"formatter": "lsp"` formatiert beim Speichern
 mit dem Server.
 
+**Bilder, Video und Ton** öffnen sich in einem eigenen Tab: PNG, JPEG, GIF,
+WebP, AVIF, BMP und Icons an die Ansicht angepasst (ein kleines in eigener
+Größe), gezoomt mit `Cmd/Ctrl` und dem Mausrad oder einer Pinch-Geste um den
+Zeiger, `+`, `−`, `0` (anpassen) und `1` (Originalgröße), ein Doppelklick
+wechselt zwischen beiden, gezogen, wenn größer als die Ansicht, Transparenz
+über einem Schachbrett; MP4, WebM, MOV und MKV im Videoplayer, MP3, WAV, OGG,
+Opus, M4A, AAC und FLAC im Tonplayer mit Wellenform. Die Statuszeile nennt
+Größe, Länge und Bytes; die Leiste unter der Datei öffnet sie im Programm des
+Systems, wie es eine Datei, die Chromium nicht dekodiert, von selbst anbietet.
+Ein SVG wird gezeichnet und als Text neben seinem Bild bearbeitet, das dem
+Geschriebenen folgt. Sie stehen auch in den Bäumen der Notizen, werden aber nie
+als Text gelesen: Suche, das PDF eines Ordners und die Versionen der Historie
+lassen sie aus.
+
 Ein Projekt ist eines aus **Notizen** oder aus **Code** — beim Hinzufügen
 erraten (ein `package.json`, `composer.json`, `go.mod`, `Cargo.toml` … oben,
 oder ein Git-Repository ohne Notizen neben seiner README macht es zu Code) und in
 seinem Menü umgestellt. Ein Code-Projekt listet jede Datei, auch die mit Punkt
-(`.github`, `.editorconfig`), und eine Datei, die kein Text ist, öffnet sich im
+(`.github`, `.editorconfig`), und eine Datei, die kein Text ist (außer einem
+Bild, einem Video oder einem Ton, die folio selbst zeigt), öffnet sich im
 Programm des Systems; ein Speichern wird dort nie von selbst committet —
 Commits entstehen von Hand. In einem Ordner unter Git bleibt, was `.gitignore`
 (mit `.git/info/exclude` und der globalen Ausschlussdatei des Benutzers)

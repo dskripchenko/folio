@@ -8,6 +8,7 @@ import { CodeEditor, type CodeEditorOptions, type CompletionSource, type KeyBind
 import { languageOf } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
 import { codeView, type CodeState } from './code'
+import { audioView, imageView, videoView, type MediaInfo, type MediaText } from './mediaView'
 
 export { READ_ONLY_BYTES } from './code'
 
@@ -70,6 +71,8 @@ export interface ViewOptions {
   hover?: CodeEditorOptions['hover']
   signatureHelp?: CodeEditorOptions['signatureHelp']
   onModClick?: CodeEditorOptions['onModClick']
+  /** A picture, a video or a sound: its URL, the words of its controls, the system's program, its size once known. */
+  media?: { src: string; text: MediaText; external(): void; info(info: MediaInfo): void }
 }
 
 /** The document drawn, read-only. */
@@ -119,6 +122,19 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
       el.setAttribute('label', o.name)
       return el
     }
+    case 'image':
+    case 'video':
+    case 'audio': {
+      if (!o.media) return codeView('', o.name, o.code)
+      const media = { ...o.media, name: o.name }
+      return format === 'image' ? imageView(media) : format === 'video' ? videoView(media) : audioView(media)
+    }
+    case 'svg': {
+      // Drawn from its text: what is being written shows as it is written.
+      const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`
+      if (!o.media) return codeView(text, o.name, o.code)
+      return imageView({ ...o.media, src, name: o.name })
+    }
     default:
       return codeView(text, o.name, o.code)
   }
@@ -126,7 +142,7 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
 
 /** Formats with an editor of their own; draw.io has none (folio shows it, the source stays as is). */
 export function canEdit(format: Format): boolean {
-  return format !== 'drawio'
+  return format !== 'drawio' && format !== 'image' && format !== 'video' && format !== 'audio'
 }
 
 /** The editor of a non-Markdown document; `changed` gets the new text after each edit. */
@@ -191,7 +207,7 @@ function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (te
   main.append(crumbs, host)
   box.append(main)
   box.folioCrumbs = crumbs
-  const preview = format === 'diagram' || format === 'asyncapi'
+  const preview = format === 'diagram' || format === 'asyncapi' || format === 'svg'
   let pane: HTMLElement | null = null
   if (preview) {
     pane = document.createElement('div')

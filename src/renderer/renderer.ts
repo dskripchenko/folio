@@ -33,6 +33,7 @@ import { GitMarks, type GitMarksText } from './gitMarks'
 import { CodeNav, type NavItem } from './codeNav'
 import { SymbolPalette, type SymbolPaletteText } from './symbolPalette'
 import { parseProblems, ProblemsPanel, type ProblemsText, type ResolvedProblem } from './problems'
+import { bytes, duration, type MediaInfo, type MediaText } from './mediaView'
 import {
   applyTextEdits,
   applyWorkspaceEdit,
@@ -104,6 +105,7 @@ const TEXT = {
     changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
     gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
+    media: { zoomIn: 'Zoom in', zoomOut: 'Zoom out', fit: 'Fit to the view', actual: 'Actual size', external: 'Open in the system’s program', failed: 'folio cannot show {name} (a format or codec it does not read).' } as MediaText,
     lsp: { none: 'no language server', install: 'To understand the code, install a language server: {install}', untrusted: '{server}: the project is not trusted', failed: '{server} did not start', log: 'Language server output', definitions: 'Definitions', references: 'References' },
     problems: { title: 'Problems', close: 'Close', none: 'No problems. A task\'s errors and warnings come here.', from: 'From the task {task}' } as ProblemsText,
     tasks2: { run: 'Run a task', none: 'No tasks here: scripts of package.json or composer.json, Makefile targets, justfile recipes, or .folio/settings.json.' },
@@ -168,6 +170,7 @@ const TEXT = {
     changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
     gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
+    media: { zoomIn: 'Увеличить', zoomOut: 'Уменьшить', fit: 'Вписать в окно', actual: 'Исходный размер', external: 'Открыть в системной программе', failed: 'folio не может показать {name} (формат или кодек, которого он не читает).' } as MediaText,
     lsp: { none: 'без языкового сервера', install: 'Чтобы folio понимал код, поставьте языковой сервер: {install}', untrusted: '{server}: проекту не доверяют', failed: '{server} не запустился', log: 'Вывод языкового сервера', definitions: 'Определения', references: 'Ссылки' },
     problems: { title: 'Проблемы', close: 'Закрыть', none: 'Проблем нет. Сюда попадают ошибки и предупреждения задач.', from: 'Из задачи {task}' } as ProblemsText,
     tasks2: { run: 'Запустить задачу', none: 'Задач нет: скрипты package.json или composer.json, цели Makefile, рецепты justfile или .folio/settings.json.' },
@@ -322,7 +325,7 @@ function markLayout(tab: Tab): void {
   let edit = ''
   if (tab.view === 'edit' && !tab.version) {
     if (format === 'markdown') edit = tab.mode === 'visual' ? '' : tab.mode
-    else if (format === 'diagram' || format === 'asyncapi') edit = 'split'
+    else if (format === 'diagram' || format === 'asyncapi' || format === 'svg') edit = 'split'
     else if (format === 'text') edit = 'source'
   }
   if (edit) tab.pane.dataset.edit = edit
@@ -335,8 +338,30 @@ function formatOf(tab: Tab): Format {
   return tab.doc?.format ?? 'markdown'
 }
 
+/** What is known of a shown picture, video or sound (its size, its length), for the status line. */
+const mediaInfo = new WeakMap<Tab, MediaInfo>()
+
+const isMediaFormat = (format: Format): boolean => format === 'image' || format === 'video' || format === 'audio' || format === 'svg'
+
+/** A picture's, a video's or a sound's URL, its controls' words, the system's program, its size once known. */
+function mediaOptions(tab: Tab): ViewOptions['media'] {
+  const doc = tab.doc
+  if (!doc || !isMediaFormat(doc.format)) return undefined
+  return {
+    // A new version of the file is a new URL: the picture is not the cached one.
+    src: `${doc.base}${encodeURIComponent(doc.name)}?v=${Math.round(doc.media?.modified ?? 0)}`,
+    text: t.media,
+    external: () => void folio.openExternal(doc.path),
+    info: (info) => {
+      mediaInfo.set(tab, info)
+      if (tab === active) syncStatus()
+    },
+  }
+}
+
 function viewOptions(tab: Tab, main = false): ViewOptions {
   return {
+    media: mediaOptions(tab),
     base: tab.doc?.base,
     name: tab.doc?.name ?? titleOf(tab),
     main,
@@ -845,6 +870,17 @@ function syncStatus(): void {
   if (!statusBar) return
   const editor = tab && !tab.version ? codeEditorOf(tab) : null
   if (editor) return statusBar.showEditor(editor, lspStatus.get(editor) ?? null)
+  // A picture, a video, a sound: its size and length, its bytes, its kind.
+  if (tab && !tab.version && tab.doc && isMediaFormat(tab.doc.format)) {
+    const info = mediaInfo.get(tab)
+    const parts = [
+      ...(info?.width && info.height ? [`${info.width} × ${info.height}`] : []),
+      ...(info?.duration !== undefined ? [duration(info.duration)] : []),
+      ...(tab.doc.media ? [bytes(tab.doc.media.size, lang)] : []),
+      tab.doc.name.split('.').pop()!.toUpperCase(),
+    ]
+    return statusBar.showParts(parts)
+  }
   if (!tab || tab.version || (formatOf(tab) !== 'markdown' && formatOf(tab) !== 'text')) return statusBar.show(null)
   const field = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility()) ?? null
   statusBar.show({ text: tab.text, field: field && document.activeElement === field ? field : null })
@@ -1739,6 +1775,8 @@ const history = new HistoryPanel({
   openFile: (path) => void folio.open(path).then((result) => add(result)),
   open: async (path: string, v: Version) => {
     const tab = tabs.find((x) => x.path === path)
+    // A picture's or a video's versions are listed; they are not text to show.
+    if (tab?.doc?.media) return
     const text = await folio.gitTextAt(path, v.oid)
     if (!tab || text === null) return
     tab.version = { oid: v.oid, text, message: v.message, time: v.time, mode: tab.version?.mode ?? 'version' }
@@ -1829,6 +1867,15 @@ folio.onFsChanged(async (value) => {
   const files = new Set((value as Changes[]).flatMap((c) => c.files))
   for (const tab of tabs) {
     if (!tab.path || !files.has(tab.path)) continue
+    // A picture, a video or a sound changed on disk: drawn again from the new file (it is never edited here).
+    if (tab.doc?.media) {
+      const reopened = await folio.open(tab.path)
+      if (isOpened(reopened)) {
+        tab.doc = reopened
+        render(tab)
+      }
+      continue
+    }
     const disk = await folio.disk(tab.path)
     if (!disk || disk.text === tab.saved) continue
     if (isDirty(tab)) {
@@ -2077,6 +2124,8 @@ async function noteFromTemplate(path: string): Promise<void> {
 function commands(): Command[] {
   const c = t.commands
   const has = (): boolean => active !== null
+  /** A document with text (not a picture, a video or a sound): printed, exported, searched in. */
+  const hasText = (): boolean => active !== null && !active.doc?.media
   const file = c.file
   const view = c.view
   const list: Command[] = [
@@ -2087,8 +2136,8 @@ function commands(): Command[] {
     { id: 'clone', group: file, title: c.clone, icon: 'clone', run: () => openClone() },
     { id: 'save', group: file, title: c.save, keys: `${mod}S`, icon: 'save', when: has, run: () => active && void save(active, false) },
     { id: 'save-as', group: file, title: c.saveAs, keys: `${mod}⇧S`, icon: 'save', when: has, run: () => active && void save(active, true) },
-    { id: 'print', group: file, title: t.print, keys: `${mod}P`, icon: 'print', when: has, run: () => void printActive() },
-    { id: 'export-pdf', group: file, title: t.exportPdf, keys: `${mod}⇧P`, icon: 'pdf', when: has, run: () => exportActive() },
+    { id: 'print', group: file, title: t.print, keys: `${mod}P`, icon: 'print', when: hasText, run: () => void printActive() },
+    { id: 'export-pdf', group: file, title: t.exportPdf, keys: `${mod}⇧P`, icon: 'pdf', when: hasText, run: () => exportActive() },
     { id: 'present', group: view, title: c.present, keys: 'F5', icon: 'present', when: isNote, run: () => present() },
     { id: 'export-slides', group: file, title: c.slidesPdf, icon: 'pdf', when: isNote, run: () => void exportSlides() },
     { id: 'close-tab', group: file, title: c.closeTab, keys: `${mod}W`, icon: 'close', when: has, run: () => active && void close(active) },
@@ -2102,7 +2151,7 @@ function commands(): Command[] {
     { id: 'unbookmark', group: c.notes, title: c.unbookmark, icon: 'star', when: () => !!active?.path && bookmarked(active.path), run: () => void folio.bookmark(active!.path!, false) },
     { id: 'template-insert', group: c.notes, title: c.insertTemplate, icon: 'note', when: () => !!active && formatOf(active) === 'markdown' && !active.version, run: () => void chooseTemplate((path) => void insertTemplate(path)) },
     { id: 'template-new', group: c.notes, title: c.newFromTemplate, icon: 'note', run: () => void chooseTemplate((path) => void noteFromTemplate(path)) },
-    { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: has, run: () => openFind() },
+    { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: hasText, run: () => openFind() },
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },
     { id: 'symbol-project', group: c.edit, title: t.symbols.project, keys: `${mod}⌥O`, icon: 'search', run: () => goToSymbol('project') },
@@ -2417,7 +2466,7 @@ window.addEventListener(
  */
 async function printActive(): Promise<void> {
   const tab = active
-  if (!tab) return
+  if (!tab || tab.doc?.media) return
   if (tab.view === 'edit' && canEdit(formatOf(tab))) toggleEdit(tab)
   // Paper is light: the widgets too, for the time of printing.
   window.DskEmbed?.configure({ theme: 'light' })
@@ -2441,7 +2490,7 @@ function exportPdf(target: PdfTarget): void {
   openPdfDialog(t.pdf, target, notify)
 }
 function exportActive(): void {
-  if (!active) return
+  if (!active || active.doc?.media) return
   exportPdf({ kind: 'doc', path: active.path, text: active.text, name: titleOf(active) })
 }
 folio.onExportPdf(() => exportActive())

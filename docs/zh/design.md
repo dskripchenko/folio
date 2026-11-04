@@ -112,9 +112,15 @@ mypy、pytest、eslint 的 unix 格式）、tsc、eslint 的 stylish 块、rustc
 或应安装什么；命令中的*语言服务器输出*显示其日志。`.folio/settings.json` 中的 `"lsp"` 为某语言指定自己的命令，`false` 表示不用服务器；
 `"formatter": "lsp"` 在保存时由服务器格式化。
 
+**图片、视频和音频**在自己的标签页中打开：PNG、JPEG、GIF、WebP、AVIF、BMP 和图标适应视图显示（小图保持原尺寸），
+用 `Cmd/Ctrl` 加滚轮或捏合手势围绕指针缩放，`+`、`−`、`0`（适应）和 `1`（原始尺寸），双击在两者间切换，大于视图时可拖动，
+透明部分显示在棋盘格上；MP4、WebM、MOV 和 MKV 在视频播放器中播放，MP3、WAV、OGG、Opus、M4A、AAC 和 FLAC 在带波形的音频播放器中播放。
+状态栏显示尺寸、时长和大小；文件下方的工具栏可用系统程序打开它——Chromium 无法解码的文件也会自动提供此选项。
+SVG 会被绘制，并在其图像旁作为文本编辑，图像随输入更新。它们也会出现在笔记的文件树中，但从不作为文本读取：搜索、文件夹 PDF 和历史版本都会跳过它们。
+
 项目分为**笔记**项目和**代码**项目——添加时自动判断（根目录有 `package.json`、`composer.json`、`go.mod`、`Cargo.toml`……，
 或是除 README 外没有笔记的 git 仓库，即为代码项目），可在其菜单中更改。代码项目列出所有文件，包括以点开头的文件
-（`.github`、`.editorconfig`），非文本文件用系统程序打开；保存不会自动提交——提交需手动完成。在 git 管理的文件夹中，
+（`.github`、`.editorconfig`），非文本文件（图片、视频和音频除外——由 folio 自己显示）用系统程序打开；保存不会自动提交——提交需手动完成。在 git 管理的文件夹中，
 `.gitignore`（连同 `.git/info/exclude` 和用户的全局排除文件）排除的内容不会出现在文件树、转到文件和搜索中，
 文件树会随 `.gitignore` 的编辑实时更新；没有 git 的文件夹沿用 folio 自己的工具文件夹列表（`node_modules`、`vendor`、`dist`……）。
 

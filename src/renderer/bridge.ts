@@ -3,7 +3,22 @@ import type { LspOpenResult } from './lsp'
 
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
-export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'board' | 'text'
+export type Format =
+  | 'markdown'
+  | 'bpmn'
+  | 'dmn'
+  | 'drawio'
+  | 'openapi'
+  | 'asyncapi'
+  | 'diagram'
+  | 'kanban'
+  | 'calendar'
+  | 'board'
+  | 'text'
+  | 'svg'
+  | 'image'
+  | 'video'
+  | 'audio'
 
 /** A place in a note, as the links panel shows it. */
 export interface LinkPlace {
@@ -45,6 +60,8 @@ export interface Opened {
   folder: string
   owner: 'shared' | 'project' | 'file'
   project: string | null
+  /** A picture, a video or a sound: its size and when it changed. */
+  media?: { size: number; modified: number }
 }
 /** Opened; refused (an error tab); or handed to the system's program (a file that is not text). */
 export type OpenResult = Opened | { error: string; path: string } | { external: true; path: string }
@@ -109,7 +126,7 @@ export interface Entry {
   name: string
   path: string
   type: 'dir' | 'file'
-  kind?: 'markdown' | 'diagram' | 'code' | 'other'
+  kind?: 'markdown' | 'diagram' | 'code' | 'media' | 'other'
 }
 
 export interface ProjectView {
@@ -216,10 +233,12 @@ export interface FolioBridge {
   cancelSearch(): void
   replace(query: string, options: Record<string, boolean>, replacement: string, files: string[]): Promise<{ files: number; replacements: number; commits: number } | { error: string }>
   onSearchHits(callback: (id: number, batch: unknown) => void): () => void
-  allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'other' }[]>
+  allFiles(): Promise<{ root: string; label: string | null; path: string; kind: 'markdown' | 'diagram' | 'code' | 'media' | 'other' }[]>
   /** The settings of the project a file is in (`.folio/settings.json`). */
   projectSettings(path: string): Promise<{ indentUnit?: string; tabSize?: number; formatOnSave?: boolean; formatter?: string }>
   /** Language servers (ADR-003): a file opened in its server, its changes, its saves; requests at positions. */
+  /** A file of the workspace in the system's program for it. */
+  openExternal(path: string): Promise<boolean>
   lspOpen(path: string, text: string): Promise<LspOpenResult>
   lspChange(path: string, edits: unknown[]): void
   lspSave(path: string): void
