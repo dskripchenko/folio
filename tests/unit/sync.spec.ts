@@ -32,7 +32,8 @@ let dir: string
 beforeEach(() => {
   dir = realish(mkdtempSync(join(tmpdir(), 'folio-sync-')))
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+// A git process of a test may still hold its folder for a moment on Windows.
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 const refusal = async (p: Promise<unknown>) => {
   try {

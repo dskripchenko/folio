@@ -9,7 +9,7 @@ let dir: string
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'folio-tree-'))
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('tree: a folder as the sidebar lists it', () => {
   it('folders first, then documents, by name as people sort; tooling and hidden files left out', () => {

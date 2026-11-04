@@ -8,7 +8,7 @@ let dir: string
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'folio-format-'))
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 const settings = (s: object) => {
   mkdirSync(join(dir, '.folio'), { recursive: true })

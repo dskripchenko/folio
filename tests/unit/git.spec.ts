@@ -10,7 +10,7 @@ let dir: string
 beforeEach(() => {
   dir = realish(mkdtempSync(join(tmpdir(), 'folio-git-')))
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('git: a history of documents', () => {
   it('starts a history of what is there, ignores what .gitignore says', async () => {

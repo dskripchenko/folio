@@ -9,7 +9,7 @@ let dir = ''
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'folio-hooks-'))
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('Claude Code hooks', () => {
   it('added once beside the others, and taken out leaving them', () => {
