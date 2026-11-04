@@ -1129,6 +1129,9 @@ ipcMain.handle('image:save', (_e, note: unknown, name: unknown, type: unknown, b
   })
 })
 
+/** A file chosen in the tree to compare another with ("Select for compare", as in VS Code). */
+let compareFrom: string | null = null
+
 ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
   if (file === null || !win) return
@@ -1146,6 +1149,16 @@ ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
     { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
     { label: L().consoleHere, click: () => send('menu:console', folder ? file : dirname(file)) },
     { label: L().reveal, click: () => shell.showItemInFolder(file) },
+    // Two files compared: one chosen first, the other compared with it.
+    ...(folder
+      ? []
+      : [
+          { type: 'separator' as const },
+          { label: L().selectForCompare, click: () => (compareFrom = file) },
+          ...(compareFrom && compareFrom !== file && existsSync(compareFrom)
+            ? [{ label: L().compareWith.replace('{name}', basename(compareFrom)), click: () => send('compare:files', { a: compareFrom, b: file }) }]
+            : []),
+        ]),
     ...(folder
       ? []
       : [{ type: 'separator' as const }, workspace.bookmarks().includes(resolve(file))

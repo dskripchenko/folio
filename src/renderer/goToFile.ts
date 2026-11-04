@@ -92,7 +92,11 @@ export class GoToFile {
     return !this.el.hidden
   }
 
-  async open(): Promise<void> {
+  /** What this opening does with the file chosen (comparing with it, say); opening it by default. */
+  private chooser: ((file: IndexedFile) => void) | null = null
+
+  async open(choose?: (file: IndexedFile) => void): Promise<void> {
+    this.chooser = choose ?? null
     if (!this.el.hidden) return this.input.select()
     this.returnFocus = document.activeElement
     this.el.hidden = false
@@ -179,7 +183,8 @@ export class GoToFile {
     if (!file) return
     this.returnFocus = null
     this.close()
-    this.openFile(file)
+    ;(this.chooser ?? this.openFile)(file)
+    this.chooser = null
   }
 
   private note(text: string): HTMLElement {

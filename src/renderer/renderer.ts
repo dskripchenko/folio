@@ -34,6 +34,7 @@ import { CodeNav, type NavItem } from './codeNav'
 import { SymbolPalette, type SymbolPaletteText } from './symbolPalette'
 import { parseProblems, ProblemsPanel, type ProblemsText, type ResolvedProblem } from './problems'
 import { bytes, duration, type MediaInfo, type MediaText } from './mediaView'
+import type { TableText } from './csvView'
 import {
   applyTextEdits,
   applyWorkspaceEdit,
@@ -107,6 +108,11 @@ const TEXT = {
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
     media: { zoomIn: 'Zoom in', zoomOut: 'Zoom out', fit: 'Fit to the view', actual: 'Actual size', external: 'Open in the system’s program', failed: 'folio cannot show {name} (a format or codec it does not read).' } as MediaText,
     wrapLines: 'Wrap long lines',
+    table: { more: 'Show {n} more', rows: ['row', 'rows'], size: '{rows} rows × {cols} columns' } as TableText & { size: string },
+    compareWithCommand: 'Compare the file with…',
+    comparedWith: 'Compared with {name}',
+    takeText: 'Take its text',
+    cannotCompare: 'Only text files can be compared.',
     lsp: { none: 'no language server', install: 'To understand the code, install a language server: {install}', untrusted: '{server}: the project is not trusted', failed: '{server} did not start', log: 'Language server output', definitions: 'Definitions', references: 'References' },
     problems: { title: 'Problems', close: 'Close', none: 'No problems. A task\'s errors and warnings come here.', from: 'From the task {task}' } as ProblemsText,
     tasks2: { run: 'Run a task', none: 'No tasks here: scripts of package.json or composer.json, Makefile targets, justfile recipes, or .folio/settings.json.' },
@@ -173,6 +179,11 @@ const TEXT = {
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
     media: { zoomIn: 'Увеличить', zoomOut: 'Уменьшить', fit: 'Вписать в окно', actual: 'Исходный размер', external: 'Открыть в системной программе', failed: 'folio не может показать {name} (формат или кодек, которого он не читает).' } as MediaText,
     wrapLines: 'Переносить длинные строки',
+    table: { more: 'Показать ещё {n}', rows: ['строку', 'строки', 'строк'], size: 'Строк: {rows} × столбцов: {cols}' } as TableText & { size: string },
+    compareWithCommand: 'Сравнить файл с…',
+    comparedWith: 'Сравнение с {name}',
+    takeText: 'Взять его текст',
+    cannotCompare: 'Сравнивать можно только текстовые файлы.',
     lsp: { none: 'без языкового сервера', install: 'Чтобы folio понимал код, поставьте языковой сервер: {install}', untrusted: '{server}: проекту не доверяют', failed: '{server} не запустился', log: 'Вывод языкового сервера', definitions: 'Определения', references: 'Ссылки' },
     problems: { title: 'Проблемы', close: 'Закрыть', none: 'Проблем нет. Сюда попадают ошибки и предупреждения задач.', from: 'Из задачи {task}' } as ProblemsText,
     tasks2: { run: 'Запустить задачу', none: 'Задач нет: скрипты package.json или composer.json, цели Makefile, рецепты justfile или .folio/settings.json.' },
@@ -253,7 +264,15 @@ interface Tab {
   blocked: string[]
   scroll: number
   /** A version from the history shown instead of the document. */
-  version: { oid: string; text: string; message: string; time: number; mode: 'version' | 'diff' | 'side' } | null
+  version: {
+    oid: string
+    text: string
+    message: string
+    time: number
+    mode: 'version' | 'diff' | 'side'
+    /** Another file compared with this one (its name), not a version from the history. */
+    compare?: string
+  } | null
   timer: ReturnType<typeof setTimeout> | null
   pane: HTMLElement
   button: HTMLButtonElement
@@ -328,7 +347,7 @@ function markLayout(tab: Tab): void {
   if (tab.view === 'edit' && !tab.version) {
     if (format === 'markdown') edit = tab.mode === 'visual' ? '' : tab.mode
     else if (format === 'diagram' || format === 'asyncapi' || format === 'svg') edit = 'split'
-    else if (format === 'text') edit = 'source'
+    else if (format === 'text' || format === 'csv') edit = 'source'
   }
   if (edit) tab.pane.dataset.edit = edit
   else delete tab.pane.dataset.edit
@@ -389,9 +408,20 @@ function toggleWrap(): void {
   }
 }
 
+/** A table's size (rows below its header, columns), for the status line. */
+const tableInfo = new WeakMap<Tab, { rows: number; cols: number }>()
+
 function viewOptions(tab: Tab, main = false): ViewOptions {
   return {
     wrap: wrapFor,
+    table: {
+      text: t.table,
+      lang,
+      info: (rows, cols) => {
+        tableInfo.set(tab, { rows, cols })
+        if (tab === active) syncStatus()
+      },
+    },
     media: mediaOptions(tab),
     base: tab.doc?.base,
     name: tab.doc?.name ?? titleOf(tab),
@@ -432,8 +462,13 @@ function renderVersion(tab: Tab): void {
   title.className = 'title'
   const date = new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v.time * 1000))
   const strong = document.createElement('strong')
-  strong.textContent = t.versionOf.replace('{date}', date)
-  title.append(strong, ` — ${v.message.split('\n')[0] ?? ''}`)
+  if (v.compare) {
+    strong.textContent = t.comparedWith.replace('{name}', v.compare)
+    title.append(strong)
+  } else {
+    strong.textContent = t.versionOf.replace('{date}', date)
+    title.append(strong, ` — ${v.message.split('\n')[0] ?? ''}`)
+  }
   bar.append(title)
   const modes: [typeof v.mode, string][] = [['version', t.showVersion], ['diff', t.showDiff], ['side', t.showSide]]
   for (const [mode, label] of modes) {
@@ -451,7 +486,7 @@ function renderVersion(tab: Tab): void {
   const restore = document.createElement('button')
   restore.type = 'button'
   restore.className = 'restore'
-  restore.textContent = t.restore
+  restore.textContent = v.compare ? t.takeText : t.restore
   restore.addEventListener('click', () => {
     // Into the editor as an unsaved edit: saving it is the person's call.
     tab.text = v.text
@@ -487,7 +522,8 @@ function renderVersion(tab: Tab): void {
   } else {
     const grid = document.createElement('div')
     grid.className = 'side-by-side'
-    for (const [label, text] of [[t.then, v.text], [t.now, tab.text]] as const) {
+    const labels = v.compare ? [v.compare, titleOf(tab)] : [t.then, t.now]
+    for (const [label, text] of [[labels[0]!, v.text], [labels[1]!, tab.text]] as const) {
       const col = document.createElement('section')
       const h = document.createElement('h4')
       h.textContent = label
@@ -901,6 +937,9 @@ function syncStatus(): void {
   if (!statusBar) return
   const editor = tab && !tab.version ? codeEditorOf(tab) : null
   if (editor) return statusBar.showEditor(editor, lspStatus.get(editor) ?? null)
+  // A table read: its rows and columns.
+  const table = tab && !tab.version && formatOf(tab) === 'csv' && tab.view === 'read' ? tableInfo.get(tab) : undefined
+  if (table) return statusBar.showParts([t.table.size.replace('{rows}', table.rows.toLocaleString(lang)).replace('{cols}', String(table.cols))])
   // A picture, a video, a sound: its size and length, its bytes, its kind.
   if (tab && !tab.version && tab.doc && isMediaFormat(tab.doc.format)) {
     const info = mediaInfo.get(tab)
@@ -2258,6 +2297,35 @@ function openFind(): void {
 document.querySelector('.content')!.append(findBar.el)
 const goToFile = new GoToFile(t.goToFile, () => folio.allFiles(), (f) => void folio.openEntry(f.root, f.path).then((result) => add(result)))
 document.body.append(goToFile.el)
+
+/**
+ * Two files compared: `other` (chosen first, or in the picker) against
+ * `path`, in `path`'s tab — the history's view of a version: the changes, side
+ * by side, or the other file as drawn; its text taken into the editor on asking.
+ */
+async function compareFiles(other: string, path: string): Promise<void> {
+  const [a, b] = await Promise.all([folio.open(other), folio.open(path)])
+  if (!isOpened(a) || !isOpened(b) || a.media || b.media) {
+    notify(t.cannotCompare)
+    return
+  }
+  await add(b)
+  const tab = tabs.find((x) => x.path === b.path)
+  if (!tab) return
+  tab.version = { oid: '', text: a.text, message: '', time: 0, mode: 'diff', compare: a.name }
+  render(tab)
+  scrollerOf(tab).scrollTop = 0
+}
+folio.onCompareFiles((value) => {
+  const { a, b } = value as { a: string; b: string }
+  void compareFiles(a, b)
+})
+/** The file in view compared with one chosen like going to a file. */
+function compareWithChosen(): void {
+  const path = active?.path
+  if (!path) return
+  void goToFile.open((f) => void folio.openEntry(f.root, f.path).then((r) => (isOpened(r) ? compareFiles(r.path, path) : undefined)))
+}
 folio.onGoToFile(() => void goToFile.open())
 
 // Daily notes and templates ----------------------------------------------------------------
@@ -2346,6 +2414,7 @@ function commands(): Command[] {
     { id: 'template-insert', group: c.notes, title: c.insertTemplate, icon: 'note', when: () => !!active && formatOf(active) === 'markdown' && !active.version, run: () => void chooseTemplate((path) => void insertTemplate(path)) },
     { id: 'template-new', group: c.notes, title: c.newFromTemplate, icon: 'note', run: () => void chooseTemplate((path) => void noteFromTemplate(path)) },
     { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: hasText, run: () => openFind() },
+    { id: 'compare-with', group: file, title: t.compareWithCommand, icon: 'split', when: () => !!active?.path && !active.doc?.media, run: () => compareWithChosen() },
     { id: 'toggle-wrap', group: view, title: t.wrapLines, keys: '⌥Z', icon: 'source', when: () => !!codeEditorOf(active), run: () => toggleWrap() },
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },

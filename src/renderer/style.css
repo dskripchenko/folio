@@ -664,3 +664,15 @@ body.dragging-tab .tab { cursor: grabbing; }
 .embed-media { display: block; max-width: 100%; height: auto; margin: 8px 0; }
 .embed-image { cursor: zoom-in; border-radius: 4px; }
 img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-height: 40px; outline: 1px dashed var(--line); }
+
+/* A CSV file as a table: the header kept in view as it scrolls, a click on a column sorts by it. */
+.doc[data-format="csv"]:not([data-edit]) { max-width: none; }
+.csv-view { width: max-content; min-width: 100%; }
+.csv-table { border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.csv-table th, .csv-table td { max-width: 320px; padding: 4px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csv-table thead th { position: sticky; top: 0; z-index: 1; background: var(--tab); font-weight: 600; cursor: pointer; user-select: none; }
+.csv-table thead th[data-sort="up"]::after { content: ' ▲'; color: var(--accent); }
+.csv-table thead th[data-sort="down"]::after { content: ' ▼'; color: var(--accent); }
+.csv-table .csv-n { color: var(--muted); text-align: right; font-weight: normal; cursor: default; }
+.csv-table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.csv-more { margin: 12px 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; cursor: pointer; }

@@ -15,6 +15,7 @@ export type Format =
   | 'calendar'
   | 'board'
   | 'text'
+  | 'csv'
   | 'svg'
   | 'image'
   | 'video'
@@ -334,6 +335,8 @@ export interface FolioBridge {
   onOpened: Listener
   onBlocked: Listener
   onCloseTab: Listener
+  /** "Compare with" in the tree: the file chosen first (a) and the one compared with it (b). */
+  onCompareFiles: Listener
 }
 
 declare global {

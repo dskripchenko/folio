@@ -167,4 +167,5 @@ contextBridge.exposeInMainWorld('folio', {
   onOpened: listen('doc:opened'),
   onBlocked: listen('net:blocked'),
   onCloseTab: listen('menu:close-tab'),
+  onCompareFiles: listen('compare:files'),
 })

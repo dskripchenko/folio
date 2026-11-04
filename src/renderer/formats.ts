@@ -8,6 +8,7 @@ import { CodeEditor, type CodeEditorOptions, type CompletionSource, type KeyBind
 import { languageOf } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
 import { codeView, type CodeState } from './code'
+import { csvView, type TableText } from './csvView'
 import { audioView, imageView, videoView, type MediaInfo, type MediaText } from './mediaView'
 
 export { READ_ONLY_BYTES } from './code'
@@ -71,6 +72,8 @@ export interface ViewOptions {
   hover?: CodeEditorOptions['hover']
   signatureHelp?: CodeEditorOptions['signatureHelp']
   onModClick?: CodeEditorOptions['onModClick']
+  /** A table's words, the language, its size once read. */
+  table?: { text: TableText; lang: string; info(rows: number, cols: number): void }
   /** Long lines wrap at the view's width (null: folio's choice for the kind of text). */
   wrap?: (language: string | null) => boolean
   /** A picture, a video or a sound: its URL, the words of its controls, the system's program, its size once known. */
@@ -131,6 +134,8 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
       const media = { ...o.media, name: o.name }
       return format === 'image' ? imageView(media) : format === 'video' ? videoView(media) : audioView(media)
     }
+    case 'csv':
+      return o.table ? csvView({ text, name: o.name, t: o.table.text, lang: o.table.lang, info: o.table.info }) : codeView(text, o.name, o.code)
     case 'svg': {
       // Drawn from its text: what is being written shows as it is written.
       const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`

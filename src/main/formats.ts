@@ -21,6 +21,7 @@ export type Format =
   | 'calendar'
   | 'board'
   | 'text'
+  | 'csv'
   | 'svg'
   | 'image'
   | 'video'
@@ -65,6 +66,8 @@ export const OPENABLE_EXT = [
   '.board',
   ...Object.keys(DIAGRAM_SYNTAX),
   ...DATA_EXT,
+  '.csv',
+  '.tsv',
   '.svg',
   ...IMAGE_EXT,
   ...VIDEO_EXT,
@@ -97,6 +100,7 @@ export function formatByName(name: string): Format | 'data' {
   if (ext === '.board') return 'board'
   if (ext in DIAGRAM_SYNTAX) return 'diagram'
   if (DATA_EXT.includes(ext)) return 'data'
+  if (ext === '.csv' || ext === '.tsv') return 'csv'
   if (ext === '.svg') return 'svg'
   if (IMAGE_EXT.includes(ext)) return 'image'
   if (VIDEO_EXT.includes(ext)) return 'video'
