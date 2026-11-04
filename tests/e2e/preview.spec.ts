@@ -41,8 +41,14 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
     // A Markdown link to a note too; into the preview it stays, a click there opens the note.
     await restOn(pane.locator('a', { hasText: 'the plan' }))
     await expect(preview.locator('h1', { hasText: 'Plan' })).toBeVisible()
-    // The pointer moved by hand from the link into the preview (Playwright's hover may move it again while it checks its target).
+    // The pointer moved by hand from the link into the preview (Playwright's hover may move it again while it checks its target),
+    // resting on the way, between the link and the panel, longer than a leave takes: it stays.
+    const linkBox = (await pane.locator('a', { hasText: 'the plan' }).boundingBox())!
     const box = (await preview.boundingBox())!
+    const gapY = linkBox.y + linkBox.height < box.y ? (linkBox.y + linkBox.height + box.y) / 2 : (box.y + box.height + linkBox.y) / 2
+    await win.mouse.move(linkBox.x + linkBox.width / 2, gapY, { steps: 2 })
+    await win.waitForTimeout(700)
+    await expect(preview).toBeVisible()
     await win.mouse.move(box.x + 40, box.y + 30, { steps: 4 })
     await win.waitForTimeout(400)
     await expect(preview).toBeVisible()

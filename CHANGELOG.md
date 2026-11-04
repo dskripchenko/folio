@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+- A note's preview stays open while the pointer is on its way from the link
+  into it, however slowly: only a pointer that leaves that way closes it.
+
 ## [1.2.0] - 2026-11-03
 
 ### Fixed
