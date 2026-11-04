@@ -15,6 +15,7 @@ pnpm lint
 pnpm typecheck
 pnpm test           # unit tests (vitest)
 pnpm test:e2e       # start the built app and check it (Playwright)
+pnpm readme:shots   # retake the README's screenshots into docs/images (needs ImageMagick)
 ```
 
 Run from the sources, folio keeps its data in `.folio-data/` in the working
@@ -60,6 +61,7 @@ checksums and provenance.
 | `scripts/build.mjs` | esbuild: main, preload and page into `dist/` |
 | `tests/unit/` | unit tests |
 | `tests/e2e/` | the built app, started and driven |
+| `tests/readme/` | the README's screenshots, taken by `pnpm readme:shots` |
 | `docs/internal/` | decisions and plans (in Russian) |
 
 ## CI

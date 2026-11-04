@@ -15,6 +15,7 @@ pnpm lint
 pnpm typecheck
 pnpm test           # юнит-тесты (vitest)
 pnpm test:e2e       # запустить собранное приложение и проверить (Playwright)
+pnpm readme:shots   # переснять скриншоты README в docs/images (нужен ImageMagick)
 ```
 
 При запуске из исходников folio хранит данные в `.folio-data/` рабочего
@@ -60,6 +61,7 @@ release делает всё это на трёх системах; тег `v*`, 
 | `scripts/build.mjs` | esbuild: main, preload и страница в `dist/` |
 | `tests/unit/` | юнит-тесты |
 | `tests/e2e/` | собранное приложение, запущенное и управляемое |
+| `tests/readme/` | скриншоты README, их снимает `pnpm readme:shots` |
 | `docs/internal/` | решения и планы |
 
 ## CI

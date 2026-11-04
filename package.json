@@ -23,6 +23,7 @@
     "test": "vitest run",
     "pretest:e2e": "node -e \"require('electron')\"",
     "test:e2e": "playwright test",
+    "readme:shots": "node scripts/readme-shots.mjs",
     "dist": "pnpm build && electron-builder --publish never"
   },
   "devDependencies": {
