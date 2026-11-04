@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { diffLines } from '../renderer/diff'
+import { diffLines } from '../common/diff'
 import { historyOf, textAt, toGit } from './git'
 
 /**

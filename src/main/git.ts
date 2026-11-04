@@ -411,6 +411,8 @@ export type GitErrorCode =
   | 'failed'
   | 'conflict'
   | 'current'
+  // The review: a run of changes that is not there any more (the file changed meanwhile).
+  | 'stale'
 
 /** A refusal with a reason the window can say: `detail` holds files, a host or git's own words. */
 export class GitError extends Error {

@@ -1,3 +1,5 @@
+import type { Hunk } from '../common/hunks'
+import type { ChangedFile, Changeset, ChangeSpec, FileTexts, ReviewAction, Worktree } from '../common/review'
 import type { GroupData, TabColor } from '../common/tabGroups'
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
@@ -130,7 +132,7 @@ export interface GitInfo {
 
 /** A git action's refusal: a code the window has words for, and files, a host or git's words. */
 export interface GitRefusal {
-  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled' | 'no-git' | 'nothing' | 'failed' | 'conflict' | 'current'
+  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled' | 'no-git' | 'nothing' | 'failed' | 'conflict' | 'current' | 'stale'
   detail: string[]
 }
 
@@ -382,6 +384,15 @@ export interface FolioBridge {
   onBlocked: Listener
   onCloseTab: Listener
   onCloseAllTabs: Listener
+  // The review (ADR-006): the system's git.
+  reviewAvailable(): Promise<{ ok: true; available: boolean }>
+  reviewChangeset(spec: ChangeSpec): Promise<{ ok: true; set: Changeset } | GitRefusal>
+  reviewTexts(spec: ChangeSpec, file: ChangedFile): Promise<{ ok: true; texts: FileTexts } | GitRefusal>
+  reviewAct(spec: ChangeSpec, action: ReviewAction, path: string, hunk: (Hunk & { lines?: { before: string[]; after: string[] } }) | null): Promise<{ ok: boolean } | GitRefusal>
+  reviewWorktrees(path: string, base: string | null): Promise<{ ok: true; base: string; main: string; list: Worktree[] } | GitRefusal>
+  reviewWorktreeRemove(main: string, path: string, branch: string | null, changed: number): Promise<{ ok: boolean } | GitRefusal>
+  reviewWorktreeMerge(main: string, branch: string): Promise<{ ok: true } | GitRefusal>
+  reviewWorktreeTake(main: string, path: string, base: string): Promise<{ ok: true } | GitRefusal>
   /** "Compare with" in the tree: the file chosen first (a) and the one compared with it (b). */
   onCompareFiles: Listener
 }

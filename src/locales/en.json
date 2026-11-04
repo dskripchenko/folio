@@ -87,7 +87,12 @@
     "findNext": "Find Next",
     "findPrevious": "Find Previous",
     "revealMac": "Reveal in Finder",
-    "welcome": "What folio can do"
+    "welcome": "What folio can do",
+    "reviewDiscardDetail": "The file goes back to its last committed version (a new file goes to the trash).",
+    "removeWorktreeQuestion": "Remove the worktree “{name}”?",
+    "removeWorktreeDetail": "Its folder is deleted; its branch is deleted too.",
+    "removeWorktreeDirty": "It has {n} files changed and not committed: they are lost. Its branch is deleted too.",
+    "removeWorktree": "Remove"
   },
   "window": {
     "open": "Open…",
@@ -199,7 +204,8 @@
         "nothing": "Nothing to put aside.",
         "failed": "git said: {detail}",
         "conflict": "It does not apply cleanly: nothing was changed.",
-        "current": "Switch to another branch first."
+        "current": "Switch to another branch first.",
+        "stale": "This change is not there any more: the file changed meanwhile. Look again."
       }
     },
     "pdf": {

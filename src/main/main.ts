@@ -50,6 +50,7 @@ import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { groupOf, isTabColor } from '../common/tabGroups'
+import { registerReview } from './review/ipc'
 import { Session } from './session'
 import { Languages, type Labels } from './i18n'
 import type { Dictionary } from '../common/i18n'
@@ -1600,6 +1601,30 @@ async function confirm(message: string, detail: string, yes: string): Promise<bo
   const { response } = await dialog.showMessageBox(win, { type: 'warning', buttons: [yes, L().cancel], defaultId: 0, cancelId: 1, message, detail })
   return response === 0
 }
+
+// The review of changes (ADR-006): the system's git.
+registerReview({
+  systemGit: () => (systemGit ??= findSystemGit()),
+  repoOf,
+  confirm,
+  trash: (path) => shell.trashItem(path),
+  changed: (repo) => {
+    send('fs:changed', [{ root: roots.register(repo), dirs: [], files: [], all: true }])
+    send('git:committed', { path: repo })
+  },
+  text: () => {
+    const t = L()
+    return {
+      discardFileQuestion: t.discardQuestion,
+      discardFileDetail: t.reviewDiscardDetail,
+      discard: t.discardConfirm,
+      removeWorktreeQuestion: t.removeWorktreeQuestion,
+      removeWorktreeDetail: t.removeWorktreeDetail,
+      removeWorktreeDirty: t.removeWorktreeDirty,
+      remove: t.removeWorktree,
+    }
+  },
+})
 
 ipcMain.handle('git:merge-finish', (_e, path: unknown) =>
   gitAction(path, async (root) => ({ ok: true, oid: await finishMerge(root, authorOf(root, fallbackAuthor())) })),
