@@ -21,6 +21,7 @@ import { ConsolePanel } from './consolePanel'
 import { icon, iconButton, type IconName } from './icons'
 import { popMenu, popMenuAt, type MenuItem } from './menu'
 import { ReviewView } from './review/reviewView'
+import { WorktreesPanel } from './worktreesPanel'
 import { rootOf, type ChangeSpec } from '../common/review'
 import { TAB_COLORS, freeColor, groupAt, isTabColor, keepTogether, type GroupData, type TabColor } from '../common/tabGroups'
 import { openCloneDialog } from './clone'
@@ -76,6 +77,7 @@ let graphPanel: GraphPanel | null = null
 /** The tasks of the project in view. */
 let tasksPanel: TasksPanel | null = null
 let changesPanel: ChangesPanel | null = null
+let worktreesPanel: WorktreesPanel | null = null
 let symbolPalette: SymbolPalette | null = null
 let problemsPanel: ProblemsPanel | null = null
 /** The status line under the page. */
@@ -162,6 +164,7 @@ function applyText(): void {
   graphPanel?.setText(t.graph)
   tasksPanel?.setText(t.tasks)
   changesPanel?.setText(t.changes)
+  worktreesPanel?.setText(t.worktrees)
   symbolPalette?.setText(t.symbols)
   problemsPanel?.setText(t.problems)
   outlinePanel?.setText(t.outline)
@@ -608,6 +611,7 @@ function buildRail(): void {
     iconButton('graph', t.graph.title, () => graphPanel?.setVisible(!graphPanel.visible), 'toggle-graph'),
     iconButton('tasks', t.tasks.title, () => tasksPanel?.setVisible(!tasksPanel.visible), 'toggle-tasks'),
     iconButton('commit', `${t.changes.title} (Ctrl+⇧G)`, () => changesPanel?.setVisible(!changesPanel.visible), 'toggle-changes'),
+    iconButton('branch', t.worktrees.title, () => worktreesPanel?.setVisible(!worktreesPanel.visible), 'toggle-worktrees'),
     iconButton('alert', t.problems.title, () => problemsPanel?.setVisible(!problemsPanel.visible), 'toggle-problems'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
@@ -654,6 +658,11 @@ function syncRail(): void {
   if (pr) {
     pr.setAttribute('aria-pressed', String(!!problemsPanel?.visible))
     pr.classList.toggle('on', !!problemsPanel?.visible)
+  }
+  const wt = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-worktrees"]')
+  if (wt) {
+    wt.setAttribute('aria-pressed', String(!!worktreesPanel?.visible))
+    wt.classList.toggle('on', !!worktreesPanel?.visible)
   }
   const ch = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-changes"]')
   if (ch) {
@@ -1471,6 +1480,7 @@ function activate(tab: Tab | null): void {
   tasksPanel?.show(tab?.path ?? null)
   // A review's tab: the changes of its repository.
   changesPanel?.show(tab?.review ? rootOf(tab.review.spec) : (tab?.path ?? null))
+  worktreesPanel?.show(tab?.review ? rootOf(tab.review.spec) : (tab?.path ?? null))
   syncStatus()
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
@@ -2708,6 +2718,7 @@ function commands(): Command[] {
     { id: 'tasks', group: view, title: t.tasks.title, icon: 'tasks', run: () => tasksPanel?.setVisible(!tasksPanel.visible) },
     { id: 'blame', group: view, title: t.blame, icon: 'history', when: () => !!codeEditorOf(active), run: () => void toggleBlame() },
     { id: 'changes', group: view, title: t.changes.title, keys: 'Ctrl+⇧G', icon: 'commit', run: () => changesPanel?.setVisible(!changesPanel.visible) },
+    { id: 'worktrees', group: view, title: c.worktrees, icon: 'branch', run: () => worktreesPanel?.setVisible(!worktreesPanel.visible) },
     { id: 'review-changes', group: view, title: c.reviewChanges, icon: 'commit', run: () => void reviewWorking() },
     {
       id: 'review-since',
@@ -2812,6 +2823,34 @@ changesPanel = new ChangesPanel(
 )
 document.querySelector('.content')!.insertBefore(changesPanel.el, document.querySelector('.history'))
 changesPanel.show(null)
+
+const failed = (r: { ok?: unknown } | GitRefusal): GitRefusal | null => ('error' in r ? (r as GitRefusal) : null)
+worktreesPanel = new WorktreesPanel(
+  t.worktrees,
+  {
+    load: (path, base) => folio.reviewWorktrees(path, base),
+    branches: async (path) => (await folio.gitInfo(path))?.branches ?? [],
+    review: (spec) => void openReview(spec),
+    project: async (main, path) => {
+      const r = await folio.reviewWorktreeProject(main, path)
+      if ('ok' in r) sidebar.show(r.workspace)
+      return failed(r)
+    },
+    console: (path) => void consolePanel.open(path),
+    merge: async (main, branch) => failed(await folio.reviewWorktreeMerge(main, branch)),
+    take: async (main, path, base) => failed(await folio.reviewWorktreeTake(main, path, base)),
+    remove: async (main, w) => {
+      const r = await folio.reviewWorktreeRemove(main, w.path, w.branch, w.changed)
+      if ('workspace' in r && r.workspace) sidebar.show(r.workspace)
+      return failed(r)
+    },
+    errors: () => t.historyPanel.errors,
+    lang: () => lang,
+  },
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(worktreesPanel.el, document.querySelector('.history'))
+worktreesPanel.show(null)
 
 tasksPanel = new TasksPanel(
   t.tasks,

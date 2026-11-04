@@ -192,6 +192,7 @@ export class ReviewView {
     }
     const only = this.head.querySelector('.rv-only span')
     if (only) only.textContent = t.unviewedOnly
+    this.head.querySelector('.rv-only')?.setAttribute('title', t.unviewedOnly)
     this.syncHead()
   }
 

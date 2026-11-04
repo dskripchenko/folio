@@ -197,6 +197,7 @@ contextBridge.exposeInMainWorld('folio', {
   reviewCheckpointFile: (root: string, path: string) => ipcRenderer.invoke('review:checkpoint-file', root, path),
   reviewSinceCount: (root: string) => ipcRenderer.invoke('review:since-count', root),
   reviewWorktrees: (path: string, base: string | null) => ipcRenderer.invoke('review:worktrees', path, base),
+  reviewWorktreeProject: (main: string, path: string) => ipcRenderer.invoke('review:worktree-project', main, path),
   reviewWorktreeRemove: (main: string, path: string, branch: string | null, changed: number) => ipcRenderer.invoke('review:worktree-remove', main, path, branch, changed),
   reviewWorktreeMerge: (main: string, branch: string) => ipcRenderer.invoke('review:worktree-merge', main, branch),
   reviewWorktreeTake: (main: string, path: string, base: string) => ipcRenderer.invoke('review:worktree-take', main, path, base),

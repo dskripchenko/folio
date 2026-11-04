@@ -396,7 +396,8 @@ export interface FolioBridge {
   reviewCheckpointFile(root: string, path: string): Promise<{ ok: true } | GitRefusal>
   reviewSinceCount(root: string): Promise<{ ok: true; count: number | null } | GitRefusal>
   reviewWorktrees(path: string, base: string | null): Promise<{ ok: true; base: string; main: string; list: Worktree[] } | GitRefusal>
-  reviewWorktreeRemove(main: string, path: string, branch: string | null, changed: number): Promise<{ ok: boolean } | GitRefusal>
+  reviewWorktreeProject(main: string, path: string): Promise<{ ok: true; workspace: WorkspaceView } | GitRefusal>
+  reviewWorktreeRemove(main: string, path: string, branch: string | null, changed: number): Promise<{ ok: boolean; workspace?: WorkspaceView } | GitRefusal>
   reviewWorktreeMerge(main: string, branch: string): Promise<{ ok: true } | GitRefusal>
   reviewWorktreeTake(main: string, path: string, base: string): Promise<{ ok: true } | GitRefusal>
   /** "Compare with" in the tree: the file chosen first (a) and the one compared with it (b). */

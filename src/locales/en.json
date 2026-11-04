@@ -535,7 +535,8 @@
       "present": "Show as slides",
       "slidesPdf": "Export the slides as PDF",
       "reviewChanges": "Review the changes",
-      "reviewSince": "Review what changed since the last look"
+      "reviewSince": "Review what changed since the last look",
+      "worktrees": "Worktrees"
     },
     "goToFile": {
       "placeholder": "Go to a file by its name",
@@ -698,6 +699,30 @@
       },
       "sinceButton": "Since last look",
       "allSeen": "All seen"
+    },
+    "worktrees": {
+      "title": "Worktrees",
+      "close": "Close",
+      "base": "Base",
+      "main": "Main copy",
+      "detached": "detached",
+      "changed": [
+        "{n} file changed",
+        "{n} files changed"
+      ],
+      "clean": "no changes",
+      "review": "Review against the base",
+      "reviewWorking": "Review the changes",
+      "openProject": "Open as a project",
+      "terminal": "Open a terminal here",
+      "take": "Take the changes (no commit)",
+      "merge": "Merge into the main copy",
+      "remove": "Remove…",
+      "none": "No worktrees yet: an agent working in one (git worktree add) shows here.",
+      "noRepo": "Not in a git repository.",
+      "noGit": "Worktrees need git installed on the system.",
+      "taken": "The changes are in the main copy, not committed.",
+      "merged": "Merged."
     }
   },
   "print": {

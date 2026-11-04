@@ -108,7 +108,8 @@ export class ReviewGit {
     ])
     const files = mergeStats(parseNameStatus(names), parseNumstat(numstat))
     if (after === 'disk') {
-      const others = (await this.run(root, ['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter(Boolean)
+      // A folder ending in `/` is a repository inside (a worktree): not a file of this one.
+      const others = (await this.run(root, ['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter((p) => p && !p.endsWith('/'))
       for (const path of others) files.push({ path, status: 'added', untracked: true, ...countLines(join(root, path)) })
     }
     files.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : 0))
@@ -262,7 +263,8 @@ export class ReviewGit {
         const out: Worktree = { ...w, main: i === 0, changed: 0, ahead: 0, behind: 0, lastActivity: 0 }
         if (w.prunable || !existsSync(w.path)) return out
         try {
-          const status = (await this.run(w.path, ['status', '--porcelain=v1', '-z', '--untracked-files=all'])).split('\0').filter((x) => /^.. /.test(x))
+          // A worktree inside (`?? .claude/worktrees/x/`) is not a change of this copy.
+          const status = (await this.run(w.path, ['status', '--porcelain=v1', '-z', '--untracked-files=all'])).split('\0').filter((x) => /^.. /.test(x) && !x.endsWith('/'))
           out.changed = status.length
           let newest = Number((await this.run(w.path, ['log', '-1', '--format=%ct']).catch(() => '0')).trim() || 0) * 1000
           for (const line of status.slice(0, 500)) {
@@ -319,7 +321,7 @@ export class ReviewGit {
   async takeChanges(repo: string, worktree: string, base: string): Promise<void> {
     const mb = (await this.mergeBase(worktree, base, 'HEAD')) ?? (await this.emptyTree(worktree))
     const tracked = await this.exec(worktree, ['diff', '--binary', '--no-color', '--no-ext-diff', mb, '--'])
-    const others = (await this.run(worktree, ['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter(Boolean)
+    const others = (await this.run(worktree, ['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter((p) => p && !p.endsWith('/'))
     // New files of the worktree: copied as they are, never over a file of the same name.
     for (const path of others) {
       if (existsSync(join(repo, ...path.split('/')))) throw new GitError('exists', [path])

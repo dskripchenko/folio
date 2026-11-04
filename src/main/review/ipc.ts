@@ -23,6 +23,10 @@ export interface ReviewDeps {
   trash: (path: string) => Promise<void>
   /** The window told that files or the repository changed. */
   changed: (repo: string) => void
+  /** A worktree added to folio's projects; the workspace as the sidebar draws it. */
+  addProject: (path: string) => unknown
+  /** A removed worktree's project (if it was one) let go; the workspace as the sidebar draws it. */
+  forgetProject: (path: string) => unknown
   text: () => { discardFileQuestion: string; discardFileDetail: string; discard: string; removeWorktreeQuestion: string; removeWorktreeDetail: string; removeWorktreeDirty: string; remove: string }
 }
 
@@ -181,11 +185,22 @@ export function registerReview(deps: ReviewDeps): void {
 
   handle('review:worktrees', async (path, base) => {
     const g = await need()
-    const root = await repo(path)
+    // Any folder of the repository: its worktrees are the repository's.
+    const root = typeof path === 'string' ? await deps.repoOf(path) : null
+    if (!root) throw new GitError('invalid')
     const list = await g.worktrees(root, null)
     const main = list.find((w) => w.main)?.path ?? root
     const b = typeof base === 'string' && REV.test(base) ? base : ((await g.currentBranch(main)) ?? 'HEAD')
     return { ok: true, base: b, main, list: await g.worktrees(main, b) }
+  })
+
+  handle('review:worktree-project', async (main, path) => {
+    const g = await need()
+    const root = await repo(main)
+    const listed = await g.worktrees(root, null)
+    const wt = listed.find((w) => resolve(w.path) === resolve(String(path)))
+    if (!wt) throw new GitError('invalid')
+    return { ok: true, workspace: deps.addProject(wt.path) }
   })
 
   handle('review:worktree-remove', async (main, path, branch, changed) => {
@@ -200,7 +215,7 @@ export function registerReview(deps: ReviewDeps): void {
     } finally {
       deps.changed(root)
     }
-    return { ok: true }
+    return { ok: true, workspace: deps.forgetProject(wt) }
   })
 
   handle('review:worktree-merge', async (main, branch) => {

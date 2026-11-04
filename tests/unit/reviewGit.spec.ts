@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { hunksOf, splitLines } from '../../src/common/hunks'
 import { ReviewGit, parseNameStatus, parseNumstat, parseWorktrees } from '../../src/main/review/git'
+import { WorktreeGit } from '../../src/main/review/worktreeGit'
 
 const g = new ReviewGit('git')
 let dir = ''
@@ -186,6 +187,40 @@ describe('since the last look', () => {
     // The texts: as seen, and as now.
     expect(await g.sinceTexts(repo, cp, 'a.txt')).toEqual({ before: 'a\nB\nc\nd\ne\nf\n', after: 'a\nB\nc\nD\ne\nf\n' })
     expect(await g.sinceTexts(repo, cp, 'gone.txt')).toEqual({ before: 'bye\n', after: 'changed\n' })
+  })
+})
+
+describe('a worktree opened as a project', () => {
+  it('its changes, staged and committed, its history and a file at HEAD — through the system git', async () => {
+    const wt = join(dir, 'wt')
+    git(repo, 'worktree', 'add', '-q', '-b', 'agent', wt)
+    const w = new WorktreeGit('git')
+    writeFileSync(join(wt, 'a.txt'), 'changed\n')
+    writeFileSync(join(wt, 'n.txt'), 'n\n')
+    expect(await w.changes(wt)).toEqual({ staged: [], unstaged: [{ path: 'a.txt', kind: 'modified' }, { path: 'n.txt', kind: 'untracked' }] })
+    await w.stage(wt, ['a.txt', 'n.txt'])
+    expect((await w.changes(wt)).staged).toEqual([{ path: 'a.txt', kind: 'modified' }, { path: 'n.txt', kind: 'added' }])
+    await w.unstage(wt, ['n.txt'])
+    expect((await w.changes(wt)).staged).toEqual([{ path: 'a.txt', kind: 'modified' }])
+    const oid = await w.commit(wt, 'agent did it', { name: 'A', email: 'a@example.com' }, false)
+    expect(oid).toMatch(/^[0-9a-f]{40}$/)
+    expect((await w.branches(wt)).current).toBe('agent')
+    const history = await w.history(wt, join(wt, 'a.txt'))
+    expect(history.map((v) => v.message)).toEqual(['agent did it', 'first'])
+    expect(history[0]!.refs).toContain('agent')
+    expect(await w.headText(wt, join(wt, 'a.txt'))).toBe('changed\n')
+    await w.discard(wt, 'n.txt')
+    expect(existsSync(join(wt, 'n.txt'))).toBe(false)
+  })
+})
+
+describe('a worktree inside the repository (.claude/worktrees)', () => {
+  it('is not a change of the main copy', async () => {
+    git(repo, 'worktree', 'add', '-q', '-b', 'inner', join(repo, '.claude', 'worktrees', 'inner'))
+    const list = await g.worktrees(repo, 'main')
+    expect(list.find((w) => w.main)!.changed).toBe(0)
+    expect((await g.changeset({ kind: 'working', repo })).files).toEqual([])
+    expect((await new WorktreeGit('git').changes(repo)).unstaged).toEqual([])
   })
 })
 

@@ -107,6 +107,11 @@ export class Sidebar {
     this.render(await folio().workspace())
   }
 
+  /** The sidebar drawn from a workspace changed elsewhere (a worktree added as a project). */
+  show(view: WorkspaceView): void {
+    this.render(view)
+  }
+
   async addProject(): Promise<void> {
     this.render(await folio().addProject())
   }

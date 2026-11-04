@@ -51,13 +51,15 @@ import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { groupOf, isTabColor } from '../common/tabGroups'
 import type { ChangeSpec } from '../common/review'
+import { WorktreeGit } from './review/worktreeGit'
+import { resolve as resolvePath } from 'node:path'
 import { registerReview } from './review/ipc'
 import { Session, specOf } from './session'
 import { Languages, type Labels } from './i18n'
 import type { Dictionary } from '../common/i18n'
 import { listDir } from './tree'
 import { Ignores } from './ignore'
-import { visibilityOf, type ProjectKind } from './visibility'
+import { isWorktree, visibilityOf, type ProjectKind } from './visibility'
 import { FileIndex } from './fileIndex'
 import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry, saveAttachment } from './fileOps'
 import { Consoles } from './pty'
@@ -1300,9 +1302,21 @@ function ownerFolder(path: string): { kind: 'project'; id: string; dir: string }
   return null
 }
 
+/** A worktree's git (ADR-006, R4): the system's, as isomorphic-git cannot read one; null for an ordinary repository. */
+async function worktreeGit(root: string | null): Promise<WorktreeGit | null> {
+  if (!root || !isWorktree(root)) return null
+  const bin = await (systemGit ??= findSystemGit())
+  return bin ? new WorktreeGit(bin) : null
+}
+
 async function gitInfo(path: string) {
   const root = await repoOf(path)
   const owner = ownerFolder(path)
+  const wt = await worktreeGit(root)
+  if (wt && root) {
+    const b = await wt.branches(root)
+    return { root, branch: b.current, branches: b.local, remote: null, counts: null, merging: null, transport: (await transportOf()).kind, autoCommit: false, canStart: false, canAutoCommit: false }
+  }
   const branches = root ? await branchesOf(root) : { current: null, local: [] }
   const remote = root ? await remoteOf(root) : null
   return {
@@ -1348,11 +1362,15 @@ ipcMain.handle('git:history', async (_e, path: unknown, scope: unknown) => {
   if (typeof path !== 'string') return []
   const root = await repoOf(path)
   if (!root) return []
+  const wt = await worktreeGit(root)
+  if (wt) return wt.history(root, scope === 'all' ? null : path)
   return scope === 'all' ? repositoryHistory(root) : historyOf(root, path)
 })
 ipcMain.handle('git:text-at', async (_e, path: unknown, oid: unknown) => {
   if (typeof path !== 'string' || typeof oid !== 'string' || !/^[0-9a-f]{40}$/.test(oid)) return null
   const root = await repoOf(path)
+  const wt = await worktreeGit(root)
+  if (wt && root) return wt.textAt(root, path, oid)
   return root ? textAt(root, path, oid) : null
 })
 /** Keep a history in the file's folder: a repository, a first commit, commits on save. */
@@ -1388,6 +1406,8 @@ ipcMain.handle('git:head-text', async (_e, path: unknown) => {
   if (typeof path !== 'string') return null
   const root = await repoOf(path)
   if (!root) return null
+  const wt = await worktreeGit(root)
+  if (wt) return wt.headText(root, path)
   return headText(root, path)
 })
 
@@ -1396,6 +1416,8 @@ ipcMain.handle('git:changes', async (_e, path: unknown) => {
   if (typeof path !== 'string') return null
   const root = await repoOf(path)
   if (!root) return null
+  const wt = await worktreeGit(root)
+  if (wt) return { root, branch: (await wt.branches(root)).current, ...(await wt.changes(root)) }
   return { root, branch: await branchOf(root), ...(await changesOf(root)) }
 })
 /** The repository's root as asked for: one folio knows of (a project's or Shared's), never any folder. */
@@ -1409,14 +1431,18 @@ ipcMain.handle('git:stage', async (_e, root: unknown, paths: unknown) => {
   const dir = await changesRoot(root)
   const files = repoPaths(paths)
   if (!dir || !files) return false
-  await stageFiles(dir, files)
+  const wt = await worktreeGit(dir)
+  if (wt) await wt.stage(dir, files)
+  else await stageFiles(dir, files)
   return true
 })
 ipcMain.handle('git:unstage', async (_e, root: unknown, paths: unknown) => {
   const dir = await changesRoot(root)
   const files = repoPaths(paths)
   if (!dir || !files) return false
-  await unstageFiles(dir, files)
+  const wt = await worktreeGit(dir)
+  if (wt) await wt.unstage(dir, files)
+  else await unstageFiles(dir, files)
   return true
 })
 /** A file's changes thrown away, after asking: it cannot be undone. */
@@ -1433,13 +1459,21 @@ ipcMain.handle('git:discard', async (_e, root: unknown, path: unknown) => {
     detail: L().discardDetail,
   })
   if (response !== 0) return false
-  await discardFile(dir, files[0]!)
+  const wt = await worktreeGit(dir)
+  if (wt) await wt.discard(dir, files[0]!)
+  else await discardFile(dir, files[0]!)
   return true
 })
 ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown, amend: unknown) => {
   const dir = await changesRoot(root)
   if (!dir || typeof message !== 'string' || message.trim() === '' || mergeHead(dir)) return null
   const author = authorOf(dir, fallbackAuthor())
+  const wt = await worktreeGit(dir)
+  if (wt) {
+    const oid = await wt.commit(dir, message.trim(), author, amend === true).catch(() => null)
+    if (oid) send('git:committed', { path: dir })
+    return oid
+  }
   // Amended: the last commit made again with what is staged (or only its message).
   const oid = amend === true ? await amendLast(dir, message.trim(), author) : await commitStaged(dir, message.trim(), author)
   if (oid) send('git:committed', { path: dir })
@@ -1610,6 +1644,14 @@ registerReview({
   repoOf,
   confirm,
   trash: (path) => shell.trashItem(path),
+  addProject: (path) => {
+    workspace.addProject(path)
+    return workspaceView()
+  },
+  forgetProject: (path) => {
+    for (const p of workspace.projects()) if (resolvePath(p.path) === resolvePath(path)) workspace.removeProject(p.id)
+    return workspaceView()
+  },
   changed: (repo) => {
     send('fs:changed', [{ root: roots.register(repo), dirs: [], files: [], all: true }])
     send('git:committed', { path: repo })

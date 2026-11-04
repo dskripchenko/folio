@@ -834,3 +834,23 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .rv-file[data-fresh] { animation: rv-fresh 2.5s ease-out; }
 @keyframes rv-fresh { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
 .changes-since { margin-right: auto; margin-left: 8px; padding: 1px 8px; border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
+
+/* Worktrees (ADR-006, R4): the main copy and each agent's, beside the page. */
+.worktrees-panel { width: 320px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--tab); font-size: 13px; }
+.worktrees-panel[hidden] { display: none; }
+.worktrees-panel header { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 6px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.worktrees-base { display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; color: var(--muted); font-size: 12px; }
+.worktrees-base select { flex: 1; min-width: 0; padding: 2px 4px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); font: inherit; }
+.worktrees-message { margin: 0; padding: 6px 14px; color: var(--muted); font-size: 12px; white-space: pre-wrap; }
+.worktrees-list { list-style: none; margin: 0; padding: 0 8px 16px; overflow: auto; }
+.worktree { margin-bottom: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.worktree[data-main] { border-style: dashed; }
+.worktree-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.worktree-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.worktree-branch { margin-left: auto; padding: 0 6px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.worktree-meta { margin: 4px 0 6px; color: var(--muted); font-size: 12px; }
+.worktree-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.worktrees-hint { padding: 8px 6px; color: var(--muted); font-size: 12px; }
+@media print { .worktrees-panel { display: none !important; } }
+.rv-title { min-width: 6em; flex: 0 1 auto; }
+@container (max-width: 1000px) { .rv-only span { display: none; } .rv-summary { overflow: hidden; text-overflow: ellipsis; } }
