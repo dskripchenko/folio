@@ -5,6 +5,7 @@ import type { Hunk } from '../../common/hunks'
 import type { ChangedFile, ChangeSpec } from '../../common/review'
 import { GitError } from '../git'
 import { ReviewGit } from './git'
+import { ReviewStore } from './store'
 
 /**
  * The review's channels to the window (ADR-006): sets of changes, a file's
@@ -13,6 +14,8 @@ import { ReviewGit } from './git'
  * paths inside the repository.
  */
 export interface ReviewDeps {
+  /** Where the review keeps its marks: `folio-data/review`. */
+  dir: string
   systemGit: () => Promise<string | null>
   repoOf: (path: string) => Promise<string | null>
   /** Asked before anything is thrown away. */
@@ -48,6 +51,7 @@ function hunkOf(v: unknown): (Hunk & { lines?: { before: string[]; after: string
 }
 
 export function registerReview(deps: ReviewDeps): void {
+  const store = new ReviewStore(deps.dir)
   let git: ReviewGit | null = null
   const need = async (): Promise<ReviewGit> => {
     if (git) return git
@@ -128,6 +132,13 @@ export function registerReview(deps: ReviewDeps): void {
     } finally {
       deps.changed(s.repo)
     }
+  })
+
+  handle('review:viewed', async (path) => ({ ok: true, viewed: store.of(await repo(path)).viewed }))
+  handle('review:set-viewed', async (path, key, hash) => {
+    if (typeof key !== 'string' || key.length > 2000 || (hash !== null && typeof hash !== 'string')) throw new GitError('invalid')
+    store.setViewed(await repo(path), key, hash as string | null)
+    return { ok: true }
   })
 
   handle('review:worktrees', async (path, base) => {

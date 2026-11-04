@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('folio', {
   /** The path of a file dropped on the window. */
   pathOf: (file: File) => webUtils.getPathForFile(file),
   state: (
-    tabs: { path: string | null; buffer: string | null; color: string | null; group: string | null }[],
+    tabs: { path: string | null; buffer: string | null; color: string | null; group: string | null; review: unknown }[],
     active: number | null,
     activePath: string | null,
     groups: { id: string; name: string; color: string; collapsed: boolean }[],
@@ -191,6 +191,8 @@ contextBridge.exposeInMainWorld('folio', {
   reviewChangeset: (spec: unknown) => ipcRenderer.invoke('review:changeset', spec),
   reviewTexts: (spec: unknown, file: unknown) => ipcRenderer.invoke('review:texts', spec, file),
   reviewAct: (spec: unknown, action: string, path: string, hunk: unknown) => ipcRenderer.invoke('review:act', spec, action, path, hunk),
+  reviewViewed: (root: string) => ipcRenderer.invoke('review:viewed', root),
+  reviewSetViewed: (root: string, key: string, hash: string | null) => ipcRenderer.invoke('review:set-viewed', root, key, hash),
   reviewWorktrees: (path: string, base: string | null) => ipcRenderer.invoke('review:worktrees', path, base),
   reviewWorktreeRemove: (main: string, path: string, branch: string | null, changed: number) => ipcRenderer.invoke('review:worktree-remove', main, path, branch, changed),
   reviewWorktreeMerge: (main: string, branch: string) => ipcRenderer.invoke('review:worktree-merge', main, branch),

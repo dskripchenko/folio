@@ -206,7 +206,9 @@
         "conflict": "It does not apply cleanly: nothing was changed.",
         "current": "Switch to another branch first.",
         "stale": "This change is not there any more: the file changed meanwhile. Look again."
-      }
+      },
+      "reviewCommit": "Review this commit",
+      "reviewAfter": "Review the changes after this commit"
     },
     "pdf": {
       "title": "Export as PDF",
@@ -346,7 +348,8 @@
       "apply": "Take back, keep in the list",
       "pop": "Take back",
       "drop": "Delete",
-      "stashed": "Put aside: the files are as last committed."
+      "stashed": "Put aside: the files are as last committed.",
+      "review": "Review the changes"
     },
     "gitMarks": {
       "was": "Before the change",
@@ -529,7 +532,8 @@
       "newCalendar": "New calendar",
       "newCanvas": "New whiteboard",
       "present": "Show as slides",
-      "slidesPdf": "Export the slides as PDF"
+      "slidesPdf": "Export the slides as PDF",
+      "reviewChanges": "Review the changes"
     },
     "goToFile": {
       "placeholder": "Go to a file by its name",
@@ -644,6 +648,52 @@
       "ungroup": "Ungroup",
       "closeGroup": "Close the Group",
       "groupOf": "{name}: {n}"
+    },
+    "review": {
+      "working": "Changes · {name}",
+      "commit": "Commit {oid}",
+      "range": "After {from}",
+      "worktree": "Worktree · {name}",
+      "since": "Since last look · {name}",
+      "files": [
+        "{n} file",
+        "{n} files"
+      ],
+      "unified": "One column",
+      "split": "Two columns",
+      "unviewedOnly": "Not viewed only",
+      "refresh": "Refresh",
+      "viewed": "Viewed",
+      "edit": "Edit",
+      "open": "Open the file",
+      "stage": "Stage",
+      "unstage": "Unstage",
+      "discard": "Discard",
+      "staged": "staged",
+      "partly": "partly staged",
+      "hidden": [
+        "{n} line hidden",
+        "{n} lines hidden"
+      ],
+      "binary": "A binary file: no lines to compare.",
+      "tooBig": "Too big to show here.",
+      "empty": "No changes.",
+      "noGit": "The review needs git installed on the system.",
+      "renamedFrom": "from {path}",
+      "loading": "Loading…",
+      "untracked": "new",
+      "allViewed": "All viewed.",
+      "collapse": "Fold",
+      "expand": "Unfold",
+      "copyPath": "Copy the path",
+      "statusLetters": {
+        "added": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "copied": "C",
+        "typechange": "T"
+      }
     }
   },
   "print": {

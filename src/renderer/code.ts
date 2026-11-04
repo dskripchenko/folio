@@ -45,7 +45,7 @@ export interface CodeState {
 
 let themed = false
 /** The token colours, once per window: light and dark follow folio's theme (`data-theme`, or the system's). */
-function syntaxTheme(): void {
+export function syntaxTheme(): void {
   if (themed) return
   themed = true
   const style = document.createElement('style')

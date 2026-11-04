@@ -110,6 +110,7 @@ export interface RestoredTab {
   conflict: boolean
   color?: string | null
   group?: string | null
+  review?: ChangeSpec | null
 }
 
 export type SaveResult = { saved: OpenResult; baseline: string } | { conflict: true } | { canceled: true } | { error: string }
@@ -207,7 +208,7 @@ export interface FolioBridge {
   openUrl(url: string): Promise<OpenResult>
   external(url: string): void
   pathOf(file: File): string
-  state(tabs: { path: string | null; buffer: string | null; color: TabColor | null; group: string | null }[], active: number | null, activePath: string | null, groups: GroupData[]): void
+  state(tabs: { path: string | null; buffer: string | null; color: TabColor | null; group: string | null; review: ChangeSpec | null }[], active: number | null, activePath: string | null, groups: GroupData[]): void
   writeBuffer(buffer: BufferData): void
   dropBuffer(id: string): void
   disk(path: string): Promise<{ text: string; hash: string } | null>
@@ -389,6 +390,8 @@ export interface FolioBridge {
   reviewChangeset(spec: ChangeSpec): Promise<{ ok: true; set: Changeset } | GitRefusal>
   reviewTexts(spec: ChangeSpec, file: ChangedFile): Promise<{ ok: true; texts: FileTexts } | GitRefusal>
   reviewAct(spec: ChangeSpec, action: ReviewAction, path: string, hunk: (Hunk & { lines?: { before: string[]; after: string[] } }) | null): Promise<{ ok: boolean } | GitRefusal>
+  reviewViewed(root: string): Promise<{ ok: true; viewed: Record<string, string> } | GitRefusal>
+  reviewSetViewed(root: string, key: string, hash: string | null): Promise<{ ok: true } | GitRefusal>
   reviewWorktrees(path: string, base: string | null): Promise<{ ok: true; base: string; main: string; list: Worktree[] } | GitRefusal>
   reviewWorktreeRemove(main: string, path: string, branch: string | null, changed: number): Promise<{ ok: boolean } | GitRefusal>
   reviewWorktreeMerge(main: string, branch: string): Promise<{ ok: true } | GitRefusal>

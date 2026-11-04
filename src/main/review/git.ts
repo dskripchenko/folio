@@ -111,7 +111,8 @@ export class ReviewGit {
       for (const path of others) files.push({ path, status: 'added', untracked: true, ...countLines(join(root, path)) })
     }
     files.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : 0))
-    return { spec, root, before, after, files }
+    const subject = spec.kind === 'commit' ? (await this.run(root, ['log', '-1', '--format=%s', spec.oid]).catch(() => '')).trim() : ''
+    return { spec, root, before, after, files, ...(subject ? { subject } : {}) }
   }
 
   /** A file's text in a revision (`:` the index), or null when it is not there. */

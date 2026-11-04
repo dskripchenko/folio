@@ -23,6 +23,7 @@ export interface ChangesView {
 export interface ChangesText {
   title: string
   close: string
+  review: string
   message: string
   commit: string
   staged: string
@@ -61,6 +62,8 @@ export interface ChangesDeps {
   discard(root: string, path: string): Promise<boolean>
   commit(root: string, message: string, amend: boolean): Promise<string | null>
   open(root: string, path: string): void
+  /** The repository's changes in a review tab (ADR-006). */
+  review(root: string): void
   /** The last commit's message (amending it). */
   lastMessage(root: string): Promise<string | null>
   /** Changes put aside: listed, put aside, taken back, dropped (asks first). A string is a refusal to say. */
@@ -84,6 +87,11 @@ export class ChangesPanel {
   private readonly list: HTMLElement
   private path: string | null = null
   private view: ChangesView | null = null
+
+  /** The repository in view. */
+  get root(): string | null {
+    return this.view?.root ?? null
+  }
   /** What the list shows, so a look that finds the same leaves it (and the pointer's place in it) alone. */
   private drawn = ''
   private seq = 0
@@ -103,7 +111,12 @@ export class ChangesPanel {
     // Every change put aside (new files too), the message (if any) naming them.
     this.stashButton = iconButton('save', text.stash, () => void this.stashChanges())
     this.stashButton.dataset.testid = 'changes-stash'
-    header.append(title, this.stashButton, iconButton('close', text.close, () => this.setVisible(false)))
+    const reviewButton = iconButton('file', text.review, () => {
+      const root = this.view?.root
+      if (root) this.deps.review(root)
+    })
+    reviewButton.dataset.testid = 'changes-review'
+    header.append(title, reviewButton, this.stashButton, iconButton('close', text.close, () => this.setVisible(false)))
     this.message = document.createElement('textarea')
     this.message.className = 'changes-message'
     this.message.dataset.testid = 'changes-message'
@@ -157,6 +170,9 @@ export class ChangesPanel {
     this.amendLabel.querySelector('span')!.textContent = text.amend
     this.stashButton.title = text.stash
     this.stashButton.setAttribute('aria-label', text.stash)
+    const review = this.el.querySelector<HTMLElement>('[data-testid="changes-review"]')
+    review?.setAttribute('title', text.review)
+    review?.setAttribute('aria-label', text.review)
     void this.refresh()
   }
 

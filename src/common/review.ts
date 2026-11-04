@@ -34,6 +34,8 @@ export interface Changeset {
   before: string
   after: string | 'disk'
   files: ChangedFile[]
+  /** A commit's first line. */
+  subject?: string
 }
 
 /** A file's two texts (null: none there); too big or binary ones are not read. */

@@ -50,8 +50,9 @@ import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { groupOf, isTabColor } from '../common/tabGroups'
+import type { ChangeSpec } from '../common/review'
 import { registerReview } from './review/ipc'
-import { Session } from './session'
+import { Session, specOf } from './session'
 import { Languages, type Labels } from './i18n'
 import type { Dictionary } from '../common/i18n'
 import { listDir } from './tree'
@@ -1604,6 +1605,7 @@ async function confirm(message: string, detail: string, yes: string): Promise<bo
 
 // The review of changes (ADR-006): the system's git.
 registerReview({
+  dir: join(data, 'review'),
   systemGit: () => (systemGit ??= findSystemGit()),
   repoOf,
   confirm,
@@ -1767,7 +1769,7 @@ ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) =>
 
 ipcMain.handle('app:startup', () => {
   const fromArgv = filesFromArgv(process.argv, process.cwd())
-  type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean; color?: string | null; group?: string | null }
+  type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean; color?: string | null; group?: string | null; review?: ChangeSpec }
   const restore = (path: string | null, bufferId: string | null): Restored | null => {
     const buffer = bufferId ? buffers.get(bufferId) : null
     if (path === null && buffer === null) return null
@@ -1780,8 +1782,15 @@ ipcMain.handle('app:startup', () => {
   }
   const tabs: Restored[] = []
   for (const t of session.tabs()) {
+    const look = { color: t.color ?? null, group: t.group ?? null }
+    const review = specOf(t.review)
+    if (review) {
+      // A review's tab: its set read again by the window.
+      tabs.push({ doc: null, buffer: null, conflict: false, ...look, review })
+      continue
+    }
     const r = restore(t.path, t.buffer)
-    if (r) tabs.push({ ...r, color: t.color ?? null, group: t.group ?? null })
+    if (r) tabs.push({ ...r, ...look })
   }
   // A buffer the session does not name (the session write was lost) still comes back: notes are never dropped.
   const named = new Set(tabs.map((t) => t.buffer?.id).filter(Boolean))
@@ -1812,12 +1821,13 @@ ipcMain.on('link:external', (_e, url: unknown) => {
 ipcMain.on('doc:state', (_e, tabs: unknown, active: unknown, activePath: unknown, groups: unknown) => {
   const list = Array.isArray(tabs)
     ? tabs
-        .filter((t): t is { path: unknown; buffer: unknown; color: unknown; group: unknown } => typeof t === 'object' && t !== null)
+        .filter((t): t is { path: unknown; buffer: unknown; color: unknown; group: unknown; review: unknown } => typeof t === 'object' && t !== null)
         .map((t) => ({
           path: typeof t.path === 'string' ? t.path : null,
           buffer: typeof t.buffer === 'string' ? t.buffer : null,
           color: isTabColor(t.color) ? t.color : null,
           group: typeof t.group === 'string' ? t.group : null,
+          review: specOf(t.review),
         }))
     : []
   gate?.setActive(typeof activePath === 'string' ? activePath : null)

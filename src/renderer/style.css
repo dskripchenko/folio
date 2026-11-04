@@ -742,3 +742,89 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .settings-language { flex: 1; overflow: auto; padding: 12px 14px; }
 .settings-radio { grid-template-columns: auto 1fr; justify-content: start; }
 .pop-menu-swatch { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+
+/* The review (ADR-006): a set of changes as a pull request's files. */
+.doc[data-format="review"] { max-width: none; margin: 0; padding: 0; }
+.review { --rv-head: 40px; --rv-add-bg: color-mix(in srgb, #2da44e 14%, transparent); --rv-del-bg: color-mix(in srgb, #cf222e 12%, transparent); --rv-add-word: color-mix(in srgb, #2da44e 34%, transparent); --rv-del-word: color-mix(in srgb, #cf222e 30%, transparent); font-size: 13px; }
+.rv-head { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 12px; height: var(--rv-head); padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.rv-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-summary { color: var(--muted); white-space: nowrap; }
+.rv-tools { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.rv-button, .rv-gap-button { padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--tab); color: var(--fg); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.rv-button:hover { border-color: var(--accent); }
+.rv-button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, var(--tab)); border-color: var(--accent); }
+.rv-only { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; cursor: pointer; }
+.rv-body { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); align-items: start; }
+.rv-nav { position: sticky; top: var(--rv-head); max-height: calc(100vh - var(--rv-head) - 80px); overflow: auto; border-right: 1px solid var(--line); }
+.rv-nav ul { list-style: none; margin: 0; padding: 6px 0; }
+.rv-nav-item { display: flex; align-items: baseline; gap: 6px; padding: 3px 12px; cursor: pointer; white-space: nowrap; overflow: hidden; }
+.rv-nav-item:hover { background: var(--tab); }
+.rv-nav-item[data-viewed] { opacity: 0.5; }
+.rv-nav-item[data-viewed] .rv-nav-name::after { content: ' ✓'; color: #2da44e; }
+.rv-nav-dir { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+.rv-files { min-width: 0; padding: 12px 16px 64px; }
+.rv-message { color: var(--muted); padding: 24px 0; }
+.rv-file { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.rv-file-head { position: sticky; top: var(--rv-head); z-index: 3; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; background: var(--tab); cursor: pointer; }
+.rv-file[data-folded] .rv-file-head { border-bottom: 0; border-radius: 8px; }
+.rv-fold { width: 12px; color: var(--muted); }
+.rv-status { flex: none; width: 18px; height: 18px; border-radius: 4px; text-align: center; line-height: 18px; font-size: 11px; font-weight: 700; color: #fff; background: #8b949e; }
+.rv-status-added { background: #2da44e; }
+.rv-status-deleted { background: #cf222e; }
+.rv-status-modified { background: #bf8700; }
+.rv-status-renamed, .rv-status-copied { background: #8250df; }
+.rv-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+.rv-dir, .rv-from { color: var(--muted); }
+.rv-stats { flex: none; font-size: 12px; }
+.rv-add { color: #2da44e; }
+.rv-del { color: #cf222e; }
+.rv-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.rv-viewed { display: flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.rv-file[data-viewed] .rv-viewed { border-color: #2da44e; color: #2da44e; }
+.rv-file-body { overflow-x: auto; }
+.rv-note { margin: 0; padding: 12px; color: var(--muted); }
+.rv-diff { width: 100%; border-collapse: collapse; font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 4; }
+.rv-diff td { padding: 0; vertical-align: top; }
+.rv-n { width: 1%; min-width: 3ch; padding: 0 8px !important; color: var(--muted); text-align: right; user-select: none; white-space: nowrap; }
+.rv-code { white-space: pre; padding-right: 12px !important; }
+.rv-sign { display: inline-block; width: 2ch; text-align: center; color: var(--muted); user-select: none; }
+.rv-unified .rv-add .rv-code, .rv-unified .rv-add .rv-n, .rv-split td.rv-add { background: var(--rv-add-bg); }
+.rv-unified .rv-del .rv-code, .rv-unified .rv-del .rv-n, .rv-split td.rv-del { background: var(--rv-del-bg); }
+.rv-split td.rv-none { background: color-mix(in srgb, var(--muted) 7%, transparent); }
+.rv-split td.rv-code { width: 50%; padding-left: 8px !important; }
+.rv-split td.rv-n + td.rv-code + td.rv-n { border-left: 1px solid var(--line); }
+.rv-add .rv-w { background: var(--rv-add-word); border-radius: 2px; }
+.rv-del .rv-w { background: var(--rv-del-word); border-radius: 2px; }
+.rv-hunk td { padding: 3px 10px !important; background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--muted); }
+.rv-hunk-label { margin-right: 10px; }
+.rv-hunk-actions { display: inline-flex; gap: 4px; margin-left: 8px; opacity: 0; }
+.rv-hunk:hover .rv-hunk-actions, .rv-hunk-actions:focus-within { opacity: 1; }
+.rv-badge { padding: 0 6px; border-radius: 8px; font-size: 11px; }
+.rv-badge-staged { background: color-mix(in srgb, #2da44e 20%, transparent); color: #2da44e; }
+.rv-badge-partly { background: color-mix(in srgb, #bf8700 22%, transparent); color: #bf8700; }
+.rv-gap td { padding: 0 !important; background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.rv-gap-button { width: 100%; border: 0; border-radius: 0; background: transparent; color: var(--muted); text-align: left; padding: 2px 12px; }
+.rv-gap-button:hover { color: var(--accent); }
+.rv-row:hover .rv-n { color: var(--fg); }
+.review.rv-unviewed-only .rv-file[data-viewed], .review.rv-unviewed-only .rv-nav-item[data-viewed] { display: none; }
+/* Scrolled to: below the sticky heads of the review and of the file. */
+.rv-file { scroll-margin-top: calc(var(--rv-head) + 8px); }
+.rv-diff tr { scroll-margin-top: calc(var(--rv-head) + 44px); }
+/* A narrow review (panels open, a file beside): the files' list goes, the head wraps, nothing runs under the other view. */
+.doc[data-format="review"] { overflow-x: hidden; }
+.review { container-type: inline-size; min-width: 0; }
+@container (max-width: 760px) {
+  .rv-body { grid-template-columns: minmax(0, 1fr); }
+  .rv-nav { display: none; }
+  .rv-files { padding: 8px; }
+}
+@container (max-width: 560px) {
+  .rv-head { height: auto; min-height: var(--rv-head); flex-wrap: wrap; padding: 6px 10px; row-gap: 4px; }
+  .rv-tools { margin-left: 0; flex-wrap: wrap; }
+  .rv-file-head { flex-wrap: wrap; }
+  .rv-actions { margin-left: 0; flex-wrap: wrap; }
+}
+/* Two columns of equal width; long lines wrap, as nothing scrolls sideways in half a view. */
+.rv-split { table-layout: fixed; }
+.rv-split .rv-col-n { width: 6ch; }
+.rv-split td.rv-code { width: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
