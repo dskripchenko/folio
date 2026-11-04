@@ -14,6 +14,8 @@ export interface MenuItem {
   label: string
   icon?: IconName
   checked?: boolean
+  /** A colour shown as a dot before the label (a CSS colour). */
+  swatch?: string
   testid?: string
   action: () => void
 }
@@ -47,7 +49,14 @@ export function popMenu(anchor: HTMLElement, items: MenuItem[], align: 'start' |
     mark.classList.add('mark')
     const label = document.createElement('span')
     label.textContent = item.label
-    b.append(mark, label)
+    b.append(mark)
+    if (item.swatch) {
+      const dot = document.createElement('span')
+      dot.className = 'pop-menu-swatch'
+      dot.style.background = item.swatch
+      b.append(dot)
+    }
+    b.append(label)
     if (item.keys) {
       const keys = document.createElement('span')
       keys.className = 'pop-menu-keys'

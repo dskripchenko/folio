@@ -1,3 +1,4 @@
+import type { GroupData, TabColor } from '../common/tabGroups'
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
 
@@ -105,6 +106,8 @@ export interface RestoredTab {
   doc: OpenResult | null
   buffer: BufferData | null
   conflict: boolean
+  color?: string | null
+  group?: string | null
 }
 
 export type SaveResult = { saved: OpenResult; baseline: string } | { conflict: true } | { canceled: true } | { error: string }
@@ -190,7 +193,7 @@ export type UpdateState =
 
 export interface FolioBridge {
   platform: string
-  startup(): Promise<{ tabs: RestoredTab[]; active: number | null; locale: string; shared: string; i18n: I18nState; welcome: boolean }>
+  startup(): Promise<{ tabs: RestoredTab[]; groups: GroupData[]; active: number | null; locale: string; shared: string; i18n: I18nState; welcome: boolean }>
   /** The welcome document, read-only (ADR-005). */
   openWelcome(): Promise<OpenResult>
   onWelcome: Listener
@@ -202,7 +205,7 @@ export interface FolioBridge {
   openUrl(url: string): Promise<OpenResult>
   external(url: string): void
   pathOf(file: File): string
-  state(tabs: { path: string | null; buffer: string | null }[], active: number | null, activePath: string | null): void
+  state(tabs: { path: string | null; buffer: string | null; color: TabColor | null; group: string | null }[], active: number | null, activePath: string | null, groups: GroupData[]): void
   writeBuffer(buffer: BufferData): void
   dropBuffer(id: string): void
   disk(path: string): Promise<{ text: string; hash: string } | null>
@@ -378,6 +381,7 @@ export interface FolioBridge {
   onOpened: Listener
   onBlocked: Listener
   onCloseTab: Listener
+  onCloseAllTabs: Listener
   /** "Compare with" in the tree: the file chosen first (a) and the one compared with it (b). */
   onCompareFiles: Listener
 }

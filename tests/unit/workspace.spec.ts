@@ -113,8 +113,26 @@ describe('consent and session', () => {
   it('keeps the tabs — files, buffers — and the active one', () => {
     new Session(dir).set([{ path: '/a.md', buffer: null }, { path: null, buffer: 'b1' }], 1)
     const s = new Session(dir)
-    expect(s.tabs()).toEqual([{ path: '/a.md', buffer: null }, { path: null, buffer: 'b1' }])
+    expect(s.tabs()).toEqual([{ path: '/a.md', buffer: null, color: null, group: null }, { path: null, buffer: 'b1', color: null, group: null }])
     expect(s.active()).toBe(1)
+  })
+
+  it('keeps the tabs’ colours and groups; a group no tab names, or a colour that is none, is let go', () => {
+    const work = { id: 'g1', name: 'Work', color: 'teal' as const, collapsed: true }
+    new Session(dir).set(
+      [
+        { path: '/a.md', buffer: null, color: 'red', group: 'g1' },
+        { path: '/b.md', buffer: null, color: 'magenta' as never, group: 'gone' },
+      ],
+      0,
+      [work],
+    )
+    const s = new Session(dir)
+    expect(s.tabs()).toEqual([
+      { path: '/a.md', buffer: null, color: 'red', group: 'g1' },
+      { path: '/b.md', buffer: null, color: null, group: null },
+    ])
+    expect(s.groups()).toEqual([work])
   })
 
   it('reads the session of the first version: files and the active path', () => {

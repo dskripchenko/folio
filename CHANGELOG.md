@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-04
+
+### Added
+- Closing many tabs: a tab's menu closes the others, those to its right, the
+  saved ones or all — also from the commands, the File menu and
+  `Cmd/Ctrl+Shift+W`; the saved go first, each with changes is asked about.
+- Tab colours and groups: a tab of a colour of its own; groups with a name and
+  a colour, folded by a click on their chip, joined from the menu or by
+  dropping a tab on the chip; kept across a restart.
+
 ## [1.5.1] - 2026-11-04
 
 ### Changed
@@ -393,7 +403,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/dskripchenko/folio/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/dskripchenko/folio/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/dskripchenko/folio/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/dskripchenko/folio/compare/v1.3.0...v1.4.0
