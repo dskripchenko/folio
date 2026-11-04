@@ -26,6 +26,7 @@ export type Format =
   | 'image'
   | 'video'
   | 'audio'
+  | 'pdf'
 
 /** Pictures, video and sound the window shows itself (what Chromium decodes). An SVG is text: `svg`, drawn and edited. */
 export const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.jfif', '.gif', '.webp', '.avif', '.bmp', '.ico', '.apng']
@@ -33,8 +34,8 @@ export const VIDEO_EXT = ['.mp4', '.m4v', '.webm', '.mov', '.ogv', '.mkv']
 export const AUDIO_EXT = ['.mp3', '.wav', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.flac', '.weba']
 
 /** Formats whose file is not text: never read as text, served to the window by the folio scheme. */
-export function isMedia(format: Format | 'data'): format is 'image' | 'video' | 'audio' {
-  return format === 'image' || format === 'video' || format === 'audio'
+export function isMedia(format: Format | 'data'): format is 'image' | 'video' | 'audio' | 'pdf' {
+  return format === 'image' || format === 'video' || format === 'audio' || format === 'pdf'
 }
 
 /** The text notations, by extension, with the syntax `<dsk-diagram>` reads them in. */
@@ -72,6 +73,7 @@ export const OPENABLE_EXT = [
   ...IMAGE_EXT,
   ...VIDEO_EXT,
   ...AUDIO_EXT,
+  '.pdf',
 ]
 
 /** Of a YAML or JSON document, from its first lines: an API description, or plain data. */
@@ -105,6 +107,7 @@ export function formatByName(name: string): Format | 'data' {
   if (IMAGE_EXT.includes(ext)) return 'image'
   if (VIDEO_EXT.includes(ext)) return 'video'
   if (AUDIO_EXT.includes(ext)) return 'audio'
+  if (ext === '.pdf') return 'pdf'
   return 'text'
 }
 

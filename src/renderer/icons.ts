@@ -64,6 +64,7 @@ export function mediaIcon(name: string): IconName {
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase()
   if (['mp4', 'm4v', 'webm', 'mov', 'ogv', 'mkv'].includes(ext)) return 'video'
   if (['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'weba'].includes(ext)) return 'audio'
+  if (ext === 'pdf') return 'pdf'
   return 'image'
 }
 

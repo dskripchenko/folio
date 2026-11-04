@@ -13,7 +13,7 @@ export interface Peeked {
   base: string
   heading: string | null
   /** A picture, a video or a sound (not a note): drawn as itself. */
-  media?: 'image' | 'video' | 'audio' | 'svg'
+  media?: 'image' | 'video' | 'audio' | 'svg' | 'pdf'
 }
 
 export interface HoverPreviewDeps {

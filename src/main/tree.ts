@@ -34,7 +34,7 @@ export function kindOf(name: string): Kind {
   // A table: code's place in the tree (data), drawn as a table.
   if (format === 'csv') return 'code'
   // Pictures (an SVG too), video and sound: shown in folio.
-  if (format === 'svg' || format === 'image' || format === 'video' || format === 'audio') return 'media'
+  if (format === 'svg' || format === 'image' || format === 'video' || format === 'audio' || format === 'pdf') return 'media'
   return 'diagram'
 }
 

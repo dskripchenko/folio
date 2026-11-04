@@ -30,6 +30,14 @@ export function handleScheme(session: Electron.Session, uiDir: string, roots: Ro
     let file: string | null = null
     if (path.startsWith('/ui/')) {
       file = resolveInside(uiDir, path.slice('/ui/'.length))
+    } else if (path.startsWith('/pdf/')) {
+      // A PDF for the viewer's frame: the one path a frame may load (the CSP), and only PDFs come through it.
+      const m = /^\/pdf\/([0-9a-f]{16})\/(.*\.pdf)$/i.exec(path)
+      file = m ? roots.resolve(m[1] ?? '', m[2] ?? '') : null
+      if (file === null) return notFound()
+      return net.fetch(pathToFileURL(file).toString(), { headers: request.headers }).then(
+        (r) => new Response(r.body, { status: r.status, headers: { ...Object.fromEntries(r.headers), 'content-type': 'application/pdf' } }),
+      )
     } else {
       const m = /^\/r\/([0-9a-f]{16})\/(.*)$/.exec(path)
       if (m) file = roots.resolve(m[1] ?? '', m[2] ?? '')

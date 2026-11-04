@@ -228,6 +228,23 @@ export function audioView(o: MediaOptions): HTMLElement {
   return root
 }
 
+/**
+ * A PDF in Chromium's own viewer (pages, zoom, search, its outline, printing):
+ * framed from the one path the window may frame, which gives PDFs only.
+ */
+export function pdfView(o: MediaOptions): HTMLElement {
+  const root = document.createElement('div')
+  root.className = 'media-view pdf-view'
+  const frame = document.createElement('iframe')
+  frame.className = 'pdf-frame'
+  frame.dataset.testid = 'pdf-frame'
+  frame.title = o.name
+  // From `folio://app/r/<root>/…` to `folio://app/pdf/<root>/…`.
+  frame.src = o.src.replace(/^folio:\/\/app\/r\//, 'folio://app/pdf/')
+  root.append(frame, mediaBar(o, []))
+  return root
+}
+
 /** The player's media element once it is there: its size and length for the status line. */
 function watchMedia(player: HTMLElement, o: MediaOptions): void {
   const told = (m: HTMLMediaElement) => {

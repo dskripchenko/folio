@@ -20,6 +20,7 @@ export type Format =
   | 'image'
   | 'video'
   | 'audio'
+  | 'pdf'
 
 /** A place in a note, as the links panel shows it. */
 export interface LinkPlace {

@@ -362,7 +362,7 @@ function formatOf(tab: Tab): Format {
 /** What is known of a shown picture, video or sound (its size, its length), for the status line. */
 const mediaInfo = new WeakMap<Tab, MediaInfo>()
 
-const isMediaFormat = (format: Format): boolean => format === 'image' || format === 'video' || format === 'audio' || format === 'svg'
+const isMediaFormat = (format: Format): boolean => format === 'image' || format === 'video' || format === 'audio' || format === 'svg' || format === 'pdf'
 
 /** A picture's, a video's or a sound's URL, its controls' words, the system's program, its size once known. */
 function mediaOptions(tab: Tab): ViewOptions['media'] {
@@ -1706,6 +1706,16 @@ function embeddedMedia(file: Peeked, size: { width?: number; height?: number }):
   const fit = (el: HTMLElement) => {
     if (size.width) el.style.width = `${size.width}px`
     if (size.height) el.style.height = `${size.height}px`
+  }
+  // A PDF: its pages in the viewer, as tall as asked (or a page's worth).
+  if (file.media === 'pdf') {
+    const frame = document.createElement('iframe')
+    frame.className = 'embed-media embed-pdf'
+    frame.src = src.replace(/^folio:\/\/app\/r\//, 'folio://app/pdf/')
+    frame.title = file.name
+    frame.style.width = size.width ? `${size.width}px` : '100%'
+    frame.style.height = `${size.height ?? 600}px`
+    return frame
   }
   if (file.media === 'video' || file.media === 'audio') {
     const player = document.createElement(file.media === 'video' ? 'dsk-video' : 'dsk-audio')

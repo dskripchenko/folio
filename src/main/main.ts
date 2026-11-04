@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell, systemPreferences } from 'electron'
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -269,9 +269,12 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
       webSecurity: true,
       spellcheck: true,
+      // Chromium's PDF viewer for a PDF in its tab (ADR-004 D5); only `folio://app/pdf/` may be framed (index.html's CSP).
+      plugins: true,
     },
   })
-  w.once('ready-to-show', () => w.show())
+  // Under test the window shows without taking the focus from the person's own work.
+  w.once('ready-to-show', () => (underTest ? w.showInactive() : w.show()))
   spelling(w)
   // A link: another document of a root opens in a tab; the web goes to the system browser.
   const follow = (url: string) => {
@@ -1846,7 +1849,16 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) win = createWindow()
 })
 
+/** Run by the e2e tests: out of the way of the person at the machine. */
+const underTest = process.env.FOLIO_E2E === '1'
+if (underTest && process.platform === 'darwin') {
+  // A test closes the app mid-flight; macOS would offer to reopen its windows next time (the development Electron's defaults only).
+  systemPreferences.setUserDefault('ApplePersistenceIgnoreState', 'boolean', true)
+}
+
 void app.whenReady().then(() => {
+  // No Dock icon for the tests' windows.
+  if (underTest) app.dock?.hide()
   // Run from the source on a Mac: the Dock shows folio's icon, not Electron's.
   if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(join(__dirname, 'icon.png'))
   const docs = electronSession.fromPartition(PARTITION)

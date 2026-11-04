@@ -9,7 +9,7 @@ import { languageOf } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
 import { codeView, type CodeState } from './code'
 import { csvView, type TableText } from './csvView'
-import { audioView, imageView, videoView, type MediaInfo, type MediaText } from './mediaView'
+import { audioView, imageView, pdfView, videoView, type MediaInfo, type MediaText } from './mediaView'
 
 export { READ_ONLY_BYTES } from './code'
 
@@ -129,10 +129,11 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
     }
     case 'image':
     case 'video':
-    case 'audio': {
+    case 'audio':
+    case 'pdf': {
       if (!o.media) return codeView('', o.name, o.code)
       const media = { ...o.media, name: o.name }
-      return format === 'image' ? imageView(media) : format === 'video' ? videoView(media) : audioView(media)
+      return format === 'image' ? imageView(media) : format === 'video' ? videoView(media) : format === 'pdf' ? pdfView(media) : audioView(media)
     }
     case 'csv':
       return o.table ? csvView({ text, name: o.name, t: o.table.text, lang: o.table.lang, info: o.table.info }) : codeView(text, o.name, o.code)
@@ -149,7 +150,7 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
 
 /** Formats with an editor of their own; draw.io has none (folio shows it, the source stays as is). */
 export function canEdit(format: Format): boolean {
-  return format !== 'drawio' && format !== 'image' && format !== 'video' && format !== 'audio'
+  return format !== 'drawio' && format !== 'image' && format !== 'video' && format !== 'audio' && format !== 'pdf'
 }
 
 /** The editor of a non-Markdown document; `changed` gets the new text after each edit. */
