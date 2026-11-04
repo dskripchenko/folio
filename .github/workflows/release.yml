@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-15, windows-latest, ubuntu-latest]
 
     # `id-token` mints the short-lived identity the attestation is signed with,
     # `attestations` files it against this repository: only here, where the
