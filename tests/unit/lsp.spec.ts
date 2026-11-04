@@ -7,7 +7,7 @@ import { applyEdits, realUris } from '../../src/main/lsp/manager'
 import { findServer } from '../../src/main/lsp/servers'
 
 const dir = mkdtempSync(join(tmpdir(), 'folio-lsp-'))
-afterAll(() => rmSync(dir, { recursive: true, force: true }))
+afterAll(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('the text a server is told of', () => {
   it('edits in order, by line and UTF-16 character', () => {

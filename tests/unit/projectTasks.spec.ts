@@ -9,7 +9,7 @@ let dir: string
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'folio-tasks-'))
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('a project’s tasks', () => {
   it('scripts by the package manager of the lockfile, composer scripts, make targets, just recipes, folio’s own', () => {

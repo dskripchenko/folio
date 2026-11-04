@@ -14,7 +14,7 @@ beforeEach(async () => {
   writeFileSync(join(dir, 'b.txt'), 'two\n')
   await startHistory(dir, author, 'start')
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('the changes of a repository', () => {
   it('reads the status matrix as staged and unstaged', () => {

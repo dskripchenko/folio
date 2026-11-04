@@ -6,7 +6,7 @@ import { readProjectSettings, writeProjectSettings } from '../../src/main/projec
 import { portableKey, prettyKey } from '../../src/renderer/settingsDialog'
 
 const dir = mkdtempSync(join(tmpdir(), 'folio-settings-'))
-afterAll(() => rmSync(dir, { recursive: true, force: true }))
+afterAll(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('a project’s settings written from the window', () => {
   it('the keys folio knows replaced, an empty one removed, every other key kept', () => {

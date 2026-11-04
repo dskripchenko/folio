@@ -60,7 +60,7 @@ describe('a language over English', () => {
 
 describe('languages of one’s own', () => {
   const dir = mkdtempSync(join(tmpdir(), 'folio-locales-'))
-  afterAll(() => rmSync(dir, { recursive: true, force: true }))
+  afterAll(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
   it('a file in the folder is a language: listed, chosen, English where it says nothing', () => {
     writeFileSync(join(dir, 'de.json'), JSON.stringify({ meta: { code: 'de', name: 'Deutsch' }, main: { newNote: 'Neue Notiz' } }))

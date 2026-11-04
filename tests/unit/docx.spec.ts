@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { buildDocx, type DocxModel } from '../../src/main/docx'
 
 const dir = mkdtempSync(join(tmpdir(), 'folio-docx-'))
-afterAll(() => rmSync(dir, { recursive: true, force: true }))
+afterAll(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 /** A 2×2 red PNG. */
 function png(): Uint8Array {

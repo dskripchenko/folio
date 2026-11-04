@@ -27,11 +27,13 @@ async function run(shell: string, args: string[], lines: string[]): Promise<Term
   term.onData((d) => p.write(d))
   // Until the first prompt is marked.
   for (let i = 0; i < 300 && term.commands.length === 0; i++) await wait(100)
+  const ended = () => term.commands.filter((c) => c.end !== undefined).length
   for (const line of lines) {
-    const before = term.commands.length
+    const before = ended()
     p.write(line + '\r')
-    // A slow machine (a Windows runner busy with other tests): up to half a minute a command.
-    for (let i = 0; i < 300 && term.commands.length <= before; i++) await wait(100)
+    // Until the command is marked ended and the next prompt is up (a slow machine — a Windows runner busy
+    // with other tests — takes up to half a minute a command): a line typed before the prompt may be lost.
+    for (let i = 0; i < 300 && (ended() <= before || term.commands.length <= before + 1); i++) await wait(100)
   }
   await wait(300)
   p.kill()

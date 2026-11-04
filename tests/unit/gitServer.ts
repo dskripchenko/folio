@@ -56,7 +56,14 @@ export async function gitServer(root: string, login?: { username: string; passwo
       res.writeHead(status)
       res.write(head.subarray(end + 4))
     })
-    cgi.on('close', () => res.end())
+    // What the backend says when it fails: the test then shows why, not an empty answer.
+    let errors = ''
+    cgi.stderr.on('data', (chunk: Buffer) => (errors += chunk.toString()))
+    cgi.on('close', (code) => {
+      if (code !== 0 || errors) console.error(`git http-backend (${req.method} ${url.pathname}) exited with ${code}: ${errors}`)
+      if (!started) res.writeHead(500, { 'Content-Type': 'text/plain' }).end(`git http-backend exited with ${code}: ${errors || head.toString() || 'no output'}`)
+      else res.end()
+    })
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const { port } = server.address() as AddressInfo

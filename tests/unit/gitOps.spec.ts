@@ -23,7 +23,7 @@ beforeEach(async () => {
   await git.setConfig({ fs, dir, path: 'core.autocrlf', value: 'false' })
   await commit('a.txt', 'one\n', 'first')
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('putting changes aside', () => {
   it('every change, new files too; listed; taken back, then dropped', async () => {

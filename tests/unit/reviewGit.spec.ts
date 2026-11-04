@@ -29,7 +29,7 @@ beforeEach(() => {
   write('gone.txt', 'bye\n')
   commitAll(repo, 'first')
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }))
 
 describe('parsing git', () => {
   it('names and numbers, renames among them', () => {

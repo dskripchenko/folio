@@ -327,8 +327,12 @@ function createWindow(): BrowserWindow {
       plugins: true,
     },
   })
-  // Under test the window shows without taking the focus from the person's own work.
+  // Under test the window shows without taking the focus from the person's own work, and the system's
+  // own pointer passes through it: a test drives the page itself, and a real pointer resting where windows
+  // open (another test's window shown over this one, the person's mouse) would send the page moves and
+  // leaves of its own — a hover being tested lost midway.
   w.once('ready-to-show', () => (underTest ? w.showInactive() : w.show()))
+  if (underTest) w.setIgnoreMouseEvents(true)
   spelling(w)
   // A link: another document of a root opens in a tab; the web goes to the system browser.
   const follow = (url: string) => {
