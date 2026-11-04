@@ -405,7 +405,10 @@
       "serverOff": "A language server: its command and arguments, or \"off\" for none.",
       "save": "Save",
       "saved": "Saved to .folio/settings.json.",
-      "close": "Close"
+      "close": "Close",
+      "languageSystem": "As the system’s",
+      "languageHint": "Another language is one JSON file in folio-data/locales (its meta: code and name); what it leaves out is English.",
+      "languageTab": "Language"
     },
     "exportHtml": "Export as HTML (one page)…",
     "exportDocx": "Export as Word (DOCX)…",

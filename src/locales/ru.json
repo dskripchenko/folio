@@ -407,7 +407,10 @@
       "serverOff": "Языковой сервер: команда с аргументами или \"off\" — без сервера.",
       "save": "Сохранить",
       "saved": "Сохранено в .folio/settings.json.",
-      "close": "Закрыть"
+      "close": "Закрыть",
+      "languageSystem": "Как в системе",
+      "languageHint": "Другой язык — один JSON-файл в folio-data/locales (в meta — код и название); чего в нём нет, берётся из английского.",
+      "languageTab": "Язык"
     },
     "exportHtml": "Экспорт в HTML (одна страница)…",
     "exportDocx": "Экспорт в Word (DOCX)…",

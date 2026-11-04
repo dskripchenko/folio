@@ -32,11 +32,11 @@ test('the welcome document: opened on the first start, read-only, its examples d
     await win.getByTestId('language-en').click()
     await win.getByTestId('welcome-open').click()
     await expect(win.locator('article.doc:not([hidden]) h1').first()).toHaveText('Welcome to folio')
+    // Open while the language changes: the page of the new language, in its place.
     await win.getByTestId('rail-settings').click()
     await win.getByTestId('language-ru').click()
-    await win.keyboard.press(`${mod}+w`)
-    await win.getByTestId('welcome-open').click()
     await expect(win.locator('article.doc:not([hidden]) h1').first()).toHaveText('Добро пожаловать в folio')
+    await expect(win.locator('.tabs [role="tab"]')).toHaveCount(1)
   } finally {
     await app.close().catch(() => {})
     rmSync(f.root, { recursive: true, force: true })

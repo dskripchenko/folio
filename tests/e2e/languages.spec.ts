@@ -35,6 +35,17 @@ test('languages: chosen in the settings menu, at once in the window and the menu
     await choose('language-en')
     await expect.poll(palettePlaceholder).toBe('Type a command')
     await expect.poll(() => menuLabels(app)).toContain('New Note')
+    // What is on the screen changes too: the sidebar's sections.
+    await expect(win.locator('.sidebar .section-title').first()).toHaveText('Shared')
+
+    // From the settings window too (Cmd/Ctrl+,): its Language pane.
+    await win.keyboard.press(process.platform === 'darwin' ? 'Meta+Comma' : 'Control+Comma')
+    await win.getByTestId('settings-language').click()
+    await win.getByTestId('settings-language-ru').check()
+    await expect(win.locator('.sidebar .section-title').first()).toHaveText('Общие')
+    await win.getByTestId('settings-language-en').check()
+    await expect(win.locator('.sidebar .section-title').first()).toHaveText('Shared')
+    await win.keyboard.press('Escape')
 
     // One's own: its words where it has them, English for the rest.
     await choose('language-de')

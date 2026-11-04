@@ -961,6 +961,12 @@ const settingsDialog = new SettingsDialog({
   keyName: (e) => keyName(e),
   project: () => (active?.path ? folio.projectSettingsOf(active.path) : Promise.resolve(null)),
   saveProject: async (path, settings) => (await folio.setProjectSettings(path, settings)) !== null,
+  languages: () => ({ list: i18n?.languages ?? [], choice: i18n?.choice ?? null }),
+  chooseLanguage: async (code) => {
+    const state = await folio.i18nSet(code)
+    // The window may change before the main process's word comes back: at once.
+    applyI18n(state, true)
+  },
 })
 document.body.append(settingsDialog.el)
 
@@ -2804,12 +2810,28 @@ function applyI18n(state: I18nState, redraw = false): void {
   window.DskEmbed?.configure({ locale: lang })
   if (!redraw) return
   buildRail()
+  // The sidebar takes its words as it draws: drawn again.
+  void sidebar.load()
   for (const tab of tabs) {
     syncLabel(tab)
     render(tab)
   }
   syncStatus()
   report()
+  // The welcome page open: the one of the new language, at its place.
+  void (async () => {
+    for (const tab of tabs.filter((x) => x.doc?.readOnly)) {
+      const next = await folio.openWelcome()
+      if (!isOpened(next) || next.path === tab.path) continue
+      const index = tabs.indexOf(tab)
+      const wasActive = tab === active
+      remove(tab)
+      closedTabs.shift()
+      await add(next, wasActive)
+      const added = tabs.find((x) => x.path === next.path)
+      if (added) moveTab(added, index)
+    }
+  })()
 }
 folio.onI18nChanged((state) => applyI18n(state as I18nState, true))
 
