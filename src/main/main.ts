@@ -266,7 +266,7 @@ const updater = new Updater({
   arch: process.arch,
   execPath: process.execPath,
   appImage: process.env.APPIMAGE,
-  fetch: (url) => net.fetch(url, { headers: { Accept: 'application/vnd.github+json' } }),
+  fetch: (url, init) => net.fetch(url, { headers: { Accept: 'application/vnd.github+json' }, signal: init?.signal }),
   releases: process.env.FOLIO_UPDATE_URL,
   onState: (state) => send('update:changed', state),
 })

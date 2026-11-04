@@ -85,7 +85,8 @@ describe('updates', () => {
     const u = make('1.0.0')
     expect(u.due()).toBe(true)
     expect(await u.check()).toEqual({ status: 'ready', version: '1.1.0' })
-    expect(states).toEqual(['checking', 'downloading', 'ready'])
+    // Progress is said again while downloading: the steps, each once.
+    expect(states.filter((x, i) => x !== states[i - 1])).toEqual(['checking', 'downloading', 'ready'])
     expect(u.due()).toBe(false)
     // Started again before leaving: still ready.
     const again = make('1.0.0')
@@ -111,5 +112,61 @@ describe('updates', () => {
     const latest = new Updater({ dir: join(dir, 'v'), current: '1.1.0', platform: 'linux', arch: 'x64', execPath: '/x', fetch, releases: 'releases', onState: () => undefined })
     expect(await latest.check()).toEqual({ status: 'latest' })
     expect(latest.apply(1)).toEqual({ relaunch: false })
+  })
+
+  it('says how far the download is; gives up on one that does not answer or stops getting bytes', async () => {
+    const name = 'folio-1.1.0-linux-x64.AppImage'
+    const body = Buffer.alloc(300_000, 7)
+    const sha = createHash('sha256').update(body).digest('hex')
+    const json = release('v1.1.0', [name, `${name}.sha256`])
+    const opts = (fetch: (url: string, init?: { signal?: AbortSignal }) => Promise<Response>, onState: (s: UpdateState) => void = () => undefined) => ({
+      dir: join(dir, `u${Math.random()}`),
+      current: '1.0.0',
+      platform: 'linux' as const,
+      arch: 'x64',
+      execPath: '/x',
+      appImage: join(dir, 'a'),
+      fetch,
+      releases: 'releases',
+      timeouts: { answer: 300, idle: 300 },
+      onState,
+    })
+    // Slowly, in pieces, with its size: the received bytes and the total are told.
+    const seen: UpdateState[] = []
+    const slow = async (url: string): Promise<Response> => {
+      if (url === 'releases') return new Response(JSON.stringify(json))
+      if (url.endsWith('.sha256')) return new Response(`${sha}  ${name}`)
+      let i = 0
+      const stream = new ReadableStream<Uint8Array>({
+        async pull(c) {
+          await new Promise((r) => setTimeout(r, 120))
+          if (i >= body.length) return c.close()
+          c.enqueue(new Uint8Array(body.subarray(i, i + 100_000)))
+          i += 100_000
+        },
+      })
+      return new Response(stream, { headers: { 'Content-Length': String(body.length) } })
+    }
+    expect((await new Updater(opts(slow, (s) => seen.push(s))).check()).status).toBe('ready')
+    const progress = seen.filter((s): s is Extract<UpdateState, { status: 'downloading' }> => s.status === 'downloading' && s.received !== undefined)
+    expect(progress.length).toBeGreaterThan(0)
+    expect(progress.every((s) => s.total === body.length && s.received! <= body.length)).toBe(true)
+
+    // No answer at all.
+    const silent = (url: string, init?: { signal?: AbortSignal }) =>
+      url === 'releases' ? Promise.resolve(new Response(JSON.stringify(json))) : new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => reject(new Error('aborted'))))
+    expect(await new Updater(opts(silent)).check()).toEqual({ status: 'error', error: 'the checksum did not answer in 0 s' })
+
+    // Bytes, then none.
+    const stops = async (url: string): Promise<Response> => {
+      if (url === 'releases') return new Response(JSON.stringify(json))
+      if (url.endsWith('.sha256')) return new Response(`${sha}  ${name}`)
+      let sent = false
+      return new Response(new ReadableStream<Uint8Array>({ async pull(c) { if (!sent) { sent = true; c.enqueue(new Uint8Array(10)) } else await new Promise(() => undefined) } }))
+    }
+    const stalled = new Updater(opts(stops))
+    expect(await stalled.check()).toEqual({ status: 'error', error: 'the download stopped for 0 s' })
+    // Tried again after an error.
+    expect((await stalled.check()).status).toBe('error')
   })
 })

@@ -1,6 +1,6 @@
 {
   "name": "folio",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "private": true,
   "description": "A desktop app to read, edit and print Markdown with live diagrams, API references and editors — portable on macOS, Windows and Linux.",
   "license": "MIT",

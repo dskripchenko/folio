@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-11-04
+
+### Fixed
+
+- An update shows how far its download is (a percent and megabytes), and one
+  that hangs is given up: GitHub not answering in 30 s, or the download getting
+  no bytes for 60 s, is said as an error, and **Check for Updates** tries again.
+  Before, a request the network swallowed left "Downloading folio…" on screen
+  for good.
+
 ## [1.8.0] - 2026-11-04
 
 ### Added
@@ -461,7 +471,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/dskripchenko/folio/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/dskripchenko/folio/compare/v1.7.1...v1.8.0
 [1.7.1]: https://github.com/dskripchenko/folio/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/dskripchenko/folio/compare/v1.6.0...v1.7.0

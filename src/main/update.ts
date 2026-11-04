@@ -78,7 +78,7 @@ export type UpdateState =
   | { status: 'idle' }
   | { status: 'checking' }
   | { status: 'latest' }
-  | { status: 'downloading'; version: string }
+  | { status: 'downloading'; version: string; received?: number; total?: number }
   | { status: 'ready'; version: string }
   | { status: 'error'; error: string }
 
@@ -98,7 +98,9 @@ export interface UpdaterOptions {
   execPath: string
   appImage?: string
   /** Electron's `net.fetch`: the system's proxy settings. */
-  fetch: (url: string) => Promise<Response>
+  fetch: (url: string, init?: { signal?: AbortSignal }) => Promise<Response>
+  /** How long an answer may take to begin, and the download may go without a byte (ms). */
+  timeouts?: { answer: number; idle: number }
   releases?: string
   onState: (state: UpdateState) => void
 }
@@ -160,7 +162,7 @@ export class Updater {
     this.set({ status: 'checking' })
     writeJson(join(this.o.dir, 'state.json'), { checkedAt: Date.now() })
     try {
-      const res = await this.o.fetch(this.o.releases ?? RELEASES)
+      const res = await this.fetchWithin(this.o.releases ?? RELEASES, (this.o.timeouts ?? { answer: 30_000 }).answer, 'GitHub')
       if (!res.ok) throw new Error(`the releases answered ${res.status}`)
       const release = pickRelease(await res.json(), this.o.current, this.o.platform, this.o.arch)
       if (!release) {
@@ -176,18 +178,59 @@ export class Updater {
     return this.state
   }
 
+  /** A request that must start answering in time: a network that swallows it is not waited on for ever. */
+  private async fetchWithin(url: string, ms: number, what: string, abort = new AbortController()): Promise<Response> {
+    const timer = setTimeout(() => abort.abort(new Error(`${what} did not answer in ${Math.round(ms / 1000)} s`)), ms)
+    try {
+      return await this.o.fetch(url, { signal: abort.signal })
+    } catch (e) {
+      throw abort.signal.aborted && abort.signal.reason instanceof Error ? abort.signal.reason : e
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
   private async download(release: Release): Promise<void> {
-    const shaRes = await this.o.fetch(release.shaUrl)
+    const { answer, idle } = this.o.timeouts ?? { answer: 30_000, idle: 60_000 }
+    const shaRes = await this.fetchWithin(release.shaUrl, answer, 'the checksum')
     if (!shaRes.ok) throw new Error(`the checksum answered ${shaRes.status}`)
     const expected = shaOf(await shaRes.text())
     if (!expected) throw new Error('the checksum file holds no SHA-256')
     const file = join(this.o.dir, `${release.name}.part`)
-    const res = await this.o.fetch(release.url)
+    const abort = new AbortController()
+    const res = await this.fetchWithin(release.url, answer, 'the download', abort)
     if (!res.ok || !res.body) throw new Error(`the download answered ${res.status}`)
+    const total = Number(res.headers.get('content-length')) || undefined
     const hash = createHash('sha256')
     const source = Readable.fromWeb(res.body as import('node:stream/web').ReadableStream<Uint8Array>)
-    source.on('data', (chunk: Buffer) => hash.update(chunk))
-    await pipeline(source, createWriteStream(file))
+    // How far it is, said a few times a second; a download that stops getting bytes is given up.
+    let received = 0
+    let said = 0
+    let stalled: ReturnType<typeof setTimeout> | null = null
+    const watch = () => {
+      if (stalled) clearTimeout(stalled)
+      stalled = setTimeout(() => source.destroy(new Error(`the download stopped for ${Math.round(idle / 1000)} s`)), idle)
+    }
+    watch()
+    source.on('data', (chunk: Buffer) => {
+      hash.update(chunk)
+      received += chunk.length
+      watch()
+      const now = Date.now()
+      if (now - said >= 250) {
+        said = now
+        this.set({ status: 'downloading', version: release.version, received, ...(total ? { total } : {}) })
+      }
+    })
+    try {
+      await pipeline(source, createWriteStream(file))
+    } catch (e) {
+      abort.abort()
+      rmSync(file, { force: true })
+      throw e
+    } finally {
+      if (stalled) clearTimeout(stalled)
+    }
     if (hash.digest('hex') !== expected) {
       rmSync(file, { force: true })
       throw new Error('the download does not match its checksum')

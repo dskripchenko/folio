@@ -2953,10 +2953,17 @@ function sayUpdate(state: UpdateState): void {
   const v = 'version' in state ? state.version : update.current
   if (state.status === 'ready') notify(t.update.ready.replace('{v}', v))
   else if (!askedForUpdate) return
-  else if (state.status === 'downloading') notify(t.update.downloading.replace('{v}', v))
+  else if (state.status === 'downloading') notify(t.update.downloading.replace('{v}', v) + downloadProgress(state))
   else if (state.status === 'latest') notify(t.update.latest.replace('{v}', v))
   else if (state.status === 'error') notify(t.update.failed.replace('{error}', state.error))
   if (state.status !== 'checking' && state.status !== 'downloading') askedForUpdate = false
+}
+/** How far a download is: a percent and megabytes, or the megabytes alone when the size is not known. */
+function downloadProgress(state: Extract<UpdateState, { status: 'downloading' }>): string {
+  if (state.received === undefined) return ''
+  const mb = (n: number) => (n / 1048576).toFixed(n < 10 * 1048576 ? 1 : 0)
+  if (!state.total) return ` ${mb(state.received)} ${t.update.mb}`
+  return ` ${Math.min(100, Math.floor((state.received / state.total) * 100))}% · ${mb(state.received)} / ${mb(state.total)} ${t.update.mb}`
 }
 folio.onUpdate((state) => sayUpdate(state as UpdateState))
 function checkUpdate(): void {
