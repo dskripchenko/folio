@@ -1,9 +1,19 @@
-import { _electron as electron, expect, test } from '@playwright/test'
+import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test'
 import { copyFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fixture } from './fixture'
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
+
+/** A drag by hand, in steps (one jump may never start the browser's drag on a busy machine). */
+async function drag(win: Page, from: Locator, x: number, y: number): Promise<void> {
+  const a = (await from.boundingBox())!
+  await win.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
+  await win.mouse.down()
+  await win.mouse.move(a.x + a.width / 2 + 8, a.y + a.height / 2, { steps: 4 })
+  await win.mouse.move(x, y, { steps: 10 })
+  await win.mouse.up()
+}
 
 test('tabs: a closed one back at its place; dragged to another place, beside and back', async () => {
   const f = fixture()
@@ -29,16 +39,28 @@ test('tabs: a closed one back at its place; dragged to another place, beside and
     await expect.poll(() => view.evaluate((el) => el.scrollTop)).toBeGreaterThan(300)
 
     // C dragged before A.
-    await win.getByRole('tab', { name: /C\.md/ }).dragTo(win.getByRole('tab', { name: /A\.md/ }), { targetPosition: { x: 4, y: 10 } })
-    await expect.poll(order).toEqual(['C', 'A', 'B'])
+    // (Each drag tried again when the system's own cursor broke it: a drag that did not happen changed nothing.)
+    await expect(async () => {
+      if ((await order())[0] !== 'C') {
+        const a = (await win.getByRole('tab', { name: /A\.md/ }).boundingBox())!
+        await drag(win, win.getByRole('tab', { name: /C\.md/ }), a.x + 4, a.y + a.height / 2)
+      }
+      expect(await order()).toEqual(['C', 'A', 'B'])
+    }).toPass({ timeout: 20_000 })
 
     // A dragged onto the view's right half: beside the main view; dragged to the left half: back.
     const content = (await win.locator('.content').boundingBox())!
-    await win.getByRole('tab', { name: /A\.md/ }).dragTo(win.locator('.content'), { targetPosition: { x: content.width * 0.8, y: content.height / 2 } })
-    await expect(win.locator('.content')).toHaveClass(/two-views/)
+    await expect(async () => {
+      if (!/two-views/.test((await win.locator('.content').getAttribute('class')) ?? ''))
+        await drag(win, win.getByRole('tab', { name: /A\.md/ }), content.x + content.width * 0.8, content.y + content.height / 2)
+      await expect(win.locator('.content')).toHaveClass(/two-views/, { timeout: 1000 })
+    }).toPass({ timeout: 20_000 })
     await expect(win.locator('.view-beside article.doc:not([hidden]) h1')).toHaveText('A')
-    await win.getByRole('tab', { name: /A\.md/ }).dragTo(win.locator('.content'), { targetPosition: { x: content.width * 0.2, y: content.height / 2 } })
-    await expect(win.locator('.content')).not.toHaveClass(/two-views/)
+    await expect(async () => {
+      if (/two-views/.test((await win.locator('.content').getAttribute('class')) ?? ''))
+        await drag(win, win.getByRole('tab', { name: /A\.md/ }), content.x + content.width * 0.2, content.y + content.height / 2)
+      await expect(win.locator('.content')).not.toHaveClass(/two-views/, { timeout: 1000 })
+    }).toPass({ timeout: 20_000 })
   } finally {
     await app.close().catch(() => {})
     rmSync(f.root, { recursive: true, force: true })

@@ -1706,6 +1706,15 @@ async function reopenClosed(): Promise<void> {
     }
     tab.scroll = last.scroll
     activate(tab)
+    // Its document is drawn a moment later (widgets, a slow machine): scrolled once it is tall enough.
+    const scroller = scrollerOf(tab)
+    let frames = 60
+    const settle = () => {
+      if (active !== tab) return
+      scroller.scrollTop = last.scroll
+      if (Math.abs(scroller.scrollTop - last.scroll) > 1 && --frames > 0) requestAnimationFrame(settle)
+    }
+    requestAnimationFrame(settle)
     return
   }
 }
@@ -1758,8 +1767,10 @@ tabsEl.addEventListener('drop', (event) => {
   moveTab(tab, before && before !== tab ? without.indexOf(before) : before === tab ? tabs.indexOf(tab) : without.length)
 })
 const contentEl = document.querySelector<HTMLElement>('.content')!
+// Caught on the way down: the editors inside (a contenteditable takes drops) never see a tab dragged.
 contentEl.addEventListener('dragover', (event) => {
   if (!draggedTab) return
+  event.stopPropagation()
   const box = contentEl.getBoundingClientRect()
   const right = event.clientX > box.left + box.width / 2
   // The right half: beside (when there is another tab for the main view); the left: back to the main view.
@@ -1769,7 +1780,7 @@ contentEl.addEventListener('dragover', (event) => {
   if (!can) return
   event.preventDefault()
   event.dataTransfer!.dropEffect = 'move'
-})
+}, true)
 contentEl.addEventListener('dragleave', (event) => {
   if (!contentEl.contains(event.relatedTarget as Node | null)) besideDrop.hidden = true
 })
@@ -1778,10 +1789,11 @@ contentEl.addEventListener('drop', (event) => {
   besideDrop.hidden = true
   if (!tab) return
   event.preventDefault()
+  event.stopPropagation()
   const box = contentEl.getBoundingClientRect()
   if (event.clientX > box.left + box.width / 2) openBeside(tab)
   else if (tab === beside) closeBeside()
-})
+}, true)
 
 function newNote(): void {
   const tab = makeTab({ path: null, text: '', saved: null, view: 'edit' })
