@@ -31,6 +31,8 @@ export interface HistoryText {
   renameBranch: string
   deleteBranch: string
   revertCommit: string
+  reviewCommit: string
+  reviewAfter: string
   tagHere: string
   tagName: string
   deleteTag: string
@@ -71,6 +73,8 @@ interface Options {
   open: (path: string, version: Version) => void
   /** Open a file (a conflicted one, from the merge). */
   openFile: (path: string) => void
+  /** A commit, or (`after`) the changes since it, in a review tab (ADR-006). */
+  review: (path: string, oid: string, after: boolean) => void | Promise<void>
   /** The version open in the document, to mark it. */
   current: () => string | null
 }
@@ -586,6 +590,8 @@ export class HistoryPanel {
         e.preventDefault()
         const summary = v.message.split('\n')[0] ?? ''
         popMenuAt(e.clientX, e.clientY, [
+          { label: t.reviewCommit, testid: 'commit-review', action: () => void this.o.review(path, v.oid, false) },
+          { label: t.reviewAfter, testid: 'commit-review-after', action: () => void this.o.review(path, v.oid, true) },
           { label: t.revertCommit, testid: 'commit-revert', action: () => void this.act(() => folio().gitRevert(path, v.oid, summary), (r) => r.ok && this.say('ok', t.reverted)) },
           {
             label: t.tagHere,

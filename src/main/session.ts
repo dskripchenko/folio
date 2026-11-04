@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { groupOf, isTabColor, type GroupData, type TabColor } from '../common/tabGroups'
+import type { ChangeSpec } from '../common/review'
 import { readJson, writeJson } from './jsonFile'
 
 /**
@@ -12,6 +13,28 @@ export interface SessionTab {
   buffer: string | null
   color?: TabColor | null
   group?: string | null
+  /** A review's set of changes (ADR-006): such a tab has no file. */
+  review?: ChangeSpec | null
+}
+
+/** A set of changes as stored: its kind and its strings, or null. */
+export function specOf(v: unknown): ChangeSpec | null {
+  if (!v || typeof v !== 'object') return null
+  const s = v as Record<string, unknown>
+  const str = (x: unknown): x is string => typeof x === 'string' && x !== '' && x.length < 4096
+  switch (s.kind) {
+    case 'working':
+    case 'since':
+      return str(s.repo) ? { kind: s.kind, repo: s.repo } : null
+    case 'commit':
+      return str(s.repo) && str(s.oid) ? { kind: 'commit', repo: s.repo, oid: s.oid } : null
+    case 'range':
+      return str(s.repo) && str(s.from) && str(s.to) ? { kind: 'range', repo: s.repo, from: s.from, to: s.to } : null
+    case 'worktree':
+      return str(s.path) && str(s.base) ? { kind: 'worktree', path: s.path, base: s.base } : null
+    default:
+      return null
+  }
 }
 
 export interface SessionData {
@@ -62,7 +85,13 @@ export class Session {
     const ids = new Set(groups.map((g) => g.id))
     this.data = {
       version: 2,
-      tabs: tabs.map((t) => ({ path: t.path, buffer: t.buffer, color: isTabColor(t.color) ? t.color : null, group: typeof t.group === 'string' && ids.has(t.group) ? t.group : null })),
+      tabs: tabs.map((t) => ({
+        path: t.path,
+        buffer: t.buffer,
+        color: isTabColor(t.color) ? t.color : null,
+        group: typeof t.group === 'string' && ids.has(t.group) ? t.group : null,
+        ...(specOf(t.review) ? { review: specOf(t.review) } : {}),
+      })),
       active,
       groups,
     }

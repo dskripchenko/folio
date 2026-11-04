@@ -7,6 +7,29 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-04
+
+### Added
+- Reviewing an AI agent's work (ADR-006). **Review** shows a set of changes as
+  a pull request's files, in a tab: files marked as viewed, one column or two,
+  words changed within a line marked, unchanged stretches folded; the working
+  copy, a commit, the changes after one, or a worktree against its base. Runs
+  of the working copy are staged, taken out of the index or thrown away; a
+  double click edits the line beside the review; what an agent writes shows by
+  itself.
+- **Since the last look**: only what changed since you looked — edits and the
+  agent's commits — the newest first, with when; counted in **Changes**.
+- **Worktrees** beside the page: each with its branch, commits ahead of the
+  base and behind, files changed and when; reviewed against the base, opened as
+  a project (its changes and history work there through the system's git) or in
+  a terminal, taken without a commit, merged, removed with its branch.
+  Worktrees inside a project are left out of search and going to a file.
+- **Comments** on lines, kept where their lines move, sent to the agent's
+  console as one paste without Enter (never as lines a shell would run).
+- **Connect Claude Code to folio**: a hook in the repository's local settings
+  (shown first); reviews and worktrees say which session changed a file, and
+  when.
+
 ## [1.6.0] - 2026-11-04
 
 ### Added
@@ -403,7 +426,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/dskripchenko/folio/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/dskripchenko/folio/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/dskripchenko/folio/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/dskripchenko/folio/compare/v1.4.0...v1.5.0

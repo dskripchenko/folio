@@ -20,6 +20,9 @@ import { SearchPanel } from './searchPanel'
 import { ConsolePanel } from './consolePanel'
 import { icon, iconButton, type IconName } from './icons'
 import { popMenu, popMenuAt, type MenuItem } from './menu'
+import { ReviewView } from './review/reviewView'
+import { WorktreesPanel } from './worktreesPanel'
+import { rootOf, type ChangeSpec } from '../common/review'
 import { TAB_COLORS, freeColor, groupAt, isTabColor, keepTogether, type GroupData, type TabColor } from '../common/tabGroups'
 import { openCloneDialog } from './clone'
 import { openPdfDialog, type PdfTarget } from './pdfDialog'
@@ -74,6 +77,7 @@ let graphPanel: GraphPanel | null = null
 /** The tasks of the project in view. */
 let tasksPanel: TasksPanel | null = null
 let changesPanel: ChangesPanel | null = null
+let worktreesPanel: WorktreesPanel | null = null
 let symbolPalette: SymbolPalette | null = null
 let problemsPanel: ProblemsPanel | null = null
 /** The status line under the page. */
@@ -135,6 +139,8 @@ interface Tab {
     compare?: string
   } | null
   timer: ReturnType<typeof setTimeout> | null
+  /** A set of changes under review (ADR-006), not a file. */
+  review: ReviewView | null
   /** Its own colour, and the group it is in. */
   color: TabColor | null
   group: string | null
@@ -158,6 +164,7 @@ function applyText(): void {
   graphPanel?.setText(t.graph)
   tasksPanel?.setText(t.tasks)
   changesPanel?.setText(t.changes)
+  worktreesPanel?.setText(t.worktrees)
   symbolPalette?.setText(t.symbols)
   problemsPanel?.setText(t.problems)
   outlinePanel?.setText(t.outline)
@@ -186,6 +193,7 @@ function isDirty(tab: Tab): boolean {
 
 /** A note's name: its first line, without the heading marks. */
 function titleOf(tab: Tab): string {
+  if (tab.review) return tab.review.title()
   if (tab.doc) return tab.doc.name
   if (tab.path) return tab.path.split(/[\\/]/).pop() || tab.path
   const first = tab.text.split('\n').map((l) => l.replace(/^#+\s*/, '').trim()).find((l) => l !== '')
@@ -195,7 +203,8 @@ function titleOf(tab: Tab): string {
 function syncLabel(tab: Tab): void {
   tab.label.textContent = titleOf(tab)
   tab.button.classList.toggle('dirty', isDirty(tab))
-  tab.button.classList.toggle('note', tab.path === null)
+  tab.button.classList.toggle('note', tab.path === null && !tab.review)
+  tab.button.classList.toggle('review-tab', !!tab.review)
   tab.button.title = tab.path ?? titleOf(tab)
 }
 
@@ -400,6 +409,11 @@ function renderVersion(tab: Tab): void {
 
 function render(tab: Tab): void {
   tab.pane.replaceChildren()
+  if (tab.review) {
+    tab.pane.dataset.format = 'review'
+    tab.pane.append(tab.review.el)
+    return
+  }
   markLayout(tab)
   if (tab.version) {
     renderVersion(tab)
@@ -597,6 +611,7 @@ function buildRail(): void {
     iconButton('graph', t.graph.title, () => graphPanel?.setVisible(!graphPanel.visible), 'toggle-graph'),
     iconButton('tasks', t.tasks.title, () => tasksPanel?.setVisible(!tasksPanel.visible), 'toggle-tasks'),
     iconButton('commit', `${t.changes.title} (Ctrl+⇧G)`, () => changesPanel?.setVisible(!changesPanel.visible), 'toggle-changes'),
+    iconButton('branch', t.worktrees.title, () => worktreesPanel?.setVisible(!worktreesPanel.visible), 'toggle-worktrees'),
     iconButton('alert', t.problems.title, () => problemsPanel?.setVisible(!problemsPanel.visible), 'toggle-problems'),
     iconButton('history', `${t.history} (${mod}⇧H)`, () => toggleHistory(), 'toggle-history'),
     iconButton('print', `${t.print} (${mod}P)`, () => void printActive(), 'rail-print'),
@@ -643,6 +658,11 @@ function syncRail(): void {
   if (pr) {
     pr.setAttribute('aria-pressed', String(!!problemsPanel?.visible))
     pr.classList.toggle('on', !!problemsPanel?.visible)
+  }
+  const wt = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-worktrees"]')
+  if (wt) {
+    wt.setAttribute('aria-pressed', String(!!worktreesPanel?.visible))
+    wt.classList.toggle('on', !!worktreesPanel?.visible)
   }
   const ch = railRight.querySelector<HTMLButtonElement>('[data-testid="toggle-changes"]')
   if (ch) {
@@ -822,7 +842,7 @@ function syncStatus(): void {
     ]
     return statusBar.showParts(parts)
   }
-  if (!tab || tab.version || (formatOf(tab) !== 'markdown' && formatOf(tab) !== 'text')) return statusBar.show(null)
+  if (!tab || tab.version || tab.review || (formatOf(tab) !== 'markdown' && formatOf(tab) !== 'text')) return statusBar.show(null)
   const field = [...tab.pane.querySelectorAll('textarea')].find((a) => a.checkVisibility()) ?? null
   statusBar.show({ text: tab.text, field: field && document.activeElement === field ? field : null })
 }
@@ -1420,7 +1440,7 @@ function flush(tab: Tab): void {
 function report(): void {
   const index = active ? tabs.indexOf(active) : -1
   folio.state(
-    tabs.map((tab) => ({ path: tab.path, buffer: tab.buffer, color: tab.color, group: tab.group })),
+    tabs.map((tab) => ({ path: tab.path, buffer: tab.buffer, color: tab.color, group: tab.group, review: tab.review?.spec ?? null })),
     index >= 0 ? index : null,
     active?.path ?? null,
     [...groups.values()].map(({ id, name, color, collapsed }) => ({ id, name, color, collapsed })),
@@ -1458,7 +1478,9 @@ function activate(tab: Tab | null): void {
   tagsPanel?.show(tab?.path ?? null)
   graphPanel?.show(tab?.path ?? null)
   tasksPanel?.show(tab?.path ?? null)
-  changesPanel?.show(tab?.path ?? null)
+  // A review's tab: the changes of its repository.
+  changesPanel?.show(tab?.review ? rootOf(tab.review.spec) : (tab?.path ?? null))
+  worktreesPanel?.show(tab?.review ? rootOf(tab.review.spec) : (tab?.path ?? null))
   syncStatus()
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
@@ -1549,6 +1571,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
     timer: null,
     color: null,
     group: null,
+    review: null,
     ...init,
     pane,
     button,
@@ -1993,6 +2016,101 @@ contentEl.addEventListener('drop', (event) => {
   else if (tab === beside) closeBeside()
 }, true)
 
+// The review (ADR-006) ------------------------------------------------------------
+
+const specKey = (s: ChangeSpec) => JSON.stringify(s)
+
+/** A set of changes in a tab of its own: the one it already has, or a new one. */
+function openReview(spec: ChangeSpec, focus = true, look: Partial<Pick<Tab, 'color' | 'group'>> = {}): Tab {
+  const existing = tabs.find((x) => x.review && specKey(x.review.spec) === specKey(spec))
+  if (existing) {
+    if (focus) activate(existing)
+    void existing.review!.refresh()
+    return existing
+  }
+  let tab: Tab | null = null
+  const review = new ReviewView(spec, {
+    text: () => t.review,
+    errors: () => t.historyPanel.errors,
+    lang: () => lang,
+    open: (path, line, edit) => void openToEdit(path, line, edit),
+    titled: () => tab && syncLabel(tab),
+    openSet: (s) => void openReview(s),
+    consoles: () => consolePanel.targets(),
+    paste: (id, text) => consolePanel.pasteTo(id, text),
+    openConsole: (cwd) => void consolePanel.open(cwd),
+  })
+  tab = makeTab({ path: null, text: '', saved: '', review, ...look })
+  void review.refresh()
+  if (focus) activate(tab)
+  else report()
+  return tab
+}
+
+/** A file from the review: beside it, to edit, at a line. */
+async function openToEdit(path: string, line: number | null, edit: boolean): Promise<void> {
+  const from = active
+  await add(await folio.open(path), false)
+  const tab = tabs.find((x) => x.path && samePath(x.path, path))
+  if (!tab) return
+  if (edit && tab.view !== 'edit') toggleEditTo(tab, 'edit')
+  if (from?.review && tab !== beside) {
+    if (mainTab !== from) activate(from)
+    openBeside(tab)
+  } else activate(tab)
+  if (!line) return
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const editor = codeEditorOf(tab)
+      if (editor) editor.goToLine(line)
+      else tab.pane.querySelector<HTMLElement & { folioGoTo?: (n: number) => void }>('.code-view')?.folioGoTo?.(line)
+    }),
+  )
+}
+
+const samePath = (a: string, b: string) => a.replace(/\\/g, '/').toLowerCase() === b.replace(/\\/g, '/').toLowerCase()
+
+/** The repository of what is in view: the active file's, else the changes panel's. */
+async function repoInView(): Promise<string | null> {
+  if (active?.review) {
+    const s = active.review.spec
+    return s.kind === 'worktree' ? s.path : s.repo
+  }
+  if (active?.path) {
+    const info = await folio.gitInfo(active.path)
+    if (info?.root) return info.root
+  }
+  return changesPanel?.root ?? null
+}
+
+async function reviewWorking(): Promise<void> {
+  const repo = await repoInView()
+  if (repo) openReview({ kind: 'working', repo })
+}
+
+/** Claude Code's hook in the repository in view (R6): added after asking, or taken out. */
+async function claudeConnect(on: boolean): Promise<void> {
+  const repo = await repoInView()
+  if (!repo) return
+  const r = await folio.reviewClaudeConnect(repo, on)
+  if ('error' in r) notify(r.error === 'invalid' ? t.commands.claudeUnreadable : describeRefusal(t.historyPanel.errors, r))
+  else if (r.ok) {
+    notify(on ? t.commands.claudeConnected : t.commands.claudeDisconnected)
+    reviewsSoon()
+  }
+}
+
+let reviewTimer: ReturnType<typeof setTimeout> | null = null
+/** Open reviews read again a moment after files or the repository change (an agent writes in bursts). */
+function reviewsSoon(): void {
+  if (!tabs.some((x) => x.review)) return
+  if (reviewTimer) clearTimeout(reviewTimer)
+  reviewTimer = setTimeout(() => {
+    reviewTimer = null
+    for (const x of tabs) if (x.review) void x.review.refresh()
+  }, 400)
+}
+
 function newNote(): void {
   const tab = makeTab({ path: null, text: '', saved: null, view: 'edit' })
   activate(tab)
@@ -2011,6 +2129,7 @@ function remove(tab: Tab): void {
     closedTabs.splice(30)
   }
   if (tab.timer) clearTimeout(tab.timer)
+  tab.review?.destroy()
   tabs.splice(i, 1)
   if (tab === beside) backToMain(tab)
   tab.pane.remove()
@@ -2049,6 +2168,7 @@ function toggleEdit(tab: Tab | null): void {
 
 /** Reading or editing: drawn again where the reader was, as near as the other view allows. */
 function toggleEditTo(tab: Tab, view: 'read' | 'edit'): void {
+  if (tab.review) return
   if ((tab.error && !tab.buffer && tab.saved !== null) || !canEdit(formatOf(tab)) || tab.doc?.readOnly) return
   const scroller = scrollerOf(tab)
   const ratio = scroller.scrollHeight > 0 ? scroller.scrollTop / scroller.scrollHeight : 0
@@ -2091,7 +2211,7 @@ function savedAs(tab: Tab, result: Extract<SaveResult, { saved: OpenResult }>): 
 }
 
 async function save(tab: Tab, as: boolean): Promise<boolean> {
-  if (tab.doc?.readOnly) return false
+  if (tab.doc?.readOnly || tab.review) return false
   pull(tab)
   await formatBeforeSave(tab)
   if (tab.timer) flush(tab)
@@ -2167,6 +2287,11 @@ const history = new HistoryPanel({
   locale: () => lang,
   current: () => active?.version?.oid ?? null,
   openFile: (path) => void folio.open(path).then((result) => add(result)),
+  review: async (path, oid, after) => {
+    const info = await folio.gitInfo(path)
+    if (!info?.root) return
+    openReview(after ? { kind: 'range', repo: info.root, from: oid, to: 'HEAD' } : { kind: 'commit', repo: info.root, oid })
+  },
   open: async (path: string, v: Version) => {
     const tab = tabs.find((x) => x.path === path)
     // A picture's or a video's versions are listed; they are not text to show.
@@ -2188,6 +2313,7 @@ function toggleHistory(): void {
 folio.onToggleHistory(() => toggleHistory())
 folio.onCommitted((value) => {
   const { path } = value as { path: string }
+  reviewsSoon()
   void changesPanel?.refresh()
   void committedAgain()
   if (active?.path === path) void history.refresh()
@@ -2259,6 +2385,7 @@ folio.onFsRemoved((value) => {
 folio.onFsChanged(async (value) => {
   linksSoon()
   changesSoon()
+  reviewsSoon()
   const files = new Set((value as Changes[]).flatMap((c) => c.files))
   for (const tab of tabs) {
     if (!tab.path || !files.has(tab.path)) continue
@@ -2606,6 +2733,17 @@ function commands(): Command[] {
     { id: 'tasks', group: view, title: t.tasks.title, icon: 'tasks', run: () => tasksPanel?.setVisible(!tasksPanel.visible) },
     { id: 'blame', group: view, title: t.blame, icon: 'history', when: () => !!codeEditorOf(active), run: () => void toggleBlame() },
     { id: 'changes', group: view, title: t.changes.title, keys: 'Ctrl+⇧G', icon: 'commit', run: () => changesPanel?.setVisible(!changesPanel.visible) },
+    { id: 'claude-connect', group: view, title: c.claudeConnect, icon: 'links', run: () => void claudeConnect(true) },
+    { id: 'claude-disconnect', group: view, title: c.claudeDisconnect, icon: 'links', run: () => void claudeConnect(false) },
+    { id: 'worktrees', group: view, title: c.worktrees, icon: 'branch', run: () => worktreesPanel?.setVisible(!worktreesPanel.visible) },
+    { id: 'review-changes', group: view, title: c.reviewChanges, icon: 'commit', run: () => void reviewWorking() },
+    {
+      id: 'review-since',
+      group: view,
+      title: c.reviewSince,
+      icon: 'commit',
+      run: () => void repoInView().then((repo) => repo && void openReview({ kind: 'since', repo })),
+    },
     { id: 'graph', group: view, title: t.graph.title, icon: 'graph', run: () => graphPanel?.setVisible(!graphPanel.visible) },
     ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),
   ]
@@ -2683,6 +2821,12 @@ changesPanel = new ChangesPanel(
     discard: (root, path) => folio.gitDiscard(root, path),
     commit: (root, message, amend) => folio.gitCommitStaged(root, message, amend),
     open: (root, path) => void folio.open(`${root}/${path}`).then((result) => add(result)),
+    review: (root) => void openReview({ kind: 'working', repo: root }),
+    sinceCount: async (root) => {
+      const r = await folio.reviewSinceCount(root)
+      return 'ok' in r ? r.count : null
+    },
+    reviewSince: (root) => void openReview({ kind: 'since', repo: root }),
     lastMessage: (root) => folio.gitLastMessage(root),
     stashes: async (root) => {
       const r = await folio.gitStashList(root)
@@ -2696,6 +2840,38 @@ changesPanel = new ChangesPanel(
 )
 document.querySelector('.content')!.insertBefore(changesPanel.el, document.querySelector('.history'))
 changesPanel.show(null)
+
+const failed = (r: { ok?: unknown } | GitRefusal): GitRefusal | null => ('error' in r ? (r as GitRefusal) : null)
+worktreesPanel = new WorktreesPanel(
+  t.worktrees,
+  {
+    load: (path, base) => folio.reviewWorktrees(path, base),
+    branches: async (path) => (await folio.gitInfo(path))?.branches ?? [],
+    review: (spec) => void openReview(spec),
+    project: async (main, path) => {
+      const r = await folio.reviewWorktreeProject(main, path)
+      if ('ok' in r) sidebar.show(r.workspace)
+      return failed(r)
+    },
+    console: (path) => void consolePanel.open(path),
+    merge: async (main, branch) => failed(await folio.reviewWorktreeMerge(main, branch)),
+    take: async (main, path, base) => failed(await folio.reviewWorktreeTake(main, path, base)),
+    edits: async (main) => {
+      const r = await folio.reviewAgentEdits(main)
+      return 'ok' in r ? r.edits : []
+    },
+    remove: async (main, w) => {
+      const r = await folio.reviewWorktreeRemove(main, w.path, w.branch, w.changed)
+      if ('workspace' in r && r.workspace) sidebar.show(r.workspace)
+      return failed(r)
+    },
+    errors: () => t.historyPanel.errors,
+    lang: () => lang,
+  },
+  () => syncRail(),
+)
+document.querySelector('.content')!.insertBefore(worktreesPanel.el, document.querySelector('.history'))
+worktreesPanel.show(null)
 
 tasksPanel = new TasksPanel(
   t.tasks,
@@ -3057,6 +3233,7 @@ function applyI18n(state: I18nState, redraw = false): void {
   // The sidebar takes its words as it draws: drawn again.
   void sidebar.load()
   for (const tab of tabs) {
+    tab.review?.applyText()
     syncLabel(tab)
     render(tab)
   }
@@ -3091,6 +3268,10 @@ void folio.startup().then(async ({ tabs: restored, groups: savedGroups, active: 
     const doc = isOpened(r.doc) ? r.doc : null
     const b = r.buffer
     const look = { color: isTabColor(r.color) ? r.color : null, group: typeof r.group === 'string' && groups.has(r.group) ? r.group : null }
+    if (r.review) {
+      openReview(r.review, false, look)
+      continue
+    }
     if (b) {
       makeTab({
         ...look,

@@ -451,6 +451,49 @@ geändert (blame)** unter den Befehlen fügt eine Spalte neben den Nummern hinzu
 Autor und Datum; derselbe Befehl nimmt sie wieder weg. Es nutzt das Git des
 Systems, wenn es eines gibt, sonst liest folio die Geschichte der Datei selbst.
 
+### Die Arbeit eines Agenten prüfen
+
+folio ist dafür gemacht, neben einem KI-Agenten im Terminal zu stehen: Sie
+lesen und prüfen vor allem, was er geändert hat, und bearbeiten ein wenig.
+
+- **Review** (die Seiten-Schaltfläche in **Änderungen**, die Befehle oder das
+  Menü eines Commits im Verlauf) öffnet die Änderungen wie die Dateien eines
+  Pull-Requests in einem Tab: links die Dateien, rechts die Änderungen jeder
+  Datei mit drei Zeilen Kontext, Unverändertes eingeklappt, in einer Spalte
+  oder zwei, in den Farben der Sprache, geänderte Wörter in einer Zeile
+  markiert. Arbeitskopie, ein Commit, die Änderungen nach einem Commit, ein
+  Worktree gegen seine Basis — dieselbe Ansicht. Eine als **Gesehen** markierte
+  Datei klappt ein und bleibt markiert, bis sich ihr Text ändert. In der
+  Arbeitskopie wird jeder Änderungsblock über seine Kopfzeile vorgemerkt, aus
+  dem Index genommen oder verworfen. Ein Doppelklick auf eine Zeile (oder
+  **Bearbeiten**) öffnet die Datei neben dem Review an dieser Zeile. Das Review
+  folgt der Platte: was ein Agent schreibt, erscheint von selbst, eine
+  geänderte Datei wird kurz hervorgehoben.
+- **Seit dem letzten Blick** zeigt nur, was sich seitdem geändert hat —
+  Bearbeitungen und die eigenen Commits des Agenten —, das Neueste zuerst, mit
+  Zeit. **Gesehen** an einer Datei rückt den Blick für sie vor, **Alles
+  gesehen** für alle. **Änderungen** zählt diese Dateien.
+- **Worktrees** (die Branch-Schaltfläche rechts) listet die Worktrees des
+  Repositorys — eines Agenten oder Subagenten, in `.claude/worktrees` oder
+  anderswo — mit Branch, Commits vor und hinter der Basis, geänderten Dateien
+  und Zeit. Jeder wird gegen die Basis geprüft, als Projekt (Änderungen,
+  Verlauf und Randmarken funktionieren dort) oder im Terminal geöffnet, seine
+  Änderungen ohne Commit in die Hauptkopie übernommen, gemergt oder samt Branch
+  entfernt. Worktrees innerhalb eines Projekts bleiben aus Suche und
+  Dateisprung heraus.
+- **Kommentare**: das `+` neben der Zeilennummer fügt einen hinzu; er bleibt
+  bei seiner Zeile, wenn Zeilen wandern. **An den Agenten senden** fügt die
+  ungesendeten Kommentare — jeder mit Datei, Zeile und den Zeilen darum — in
+  die Konsole des Agenten ein, als ein Einfügen und ohne Enter: dort lesen und
+  selbst senden.
+- **Claude Code mit folio verbinden** (Befehle) fügt einen Hook in
+  `.claude/settings.local.json` des Repositorys ein (vor dem Schreiben
+  gezeigt): nach jeder Bearbeitung nennt Claude Code folio Datei, Sitzung und
+  Zeit, und Review und Worktrees zeigen, wer was geändert hat. **Trennen**
+  entfernt den Hook und sonst nichts.
+
+Das Review braucht ein auf dem System installiertes git.
+
 ### Branches und Synchronisieren
 
 - **Branches**: Der Branch-Name im Panel öffnet die Liste — zu einem anderen

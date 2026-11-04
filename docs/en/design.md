@@ -412,6 +412,46 @@ numbers — the author and how long ago, the commit's message, author and date
 on hover; the same command takes it away. It uses the system git when there
 is one, else reads the file's history itself.
 
+### Reviewing an agent's work
+
+folio is made to sit beside an AI agent working in a terminal: you mostly read
+and review what it changed, and edit a little.
+
+- **Review** (the page button in **Changes**, the commands, or a commit's menu
+  in the history) opens the changes as a pull request's files, in a tab: the
+  files on the left, each file's changes on the right with three lines of
+  context, unchanged stretches folded, in one column or two, in the colours of
+  its language, the words changed within a line marked. The working copy,
+  a commit, the changes after a commit, a worktree against its base — the same
+  view. A file marked **Viewed** folds and stays marked until its text changes.
+  In the working copy each run of changes is staged, taken out of the index or
+  thrown away from its heading. A double click on a line (or **Edit**) opens the
+  file beside the review, to edit, at that line. The review follows the disk:
+  what an agent writes shows by itself, a file changed in view is marked for a
+  moment.
+- **Since the last look** shows only what changed since you last looked —
+  edits and the agent's own commits — the newest first, with when. **Viewed**
+  on a file there moves the look forward for it; **All seen** for all.
+  **Changes** counts these files.
+- **Worktrees** (the branch button on the right rail) lists the repository's
+  worktrees — an agent's or a subagent's, in `.claude/worktrees` or anywhere —
+  with the branch, commits ahead of the base and behind it, files changed and
+  when. Each is reviewed against the base, opened as a project (its changes,
+  history and gutter marks work there) or in a terminal, its changes taken into
+  the main copy without a commit, merged, or removed with its branch. Worktrees
+  inside a project are left out of search and going to a file.
+- **Comments**: the `+` beside a line's number adds one; it keeps to its line
+  when lines move. **Send to the agent** puts the comments not sent — each with
+  its file, line and the rows around it — into the console where the agent
+  runs, as one paste and without Enter: read it there and send it yourself.
+- **Connect Claude Code to folio** (the commands) adds a hook to the
+  repository's `.claude/settings.local.json` (shown before it is written):
+  after each edit Claude Code tells folio the file, its session and the time,
+  and the review and the worktrees say who changed what. **Disconnect** takes
+  the hook out and nothing else.
+
+The review needs git installed on the system.
+
 ### Branches and sync
 
 - **Branches**: the branch name in the panel opens the list — switch to one, or

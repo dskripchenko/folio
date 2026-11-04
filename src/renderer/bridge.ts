@@ -1,3 +1,5 @@
+import type { Hunk } from '../common/hunks'
+import type { AgentEdit, ChangedFile, Changeset, ChangeSpec, FileTexts, ReviewAction, ReviewComment, Worktree } from '../common/review'
 import type { GroupData, TabColor } from '../common/tabGroups'
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
@@ -108,6 +110,7 @@ export interface RestoredTab {
   conflict: boolean
   color?: string | null
   group?: string | null
+  review?: ChangeSpec | null
 }
 
 export type SaveResult = { saved: OpenResult; baseline: string } | { conflict: true } | { canceled: true } | { error: string }
@@ -130,7 +133,7 @@ export interface GitInfo {
 
 /** A git action's refusal: a code the window has words for, and files, a host or git's words. */
 export interface GitRefusal {
-  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled' | 'no-git' | 'nothing' | 'failed' | 'conflict' | 'current'
+  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled' | 'no-git' | 'nothing' | 'failed' | 'conflict' | 'current' | 'stale'
   detail: string[]
 }
 
@@ -205,7 +208,7 @@ export interface FolioBridge {
   openUrl(url: string): Promise<OpenResult>
   external(url: string): void
   pathOf(file: File): string
-  state(tabs: { path: string | null; buffer: string | null; color: TabColor | null; group: string | null }[], active: number | null, activePath: string | null, groups: GroupData[]): void
+  state(tabs: { path: string | null; buffer: string | null; color: TabColor | null; group: string | null; review: ChangeSpec | null }[], active: number | null, activePath: string | null, groups: GroupData[]): void
   writeBuffer(buffer: BufferData): void
   dropBuffer(id: string): void
   disk(path: string): Promise<{ text: string; hash: string } | null>
@@ -382,6 +385,27 @@ export interface FolioBridge {
   onBlocked: Listener
   onCloseTab: Listener
   onCloseAllTabs: Listener
+  // The review (ADR-006): the system's git.
+  reviewAvailable(): Promise<{ ok: true; available: boolean }>
+  reviewChangeset(spec: ChangeSpec): Promise<{ ok: true; set: Changeset } | GitRefusal>
+  reviewTexts(spec: ChangeSpec, file: ChangedFile): Promise<{ ok: true; texts: FileTexts } | GitRefusal>
+  reviewAct(spec: ChangeSpec, action: ReviewAction, path: string, hunk: (Hunk & { lines?: { before: string[]; after: string[] } }) | null): Promise<{ ok: boolean } | GitRefusal>
+  reviewViewed(root: string): Promise<{ ok: true; viewed: Record<string, string>; comments: ReviewComment[] } | GitRefusal>
+  reviewCommentSave(root: string, comment: ReviewComment): Promise<{ ok: true } | GitRefusal>
+  reviewCommentDelete(root: string, ids: string[]): Promise<{ ok: true } | GitRefusal>
+  reviewCommentSent(root: string, ids: string[]): Promise<{ ok: true } | GitRefusal>
+  reviewSetViewed(root: string, key: string, hash: string | null): Promise<{ ok: true } | GitRefusal>
+  reviewCheckpoint(root: string): Promise<{ ok: true } | GitRefusal>
+  reviewCheckpointFile(root: string, path: string): Promise<{ ok: true } | GitRefusal>
+  reviewSinceCount(root: string): Promise<{ ok: true; count: number | null } | GitRefusal>
+  reviewClaudeState(path: string): Promise<{ ok: true; repo: string; connected: boolean; readable: boolean } | GitRefusal>
+  reviewClaudeConnect(path: string, on: boolean): Promise<{ ok: boolean } | GitRefusal>
+  reviewAgentEdits(path: string): Promise<{ ok: true; edits: AgentEdit[] } | GitRefusal>
+  reviewWorktrees(path: string, base: string | null): Promise<{ ok: true; base: string; main: string; list: Worktree[] } | GitRefusal>
+  reviewWorktreeProject(main: string, path: string): Promise<{ ok: true; workspace: WorkspaceView } | GitRefusal>
+  reviewWorktreeRemove(main: string, path: string, branch: string | null, changed: number): Promise<{ ok: boolean; workspace?: WorkspaceView } | GitRefusal>
+  reviewWorktreeMerge(main: string, branch: string): Promise<{ ok: true } | GitRefusal>
+  reviewWorktreeTake(main: string, path: string, base: string): Promise<{ ok: true } | GitRefusal>
   /** "Compare with" in the tree: the file chosen first (a) and the one compared with it (b). */
   onCompareFiles: Listener
 }

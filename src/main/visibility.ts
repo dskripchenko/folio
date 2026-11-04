@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Ignores } from './ignore'
 import { SKIP } from './tree'
@@ -70,12 +70,25 @@ export function visibilityOf(dir: string, kind: ProjectKind, ignores: Ignores): 
   if (git) {
     const listed = (name: string, path: string, isDir: boolean) =>
       name !== '.git' && !LITTER.has(name) && !dots(name) && !SKIP_ALWAYS.has(name) && !ignores.ignored(path, isDir)
-    return { listed, indexed: listed }
+    return { listed, indexed: (name, path, isDir) => listed(name, path, isDir) && !(isDir && isWorktree(path)) }
   }
   const listed = (name: string) => !LITTER.has(name) && !dots(name) && !SKIP.has(name) && (kind === 'code' || !name.startsWith('.'))
   return {
     listed,
-    indexed: (name, _path, isDir) => listed(name) && !(isDir && (NOT_INDEXED.has(name) || name.startsWith('.'))),
+    indexed: (name, path, isDir) => listed(name) && !(isDir && (NOT_INDEXED.has(name) || name.startsWith('.') || isWorktree(path))),
+  }
+}
+
+/**
+ * A worktree inside the project (an agent's, in `.claude/worktrees`): its
+ * `.git` is a file. Another copy of the same files — shown in the tree, left
+ * out of going to a file and of search (ADR-006).
+ */
+export function isWorktree(dir: string): boolean {
+  try {
+    return statSync(join(dir, '.git')).isFile()
+  } catch {
+    return false
   }
 }
 

@@ -1,4 +1,5 @@
-import { renameSync } from 'node:fs'
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 
 /**
  * Windows lets another program hold a file for a moment — an antivirus or the
@@ -27,4 +28,10 @@ export function whileBusy<T>(op: () => T, o: { platform?: NodeJS.Platform; ms?: 
 /** `renameSync`, tried again while the file is held (Windows). */
 export function renameWhileBusy(from: string, to: string): void {
   whileBusy(() => renameSync(from, to))
+}
+
+/** A file written (its folder made), tried again while it is held (Windows). */
+export function writeFileWhileBusy(path: string, data: string | Uint8Array): void {
+  mkdirSync(dirname(path), { recursive: true })
+  whileBusy(() => writeFileSync(path, data))
 }

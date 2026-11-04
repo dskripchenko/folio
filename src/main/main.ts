@@ -50,12 +50,16 @@ import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { groupOf, isTabColor } from '../common/tabGroups'
-import { Session } from './session'
+import type { ChangeSpec } from '../common/review'
+import { WorktreeGit } from './review/worktreeGit'
+import { resolve as resolvePath } from 'node:path'
+import { registerReview } from './review/ipc'
+import { Session, specOf } from './session'
 import { Languages, type Labels } from './i18n'
 import type { Dictionary } from '../common/i18n'
 import { listDir } from './tree'
 import { Ignores } from './ignore'
-import { visibilityOf, type ProjectKind } from './visibility'
+import { isWorktree, visibilityOf, type ProjectKind } from './visibility'
 import { FileIndex } from './fileIndex'
 import { create as createEntry, duplicate as duplicateEntry, FileOpError, move as moveEntry, rename as renameEntry, saveAttachment } from './fileOps'
 import { Consoles } from './pty'
@@ -1298,9 +1302,21 @@ function ownerFolder(path: string): { kind: 'project'; id: string; dir: string }
   return null
 }
 
+/** A worktree's git (ADR-006, R4): the system's, as isomorphic-git cannot read one; null for an ordinary repository. */
+async function worktreeGit(root: string | null): Promise<WorktreeGit | null> {
+  if (!root || !isWorktree(root)) return null
+  const bin = await (systemGit ??= findSystemGit())
+  return bin ? new WorktreeGit(bin) : null
+}
+
 async function gitInfo(path: string) {
   const root = await repoOf(path)
   const owner = ownerFolder(path)
+  const wt = await worktreeGit(root)
+  if (wt && root) {
+    const b = await wt.branches(root)
+    return { root, branch: b.current, branches: b.local, remote: null, counts: null, merging: null, transport: (await transportOf()).kind, autoCommit: false, canStart: false, canAutoCommit: false }
+  }
   const branches = root ? await branchesOf(root) : { current: null, local: [] }
   const remote = root ? await remoteOf(root) : null
   return {
@@ -1346,11 +1362,15 @@ ipcMain.handle('git:history', async (_e, path: unknown, scope: unknown) => {
   if (typeof path !== 'string') return []
   const root = await repoOf(path)
   if (!root) return []
+  const wt = await worktreeGit(root)
+  if (wt) return wt.history(root, scope === 'all' ? null : path)
   return scope === 'all' ? repositoryHistory(root) : historyOf(root, path)
 })
 ipcMain.handle('git:text-at', async (_e, path: unknown, oid: unknown) => {
   if (typeof path !== 'string' || typeof oid !== 'string' || !/^[0-9a-f]{40}$/.test(oid)) return null
   const root = await repoOf(path)
+  const wt = await worktreeGit(root)
+  if (wt && root) return wt.textAt(root, path, oid)
   return root ? textAt(root, path, oid) : null
 })
 /** Keep a history in the file's folder: a repository, a first commit, commits on save. */
@@ -1386,6 +1406,8 @@ ipcMain.handle('git:head-text', async (_e, path: unknown) => {
   if (typeof path !== 'string') return null
   const root = await repoOf(path)
   if (!root) return null
+  const wt = await worktreeGit(root)
+  if (wt) return wt.headText(root, path)
   return headText(root, path)
 })
 
@@ -1394,6 +1416,8 @@ ipcMain.handle('git:changes', async (_e, path: unknown) => {
   if (typeof path !== 'string') return null
   const root = await repoOf(path)
   if (!root) return null
+  const wt = await worktreeGit(root)
+  if (wt) return { root, branch: (await wt.branches(root)).current, ...(await wt.changes(root)) }
   return { root, branch: await branchOf(root), ...(await changesOf(root)) }
 })
 /** The repository's root as asked for: one folio knows of (a project's or Shared's), never any folder. */
@@ -1407,14 +1431,18 @@ ipcMain.handle('git:stage', async (_e, root: unknown, paths: unknown) => {
   const dir = await changesRoot(root)
   const files = repoPaths(paths)
   if (!dir || !files) return false
-  await stageFiles(dir, files)
+  const wt = await worktreeGit(dir)
+  if (wt) await wt.stage(dir, files)
+  else await stageFiles(dir, files)
   return true
 })
 ipcMain.handle('git:unstage', async (_e, root: unknown, paths: unknown) => {
   const dir = await changesRoot(root)
   const files = repoPaths(paths)
   if (!dir || !files) return false
-  await unstageFiles(dir, files)
+  const wt = await worktreeGit(dir)
+  if (wt) await wt.unstage(dir, files)
+  else await unstageFiles(dir, files)
   return true
 })
 /** A file's changes thrown away, after asking: it cannot be undone. */
@@ -1431,13 +1459,21 @@ ipcMain.handle('git:discard', async (_e, root: unknown, path: unknown) => {
     detail: L().discardDetail,
   })
   if (response !== 0) return false
-  await discardFile(dir, files[0]!)
+  const wt = await worktreeGit(dir)
+  if (wt) await wt.discard(dir, files[0]!)
+  else await discardFile(dir, files[0]!)
   return true
 })
 ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown, amend: unknown) => {
   const dir = await changesRoot(root)
   if (!dir || typeof message !== 'string' || message.trim() === '' || mergeHead(dir)) return null
   const author = authorOf(dir, fallbackAuthor())
+  const wt = await worktreeGit(dir)
+  if (wt) {
+    const oid = await wt.commit(dir, message.trim(), author, amend === true).catch(() => null)
+    if (oid) send('git:committed', { path: dir })
+    return oid
+  }
   // Amended: the last commit made again with what is staged (or only its message).
   const oid = amend === true ? await amendLast(dir, message.trim(), author) : await commitStaged(dir, message.trim(), author)
   if (oid) send('git:committed', { path: dir })
@@ -1601,6 +1637,41 @@ async function confirm(message: string, detail: string, yes: string): Promise<bo
   return response === 0
 }
 
+// The review of changes (ADR-006): the system's git.
+registerReview({
+  dir: join(data, 'review'),
+  systemGit: () => (systemGit ??= findSystemGit()),
+  repoOf,
+  confirm,
+  trash: (path) => shell.trashItem(path),
+  addProject: (path) => {
+    workspace.addProject(path)
+    return workspaceView()
+  },
+  claudeText: () => ({ connectQuestion: L().claudeConnectQuestion, connectDetail: L().claudeConnectDetail, connect: L().claudeConnect }),
+  confirmLong: confirm,
+  forgetProject: (path) => {
+    for (const p of workspace.projects()) if (resolvePath(p.path) === resolvePath(path)) workspace.removeProject(p.id)
+    return workspaceView()
+  },
+  changed: (repo) => {
+    send('fs:changed', [{ root: roots.register(repo), dirs: [], files: [], all: true }])
+    send('git:committed', { path: repo })
+  },
+  text: () => {
+    const t = L()
+    return {
+      discardFileQuestion: t.discardQuestion,
+      discardFileDetail: t.reviewDiscardDetail,
+      discard: t.discardConfirm,
+      removeWorktreeQuestion: t.removeWorktreeQuestion,
+      removeWorktreeDetail: t.removeWorktreeDetail,
+      removeWorktreeDirty: t.removeWorktreeDirty,
+      remove: t.removeWorktree,
+    }
+  },
+})
+
 ipcMain.handle('git:merge-finish', (_e, path: unknown) =>
   gitAction(path, async (root) => ({ ok: true, oid: await finishMerge(root, authorOf(root, fallbackAuthor())) })),
 )
@@ -1742,7 +1813,7 @@ ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) =>
 
 ipcMain.handle('app:startup', () => {
   const fromArgv = filesFromArgv(process.argv, process.cwd())
-  type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean; color?: string | null; group?: string | null }
+  type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean; color?: string | null; group?: string | null; review?: ChangeSpec }
   const restore = (path: string | null, bufferId: string | null): Restored | null => {
     const buffer = bufferId ? buffers.get(bufferId) : null
     if (path === null && buffer === null) return null
@@ -1755,8 +1826,15 @@ ipcMain.handle('app:startup', () => {
   }
   const tabs: Restored[] = []
   for (const t of session.tabs()) {
+    const look = { color: t.color ?? null, group: t.group ?? null }
+    const review = specOf(t.review)
+    if (review) {
+      // A review's tab: its set read again by the window.
+      tabs.push({ doc: null, buffer: null, conflict: false, ...look, review })
+      continue
+    }
     const r = restore(t.path, t.buffer)
-    if (r) tabs.push({ ...r, color: t.color ?? null, group: t.group ?? null })
+    if (r) tabs.push({ ...r, ...look })
   }
   // A buffer the session does not name (the session write was lost) still comes back: notes are never dropped.
   const named = new Set(tabs.map((t) => t.buffer?.id).filter(Boolean))
@@ -1787,12 +1865,13 @@ ipcMain.on('link:external', (_e, url: unknown) => {
 ipcMain.on('doc:state', (_e, tabs: unknown, active: unknown, activePath: unknown, groups: unknown) => {
   const list = Array.isArray(tabs)
     ? tabs
-        .filter((t): t is { path: unknown; buffer: unknown; color: unknown; group: unknown } => typeof t === 'object' && t !== null)
+        .filter((t): t is { path: unknown; buffer: unknown; color: unknown; group: unknown; review: unknown } => typeof t === 'object' && t !== null)
         .map((t) => ({
           path: typeof t.path === 'string' ? t.path : null,
           buffer: typeof t.buffer === 'string' ? t.buffer : null,
           color: isTabColor(t.color) ? t.color : null,
           group: typeof t.group === 'string' ? t.group : null,
+          review: specOf(t.review),
         }))
     : []
   gate?.setActive(typeof activePath === 'string' ? activePath : null)

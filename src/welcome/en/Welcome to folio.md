@@ -136,6 +136,16 @@ In a project of code folio runs its **tasks** (`⌘⇧B`) and lists their
 (go to definition with `F12`, rename with `F2`, fixes with `⌘.`), and shows the
 **changes** against git (`Ctrl+Shift+G`): stage, commit, stash, branches, sync.
 
+## Reviewing an agent's work
+
+Working beside an AI agent in a terminal? **Review the changes** (`Ctrl+Shift+G`,
+then the page button) shows them as a pull request: viewed files fold, runs of
+changes are staged or thrown away, a double click edits the line beside.
+**Since the last look** shows only what the agent did since you looked;
+**Worktrees** (the branch button) lists its worktrees to review, take or remove;
+the `+` by a line number adds a comment, and **Send to the agent** pastes them
+into its console.
+
 ## Files folio shows
 
 Pictures (zoomed, fitted), video and sound in players, **PDF** in its viewer,
