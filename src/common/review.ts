@@ -124,3 +124,14 @@ export interface AgentEdit {
   /** From the repository asked about, when the file is in it. */
   rel?: string
 }
+
+/** The comments as one text for an agent: each with its file and line, the rows it is about, and what to do. */
+export function compose(intro: string, comments: readonly ReviewComment[]): string {
+  const parts = [intro, '']
+  comments.forEach((c, i) => {
+    parts.push(`${i + 1}. ${c.path}:${c.line}${c.side === 'a' ? ' (removed line)' : ''}`)
+    if (c.context.length) parts.push('```diff', ...c.context, '```')
+    parts.push(...c.text.trim().split('\n'), '')
+  })
+  return parts.join('\n').trimEnd() + '\n'
+}

@@ -50,10 +50,13 @@ import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { groupOf, isTabColor } from '../common/tabGroups'
-import type { ChangeSpec } from '../common/review'
 import { WorktreeGit } from './review/worktreeGit'
 import { resolve as resolvePath } from 'node:path'
 import { registerReview } from './review/ipc'
+import { McpServer } from './review/mcp'
+import { addCommand, removeCommand, runInShell } from './review/claudeMcp'
+import type { McpAnswer } from '../common/mcp'
+import type { ChangeSpec } from '../common/review'
 import { Session, specOf } from './session'
 import { Languages, type Labels } from './i18n'
 import type { Dictionary } from '../common/i18n'
@@ -1638,7 +1641,54 @@ async function confirm(message: string, detail: string, yes: string): Promise<bo
 }
 
 // The review of changes (ADR-006): the system's git.
-registerReview({
+// An agent's requests to show changes (R7), waiting for the person's answer in the window.
+const asks = new Map<number, (a: McpAnswer) => void>()
+let askSeq = 0
+ipcMain.handle('mcp:answer', (_e, id: unknown, answer: unknown) => {
+  const a = answer as Partial<McpAnswer> | null
+  const done = typeof id === 'number' ? asks.get(id) : undefined
+  if (!done || !a || (a.decision !== 'approved' && a.decision !== 'changes' && a.decision !== 'closed')) return false
+  done({ decision: a.decision, ...(typeof a.text === 'string' ? { text: a.text.slice(0, 200_000) } : {}) })
+  return true
+})
+
+const mcpTools = registerReview({
+  ask: (spec: ChangeSpec, message: string, signal: AbortSignal) =>
+    new Promise<McpAnswer>((resolve) => {
+      if (!win) return resolve({ decision: 'closed' })
+      const id = ++askSeq
+      const finish = (a: McpAnswer) => {
+        if (!asks.delete(id)) return
+        signal.removeEventListener('abort', gone)
+        win?.removeListener('closed', closed)
+        resolve(a)
+      }
+      // The agent stopped waiting: the window stops asking.
+      const gone = () => {
+        send('mcp:cancel', id)
+        finish({ decision: 'closed' })
+      }
+      const closed = () => finish({ decision: 'closed' })
+      asks.set(id, finish)
+      signal.addEventListener('abort', gone)
+      win.once('closed', closed)
+      send('mcp:ask', { id, spec, message })
+      if (win.isMinimized()) win.restore()
+      // Under test the window is not brought forward (out of the way of the person at the machine).
+      if (!underTest) win.show()
+    }),
+  openFile: async (path: string, line: number | null) => {
+    const opened = open(path)
+    if ('error' in opened && opened.error) return false
+    send('mcp:open', { opened, line })
+    return true
+  },
+  mcp: {
+    preview: () => addCommand(mcpLaunch(), process.platform === 'win32', CLAUDE || 'claude'),
+    // Under test Claude Code's settings are not touched unless a test names its own command.
+    add: (repo) => (CLAUDE ? runInShell((ps) => addCommand(mcpLaunch(), ps, CLAUDE), repo) : Promise.resolve({ ok: true, command: '', output: '' })),
+    remove: (repo) => (CLAUDE ? runInShell((ps) => removeCommand(ps, CLAUDE), repo) : Promise.resolve(null)),
+  },
   dir: join(data, 'review'),
   systemGit: () => (systemGit ??= findSystemGit()),
   repoOf,
@@ -1671,6 +1721,32 @@ registerReview({
     }
   },
 })
+
+/**
+ * folio's MCP server (R7) and the bridge an agent starts to reach it: the
+ * bridge is put beside folio's data (outside the app's archive, the same path
+ * after an update), where it reads where the server listens.
+ */
+const MCP_INFO = join(data, 'review', 'mcp.json')
+const MCP_BRIDGE = join(data, 'review', 'mcp-bridge.cjs')
+const mcp = new McpServer(mcpTools, app.getVersion())
+/** Claude Code's command (FOLIO_CLAUDE: another, for the tests; none under test otherwise). */
+const CLAUDE = process.env.FOLIO_CLAUDE || (process.env.FOLIO_E2E === '1' ? '' : 'claude')
+/** How an agent starts the bridge: folio's own executable as Node. */
+function mcpLaunch(): { exe: string; bridge: string; info: string } {
+  // An AppImage runs from a folder mounted anew at each start: the image itself is what stays.
+  return { exe: process.env.APPIMAGE || process.execPath, bridge: MCP_BRIDGE, info: MCP_INFO }
+}
+async function startMcp(): Promise<void> {
+  try {
+    const source = readFileSync(join(__dirname, 'mcp-bridge.cjs'), 'utf8')
+    mkdirSync(dirname(MCP_BRIDGE), { recursive: true })
+    if (!existsSync(MCP_BRIDGE) || readFileSync(MCP_BRIDGE, 'utf8') !== source) writeFileSync(MCP_BRIDGE, source)
+    await mcp.start(MCP_INFO)
+  } catch (e) {
+    console.error('folio: the MCP server did not start:', e)
+  }
+}
 
 ipcMain.handle('git:merge-finish', (_e, path: unknown) =>
   gitAction(path, async (root) => ({ ok: true, oid: await finishMerge(root, authorOf(root, fallbackAuthor())) })),
@@ -2015,6 +2091,7 @@ app.on('before-quit', (event) => {
 })
 
 app.on('will-quit', () => {
+  mcp.stop(MCP_INFO)
   watcher.close()
   void lsp.stopAll()
   // A downloaded version takes the program's place; only a packaged one has a place to take.
@@ -2050,6 +2127,7 @@ void app.whenReady().then(() => {
   useLanguage()
   buildMenu()
   win = createWindow()
+  void startMcp()
   updater.tidy()
   // Once a day at start, a while after the window is up; a source checkout (no release to replace) never looks.
   if ((app.isPackaged || process.env.FOLIO_UPDATE_URL) && workspace.updates() && updater.due()) setTimeout(() => void updater.check(), 10_000)

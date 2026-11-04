@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- folio's MCP server (ADR-006, R7): an agent shows you its changes and waits
+  for your answer. **Connect Claude Code to folio** also adds the server to
+  Claude Code for the project (`claude mcp add --scope local`). Its tools:
+  `show_changes` opens the review with the agent's message — **Approve**, or
+  **Request changes** with your comments on lines; `get_review_comments`;
+  `open_file` at a line; `list_worktrees`. The server listens on 127.0.0.1
+  with a token; the agent reaches it through a small bridge run by folio's own
+  executable, which tells it to start folio while folio is closed.
+
 ## [1.7.1] - 2026-11-04
 
 ### Fixed

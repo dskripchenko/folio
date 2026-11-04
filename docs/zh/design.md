@@ -238,7 +238,7 @@ folio 适合放在终端里运行的 AI 智能体旁边使用：你主要阅读�
 - **自上次查看以来**只显示上次查看之后的变化——编辑以及智能体自己的提交——最新的在前，并标明时间。在其中某个文件上点**已查看**会为它前移查看点，**全部已看**则为全部前移。**更改**面板会统计这些文件。
 - **Worktree**（右侧栏的分支按钮）列出仓库的 worktree——智能体或子智能体的，在 `.claude/worktrees` 或其他位置——显示分支、领先和落后于基准的提交、已更改文件和时间。每个都可以相对基准审阅、作为项目打开（其更改、历史和行号旁标记都可用）或在终端中打开、不提交地把更改取到主副本、合并，或连同分支一起删除。项目内部的 worktree 不参与搜索和跳转到文件。
 - **评论**：行号旁的 `+` 添加评论；行移动时评论会跟着它的行。**发送给智能体**会把未发送的评论——每条附带文件、行号和周围的行——作为一次粘贴、不带回车地放进智能体所在的控制台：在那里阅读后自己发送。
-- **将 Claude Code 连接到 folio**（命令）会在仓库的 `.claude/settings.local.json` 中添加一个钩子（写入前会先展示）：每次编辑后 Claude Code 都会告诉 folio 文件、会话和时间，审阅和 worktree 中会显示谁改了什么。**断开**只移除该钩子，不动其他设置。
+- **将 Claude Code 连接到 folio**（命令）会在仓库的 `.claude/settings.local.json` 中添加一个钩子（写入前会先展示）：每次编辑后 Claude Code 都会告诉 folio 文件、会话和时间，审阅和 worktree 中会显示谁改了什么。它还会用 Claude Code 自己的 `claude mcp add --scope local` 为该项目把 folio 的 MCP 服务器加入 Claude Code（写入其设置，而非仓库；该命令也会展示，无法运行时 folio 会告诉你要运行什么）。之后代理有四个工具：`show_changes` 打开带有其消息的审阅并等待你的答复——**批准**，或带着你对各行的评论**要求修改**（每条附文件、行号和上下文）；`get_review_comments` 读取尚未交给代理的评论；`open_file` 在某一行打开文件；`list_worktrees` 列出 worktree。folio 未运行时，代理会被告知先启动它。**断开**只移除钩子和服务器，不动其他设置。
 
 审阅需要系统中安装了 git。
 
@@ -409,7 +409,7 @@ Electron 默认把数据存放在用户配置目录中。folio 把所有数据�
 
 其中包括：工作区与设置（`workspace.json`）、自定义快捷键（`keybindings.json`）、网络授权（`consent.json`）、加密保存的同步登录信息（`logins.json`）、共享（`library/`）、打开的标签页和未保存的编辑（`session/`）、审阅标记——已查看的文件、评论、上次查看的检查点以及 Claude Code 报告的编辑（`review/`）——自定义语言（`locales/`）、更新（`update/`）、日志以及 Chromium 自身的数据（`chromium/`）。
 
-只有两个文件会写入你的文件夹，而且只在你要求时：设置窗口中的项目设置写入项目的 `.folio/settings.json`；**将 Claude Code 连接到 folio** 会在仓库的 `.claude/settings.local.json`（本地文件，不提交）中添加钩子——**断开 Claude Code** 会将其移除。删除 folio 不会动这两个文件。
+只有两个文件会写入你的文件夹，而且只在你要求时：设置窗口中的项目设置写入项目的 `.folio/settings.json`；**将 Claude Code 连接到 folio** 会在仓库的 `.claude/settings.local.json`（本地文件，不提交）中添加钩子，并把 folio 的 MCP 服务器加入 Claude Code 对该项目的本地设置——**断开 Claude Code** 会同时移除两者。删除 folio 不会动它们。folio 的 MCP 服务器只监听 127.0.0.1，且只响应保存在 `folio-data/review` 中的令牌。
 
 ## 更新
 

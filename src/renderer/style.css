@@ -872,6 +872,12 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .rv-comment-input { display: block; box-sizing: border-box; width: 100%; max-width: 760px; padding: 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--bg); color: var(--fg); font: 13px/1.5 system-ui, -apple-system, sans-serif; resize: vertical; }
 .rv-comment-actions { display: flex; gap: 6px; margin-top: 6px; }
 .rv-send { border-color: var(--accent); color: var(--accent); }
+/* An agent waiting for the person's answer (R7). */
+.rv-ask { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+.rv-ask-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.rv-ask-message { color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.rv-ask-hint { color: var(--muted); font-size: 12px; }
+.rv-ask .rv-button:disabled { opacity: 0.5; cursor: default; }
 .rv-send-dialog { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.32); }
 .rv-send-box { display: flex; flex-direction: column; gap: 10px; width: min(760px, 92vw); max-height: 86vh; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3); }
 .rv-send-box h3 { margin: 0; font-size: 15px; }

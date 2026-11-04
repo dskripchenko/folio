@@ -207,6 +207,11 @@ contextBridge.exposeInMainWorld('folio', {
   reviewWorktreeRemove: (main: string, path: string, branch: string | null, changed: number) => ipcRenderer.invoke('review:worktree-remove', main, path, branch, changed),
   reviewWorktreeMerge: (main: string, branch: string) => ipcRenderer.invoke('review:worktree-merge', main, branch),
   reviewWorktreeTake: (main: string, path: string, base: string) => ipcRenderer.invoke('review:worktree-take', main, path, base),
+  // An agent's requests over MCP (R7).
+  onMcpAsk: listen('mcp:ask'),
+  onMcpCancel: listen('mcp:cancel'),
+  onMcpOpen: listen('mcp:open'),
+  mcpAnswer: (id: number, answer: unknown) => ipcRenderer.invoke('mcp:answer', id, answer),
   onI18nChanged: listen('i18n:changed'),
   onWelcome: listen('menu:welcome'),
   openWelcome: () => ipcRenderer.invoke('welcome:open'),

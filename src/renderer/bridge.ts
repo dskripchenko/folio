@@ -1,3 +1,4 @@
+import type { McpAnswer } from '../common/mcp'
 import type { Hunk } from '../common/hunks'
 import type { AgentEdit, ChangedFile, Changeset, ChangeSpec, FileTexts, ReviewAction, ReviewComment, Worktree } from '../common/review'
 import type { GroupData, TabColor } from '../common/tabGroups'
@@ -394,12 +395,17 @@ export interface FolioBridge {
   reviewCommentSave(root: string, comment: ReviewComment): Promise<{ ok: true } | GitRefusal>
   reviewCommentDelete(root: string, ids: string[]): Promise<{ ok: true } | GitRefusal>
   reviewCommentSent(root: string, ids: string[]): Promise<{ ok: true } | GitRefusal>
+  // An agent's requests over MCP (R7).
+  onMcpAsk: Listener
+  onMcpCancel: Listener
+  onMcpOpen: Listener
+  mcpAnswer(id: number, answer: McpAnswer): Promise<boolean>
   reviewSetViewed(root: string, key: string, hash: string | null): Promise<{ ok: true } | GitRefusal>
   reviewCheckpoint(root: string): Promise<{ ok: true } | GitRefusal>
   reviewCheckpointFile(root: string, path: string): Promise<{ ok: true } | GitRefusal>
   reviewSinceCount(root: string): Promise<{ ok: true; count: number | null } | GitRefusal>
   reviewClaudeState(path: string): Promise<{ ok: true; repo: string; connected: boolean; readable: boolean } | GitRefusal>
-  reviewClaudeConnect(path: string, on: boolean): Promise<{ ok: boolean } | GitRefusal>
+  reviewClaudeConnect(path: string, on: boolean): Promise<{ ok: boolean; mcp?: { ok: boolean; command: string; output: string } } | GitRefusal>
   reviewAgentEdits(path: string): Promise<{ ok: true; edits: AgentEdit[] } | GitRefusal>
   reviewWorktrees(path: string, base: string | null): Promise<{ ok: true; base: string; main: string; list: Worktree[] } | GitRefusal>
   reviewWorktreeProject(main: string, path: string): Promise<{ ok: true; workspace: WorkspaceView } | GitRefusal>

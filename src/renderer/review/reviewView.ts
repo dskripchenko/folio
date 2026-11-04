@@ -4,6 +4,7 @@ import { hunkState, type Hunk } from '../../common/hunks'
 import { plural } from '../../common/plural'
 import { editable, rootOf, type AgentEdit, type ChangedFile, type Changeset, type ChangeSpec, type FileTexts, type ReviewComment } from '../../common/review'
 import { folio, prefs, type GitRefusal } from '../bridge'
+import type { McpAnswer } from '../../common/mcp'
 import { syntaxTheme } from '../code'
 import { anchorOf, compose, contextOf, excerptOf } from './comments'
 import { blocksOf, fileDiff, markRanges, type FileDiff, type Row } from './rows'
@@ -90,6 +91,8 @@ export class ReviewView {
   /** The last edit an agent reported of each file (R6), by its path. */
   private agentEdits = new Map<string, AgentEdit>()
   private sendButton: HTMLButtonElement | null = null
+  /** An agent waiting for the person's answer on this set (R7). */
+  private ask: { id: number; done: (a: McpAnswer) => void; bar: HTMLElement } | null = null
   private layout: Layout = prefs.get<Layout>('reviewLayout', 'unified')
   private readonly head: HTMLElement
   private readonly titleEl: HTMLElement
@@ -232,8 +235,14 @@ export class ReviewView {
   }
 
   private syncSend(): void {
-    if (!this.sendButton) return
     const n = this.unsent().length
+    if (this.ask) {
+      const request = this.ask.bar.querySelector<HTMLButtonElement>('[data-testid="review-ask-request"]')!
+      request.textContent = this.t.agentRequest.replace('{n}', String(n))
+      request.disabled = n === 0
+      this.ask.bar.querySelector('.rv-ask-hint')!.textContent = n === 0 ? this.t.agentNoComments : ''
+    }
+    if (!this.sendButton) return
     this.sendButton.hidden = n === 0
     this.sendButton.textContent = this.t.send.replace('{n}', String(n))
   }
@@ -850,17 +859,91 @@ export class ReviewView {
     this.syncSend()
   }
 
-  /** The comments not sent, as one text, to paste into the agent's console — read there, sent with Enter by the reader. */
-  private openSend(): void {
-    const t = this.t
-    // Each where it is now: its line and the rows around it as they read today.
-    const comments = this.unsent().map((c) => {
+  /** The comments not sent, each where it is now: its line and the rows around it as they read today. */
+  private current(): ReviewComment[] {
+    return this.unsent().map((c) => {
       const diff = this.files.get(c.path)?.diff
       if (!diff) return c
       const i = anchorOf(c, c.side === 'b' ? diff.after : diff.before)
       const k = i < 0 ? -1 : diff.rows.findIndex((r) => (c.side === 'b' ? r.b === i : r.a === i && r.kind !== 'add'))
       return k < 0 ? c : { ...c, line: i + 1, context: contextOf(diff, k) }
     })
+  }
+
+  /** The comments as one text for the agent, by file and line. */
+  private composed(comments: ReviewComment[]): string {
+    return compose(this.t.intro.replace('{title}', this.title()), [...comments].sort((x, y) => (x.path === y.path ? x.line - y.line : x.path < y.path ? -1 : 1)))
+  }
+
+  private markSent(root: string, comments: ReviewComment[]): void {
+    void folio()
+      .reviewCommentSent(root, comments.map((c) => c.id))
+      .then(() => {
+        for (const c of this.comments) if (comments.some((x) => x.id === c.id)) c.sent = true
+        this.syncSend()
+        for (const fv of this.files.values()) if (fv.loaded && comments.some((c) => c.path === fv.file.path)) this.renderBody(fv)
+      })
+  }
+
+  /**
+   * An agent asks the person to look at this set and waits (R7): a bar over
+   * the review — approve, or send the comments back. Another request on the
+   * same set takes the place of the one before (that one ends unanswered).
+   */
+  agentAsks(id: number, message: string, done: (a: McpAnswer) => void): void {
+    this.endAsk({ decision: 'closed' })
+    const t = this.t
+    const bar = document.createElement('div')
+    bar.className = 'rv-ask'
+    bar.dataset.testid = 'review-ask'
+    const text = document.createElement('div')
+    text.className = 'rv-ask-text'
+    const head = document.createElement('strong')
+    head.textContent = t.agentWaits
+    text.append(head)
+    if (message) {
+      const note = document.createElement('span')
+      note.className = 'rv-ask-message'
+      note.dataset.testid = 'review-ask-message'
+      note.textContent = message
+      text.append(note)
+    }
+    const hint = document.createElement('span')
+    hint.className = 'rv-ask-hint'
+    const approve = button(t.agentApprove, 'review-ask-approve', () => this.endAsk({ decision: 'approved' }), 'rv-button rv-primary')
+    const request = button('', 'review-ask-request', () => {
+      const comments = this.current()
+      if (!comments.length || !this.set) return
+      const answer: McpAnswer = { decision: 'changes', text: this.composed(comments) }
+      this.markSent(this.set.root, comments)
+      this.endAsk(answer)
+    })
+    bar.append(text, hint, request, approve)
+    this.ask = { id, done, bar }
+    this.head.after(bar)
+    this.syncSend()
+  }
+
+  /** The agent stopped waiting. */
+  agentCancelled(id: number): void {
+    if (this.ask?.id === id) {
+      this.ask.bar.remove()
+      this.ask = null
+    }
+  }
+
+  private endAsk(answer: McpAnswer): void {
+    const ask = this.ask
+    if (!ask) return
+    this.ask = null
+    ask.bar.remove()
+    ask.done(answer)
+  }
+
+  /** The comments not sent, as one text, to paste into the agent's console — read there, sent with Enter by the reader. */
+  private openSend(): void {
+    const t = this.t
+    const comments = this.current()
     if (!comments.length || !this.set) return
     const root = this.set.root
     this.el.querySelector('.rv-send-dialog')?.remove()
@@ -874,7 +957,7 @@ export class ReviewView {
     const area = document.createElement('textarea')
     area.className = 'rv-send-text'
     area.dataset.testid = 'review-send-text'
-    area.value = compose(t.intro.replace('{title}', this.title()), [...comments].sort((x, y) => (x.path === y.path ? x.line - y.line : x.path < y.path ? -1 : 1)))
+    area.value = this.composed(comments)
     area.addEventListener('keydown', (e) => {
       e.stopPropagation()
       if (e.key === 'Escape') dialog.remove()
@@ -907,13 +990,7 @@ export class ReviewView {
         if (done === 'unsafe') hint.textContent = t.pasteUnsafe
         return
       }
-      void folio()
-        .reviewCommentSent(root, comments.map((c) => c.id))
-        .then(() => {
-          for (const c of this.comments) if (comments.some((x) => x.id === c.id)) c.sent = true
-          this.syncSend()
-          for (const fv of this.files.values()) if (fv.loaded && comments.some((c) => c.path === fv.file.path)) this.renderBody(fv)
-        })
+      this.markSent(root, comments)
       close()
     })
     pasteBtn.classList.add('rv-primary')
@@ -934,6 +1011,7 @@ export class ReviewView {
   }
 
   destroy(): void {
+    this.endAsk({ decision: 'closed' })
     this.observer.disconnect()
   }
 }

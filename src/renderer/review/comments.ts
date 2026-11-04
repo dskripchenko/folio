@@ -37,13 +37,4 @@ export function contextOf(diff: FileDiff, rowIndex: number, around = 3): string[
   return rows.map((r: Row) => (r.kind === 'del' ? `-${diff.before[r.a!]}` : r.kind === 'add' ? `+${diff.after[r.b!]}` : ` ${diff.after[r.b!] ?? diff.before[r.a!]}`))
 }
 
-/** The comments as one text for an agent: each with its file and line, the rows it is about, and what to do. */
-export function compose(intro: string, comments: readonly ReviewComment[]): string {
-  const parts = [intro, '']
-  comments.forEach((c, i) => {
-    parts.push(`${i + 1}. ${c.path}:${c.line}${c.side === 'a' ? ' (removed line)' : ''}`)
-    if (c.context.length) parts.push('```diff', ...c.context, '```')
-    parts.push(...c.text.trim().split('\n'), '')
-  })
-  return parts.join('\n').trimEnd() + '\n'
-}
+export { compose } from '../../common/review'

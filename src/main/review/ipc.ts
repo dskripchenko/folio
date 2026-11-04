@@ -2,10 +2,12 @@ import { ipcMain } from 'electron'
 import { existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { Hunk } from '../../common/hunks'
-import { commentOf, type ChangedFile, type ChangeSpec } from '../../common/review'
+import { answerText, type McpAnswer } from '../../common/mcp'
+import { commentOf, compose, type ChangedFile, type ChangeSpec } from '../../common/review'
 import { GitError } from '../git'
 import { ReviewGit } from './git'
 import { compactEvents, hasHook, hookCommand, readEvents, readSettings, settingsFile, withHook, withoutHook, writeSettings } from './hooks'
+import type { ToolHandler } from './mcp'
 import { ReviewStore } from './store'
 
 /**
@@ -32,6 +34,16 @@ export interface ReviewDeps {
   /** Asked with the change shown in full (the hook's settings). */
   confirmLong: (message: string, detail: string, yes: string) => Promise<boolean>
   text: () => { discardFileQuestion: string; discardFileDetail: string; discard: string; removeWorktreeQuestion: string; removeWorktreeDetail: string; removeWorktreeDirty: string; remove: string }
+  /** An agent's request (R7): the set shown to the person, their answer awaited; ended when the agent goes. */
+  ask: (spec: ChangeSpec, message: string, signal: AbortSignal) => Promise<McpAnswer>
+  /** A file opened for the person at a line (R7). */
+  openFile: (path: string, line: number | null) => Promise<boolean>
+  /** folio's MCP server added to Claude Code for a repository, and taken out (R7). */
+  mcp: {
+    preview: () => string
+    add: (repo: string) => Promise<{ ok: boolean; command: string; output: string }>
+    remove: (repo: string) => Promise<unknown>
+  }
 }
 
 /** A path as the disk has it (its folder's, for a file gone). */
@@ -71,7 +83,8 @@ function hunkOf(v: unknown): (Hunk & { lines?: { before: string[]; after: string
   }
 }
 
-export function registerReview(deps: ReviewDeps): void {
+/** The review's channels to the window; the tools it gives an agent over MCP (R7). */
+export function registerReview(deps: ReviewDeps): Record<string, ToolHandler> {
   const store = new ReviewStore(deps.dir)
   let git: ReviewGit | null = null
   const need = async (): Promise<ReviewGit> => {
@@ -238,11 +251,16 @@ export function registerReview(deps: ReviewDeps): void {
     const t = deps.claudeText()
     const command = hookCommand(store.eventsFile(root))
     if (on === true) {
-      const detail = t.connectDetail.replace('{file}', settingsFile(root)).replace('{command}', command)
+      const detail = t.connectDetail.replace('{file}', settingsFile(root)).replace('{command}', command).replace('{mcp}', deps.mcp.preview())
       if (!(await deps.confirmLong(t.connectQuestion, detail, t.connect))) return { ok: false }
       mkdirSync(dirname(store.eventsFile(root)), { recursive: true })
       writeSettings(root, withHook(settings, command))
-    } else writeSettings(root, withoutHook(settings))
+      // The server added too: an old entry (an older folio's place) taken out first.
+      await deps.mcp.remove(root)
+      return { ok: true, mcp: await deps.mcp.add(root) }
+    }
+    writeSettings(root, withoutHook(settings))
+    await deps.mcp.remove(root)
     return { ok: true }
   })
   handle('review:agent-edits', async (path) => {
@@ -322,4 +340,68 @@ export function registerReview(deps: ReviewDeps): void {
     }
     return { ok: true }
   })
+
+  // An agent's tools (R7): what the review gives an agent over MCP. The repository is any path in it.
+  const repoAt = async (v: unknown): Promise<string> => {
+    if (typeof v !== 'string' || !isAbsolute(v)) throw new Error('repo: an absolute path in a repository is needed')
+    const root = await deps.repoOf(v)
+    if (!root) throw new Error(`Not in a git repository: ${v}`)
+    return root
+  }
+  const word = (v: unknown, name: string): string | undefined => {
+    if (v === undefined || v === null || v === '') return undefined
+    if (typeof v !== 'string' || !REV.test(v)) throw new Error(`${name}: not a revision`)
+    return v
+  }
+  const sorted = <T extends { path: string; line: number }>(list: T[]) => [...list].sort((x, y) => (x.path === y.path ? x.line - y.line : x.path < y.path ? -1 : 1))
+
+  return {
+    show_changes: async (args, signal) => {
+      const g = await need()
+      const root = await repoAt(args.repo)
+      const kind = args.kind ?? 'working'
+      let spec: ChangeSpec
+      if (kind === 'working') spec = { kind, repo: root }
+      else if (kind === 'since') spec = { kind, repo: root }
+      else if (kind === 'commit') spec = { kind, repo: root, oid: word(args.rev, 'rev') ?? 'HEAD' }
+      else if (kind === 'range') {
+        const from = word(args.from, 'from')
+        if (!from) throw new Error('from: the start of the range is needed')
+        spec = { kind, repo: root, from, to: word(args.to, 'to') ?? 'HEAD' }
+      } else if (kind === 'worktree') {
+        const main = await mainOf(root)
+        spec = { kind, path: root, base: word(args.base, 'base') ?? (await g.currentBranch(main)) ?? 'HEAD' }
+      } else throw new Error(`kind: one of working, commit, range, worktree, since`)
+      // Read once here: a set that cannot be read is said to the agent, not shown empty to the person.
+      if (spec.kind !== 'since') await g.changeset(spec)
+      const message = typeof args.message === 'string' ? args.message.slice(0, 2000) : ''
+      return { text: answerText(await deps.ask(spec, message, signal)) }
+    },
+    get_review_comments: async (args) => {
+      const root = await repoAt(args.repo)
+      const all = store.of(root).comments.filter((c) => args.all === true || !c.sent)
+      if (!all.length) return { text: 'No comments.' }
+      store.markSent(root, all.map((c) => c.id))
+      return { text: compose(`Comments on the changes in ${root}:`, sorted(all)) }
+    },
+    open_file: async (args) => {
+      if (typeof args.path !== 'string' || !isAbsolute(args.path) || !existsSync(args.path)) throw new Error('path: an absolute path of a file that is there')
+      const line = typeof args.line === 'number' && Number.isInteger(args.line) && args.line > 0 ? args.line : null
+      return (await deps.openFile(args.path, line)) ? { text: `Opened ${args.path}${line ? `:${line}` : ''}.` } : { text: `folio could not open ${args.path}.`, error: true }
+    },
+    list_worktrees: async (args) => {
+      const g = await need()
+      const root = await repoAt(args.repo)
+      const main = await mainOf(root)
+      const base = (await g.currentBranch(main)) ?? 'HEAD'
+      const list = await g.worktrees(main, base)
+      return {
+        text: JSON.stringify(
+          { base, worktrees: list.map((w) => ({ path: w.path, main: w.main, branch: w.branch, changed: w.changed, ahead: w.ahead, behind: w.behind })) },
+          null,
+          2,
+        ),
+      }
+    },
+  }
 }
