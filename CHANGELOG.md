@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+- Closing many tabs: a tab's menu closes the others, those to its right, the
+  saved ones or all — also from the commands, the File menu and
+  `Cmd/Ctrl+Shift+W`; the saved go first, each with changes is asked about.
+- Tab colours and groups: a tab of a colour of its own; groups with a name and
+  a colour, folded by a click on their chip, joined from the menu or by
+  dropping a tab on the chip; kept across a restart.
+
 ## [1.5.1] - 2026-11-04
 
 ### Changed

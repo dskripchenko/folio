@@ -20,8 +20,12 @@ contextBridge.exposeInMainWorld('folio', {
   external: (url: string) => ipcRenderer.send('link:external', url),
   /** The path of a file dropped on the window. */
   pathOf: (file: File) => webUtils.getPathForFile(file),
-  state: (tabs: { path: string | null; buffer: string | null }[], active: number | null, activePath: string | null) =>
-    ipcRenderer.send('doc:state', tabs, active, activePath),
+  state: (
+    tabs: { path: string | null; buffer: string | null; color: string | null; group: string | null }[],
+    active: number | null,
+    activePath: string | null,
+    groups: { id: string; name: string; color: string; collapsed: boolean }[],
+  ) => ipcRenderer.send('doc:state', tabs, active, activePath, groups),
   newBufferId: () => ipcRenderer.invoke('buf:new-id'),
   writeBuffer: (buffer: Record<string, unknown>) => ipcRenderer.send('buf:write', buffer),
   dropBuffer: (id: string) => ipcRenderer.send('buf:drop', id),
@@ -181,6 +185,7 @@ contextBridge.exposeInMainWorld('folio', {
   onOpened: listen('doc:opened'),
   onBlocked: listen('net:blocked'),
   onCloseTab: listen('menu:close-tab'),
+  onCloseAllTabs: listen('menu:close-all-tabs'),
   onI18nChanged: listen('i18n:changed'),
   onWelcome: listen('menu:welcome'),
   openWelcome: () => ipcRenderer.invoke('welcome:open'),

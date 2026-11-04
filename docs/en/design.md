@@ -456,6 +456,16 @@ the row, in its view, scrolled where it was. A tab is dragged to another place
 in the row, onto the right half of the view to open it beside the main one,
 and back onto the left half.
 
+A tab's menu closes it, the others, those to its right, the saved ones or all
+(`Cmd/Ctrl+Shift+W`); saved tabs go first, then each with changes is asked
+about, and a Cancel stops there. A tab may have a colour of its own and belong
+to a group: a chip with a name and a colour before its tabs, which stand
+together and are underlined in that colour. A click on the chip folds the
+group (its tabs hidden, their number shown); a tab joins a group from its menu
+or by being dropped on the chip or between the group's tabs. The chip's menu
+renames, recolours, ungroups or closes the group. Colours and groups are kept
+in the session.
+
 **Embeds of files.** `![[photo.png]]`, `![[clip.mp4]]`, `![[song.mp3]]` and
 `![[report.pdf]]` show the file in the note, found by its name anywhere in the
 project (as a link is); `![[photo.png|300]]` or `|300x200` sizes it. A click on

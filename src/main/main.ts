@@ -49,6 +49,7 @@ import { DIAGRAM_SYNTAX, formatByName, isMedia, MARKDOWN_EXT, OPENABLE_EXT, open
 import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
+import { groupOf, isTabColor } from '../common/tabGroups'
 import { Session } from './session'
 import { Languages, type Labels } from './i18n'
 import type { Dictionary } from '../common/i18n'
@@ -366,6 +367,7 @@ function buildMenu(): void {
         { label: L().print, accelerator: 'CmdOrCtrl+P', registerAccelerator: false, click: () => send('menu:print') },
         { label: L().exportPdf, accelerator: 'CmdOrCtrl+Shift+P', registerAccelerator: false, click: () => send('menu:export-pdf') },
         { label: L().closeTab, accelerator: 'CmdOrCtrl+W', registerAccelerator: false, click: () => send('menu:close-tab') },
+        { label: L().closeAllTabs, accelerator: 'CmdOrCtrl+Shift+W', registerAccelerator: false, click: () => send('menu:close-all-tabs') },
         { type: 'separator' },
         mac ? { role: 'close' } : { role: 'quit' },
       ],
@@ -1740,7 +1742,7 @@ ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) =>
 
 ipcMain.handle('app:startup', () => {
   const fromArgv = filesFromArgv(process.argv, process.cwd())
-  type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean }
+  type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean; color?: string | null; group?: string | null }
   const restore = (path: string | null, bufferId: string | null): Restored | null => {
     const buffer = bufferId ? buffers.get(bufferId) : null
     if (path === null && buffer === null) return null
@@ -1754,7 +1756,7 @@ ipcMain.handle('app:startup', () => {
   const tabs: Restored[] = []
   for (const t of session.tabs()) {
     const r = restore(t.path, t.buffer)
-    if (r) tabs.push(r)
+    if (r) tabs.push({ ...r, color: t.color ?? null, group: t.group ?? null })
   }
   // A buffer the session does not name (the session write was lost) still comes back: notes are never dropped.
   const named = new Set(tabs.map((t) => t.buffer?.id).filter(Boolean))
@@ -1771,7 +1773,7 @@ ipcMain.handle('app:startup', () => {
   // The first start: the welcome document opens by itself, once (under test only when a test asks for it).
   const first = !workspace.welcomed() && (!underTest || process.env.FOLIO_WELCOME === '1')
   if (first) workspace.setWelcomed()
-  return { tabs, active, locale: language, shared: workspace.shared(), i18n: i18nState(), welcome: first }
+  return { tabs, groups: session.groups(), active, locale: language, shared: workspace.shared(), i18n: i18nState(), welcome: first }
 })
 ipcMain.handle('doc:open-dialog', () => openDialog())
 ipcMain.handle('doc:open', (_e, path: unknown) => (typeof path === 'string' ? open(path) : { error: 'Not a path', path: '' }))
@@ -1782,14 +1784,19 @@ ipcMain.handle('doc:open-url', (_e, url: unknown) => {
 ipcMain.on('link:external', (_e, url: unknown) => {
   if (typeof url === 'string' && (/^https?:\/\//.test(url) || url.startsWith('mailto:'))) void shell.openExternal(url)
 })
-ipcMain.on('doc:state', (_e, tabs: unknown, active: unknown, activePath: unknown) => {
+ipcMain.on('doc:state', (_e, tabs: unknown, active: unknown, activePath: unknown, groups: unknown) => {
   const list = Array.isArray(tabs)
     ? tabs
-        .filter((t): t is { path: unknown; buffer: unknown } => typeof t === 'object' && t !== null)
-        .map((t) => ({ path: typeof t.path === 'string' ? t.path : null, buffer: typeof t.buffer === 'string' ? t.buffer : null }))
+        .filter((t): t is { path: unknown; buffer: unknown; color: unknown; group: unknown } => typeof t === 'object' && t !== null)
+        .map((t) => ({
+          path: typeof t.path === 'string' ? t.path : null,
+          buffer: typeof t.buffer === 'string' ? t.buffer : null,
+          color: isTabColor(t.color) ? t.color : null,
+          group: typeof t.group === 'string' ? t.group : null,
+        }))
     : []
   gate?.setActive(typeof activePath === 'string' ? activePath : null)
-  session.set(list, typeof active === 'number' ? active : null)
+  session.set(list, typeof active === 'number' ? active : null, Array.isArray(groups) ? groups.map(groupOf).filter((g) => g !== null) : [])
 })
 
 // Editing ---------------------------------------------------------------------

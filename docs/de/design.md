@@ -500,6 +500,17 @@ seinen Platz in der Reihe, in seiner Ansicht, dorthin gescrollt, wo er war. Ein
 Tab wird an eine andere Stelle der Reihe gezogen, auf die rechte Hälfte der
 Ansicht, um ihn neben der Hauptansicht zu öffnen, und zurück auf die linke.
 
+Das Menü eines Tabs schließt ihn, die anderen, die rechts davon, die
+gespeicherten oder alle (`Cmd/Ctrl+Shift+W`): zuerst die gespeicherten, dann
+wird zu jedem mit Änderungen gefragt, ein Abbrechen hält an. Ein Tab kann eine
+eigene Farbe haben und zu einer Gruppe gehören: vor ihren Tabs steht ein Etikett
+mit Name und Farbe, die Tabs stehen zusammen und sind in dieser Farbe
+unterstrichen. Ein Klick auf das Etikett klappt die Gruppe ein (ihre Tabs
+verborgen, ihre Zahl gezeigt); ein Tab kommt über sein Menü in eine Gruppe oder
+indem man ihn auf das Etikett oder zwischen ihre Tabs fallen lässt. Das Menü des
+Etiketts benennt um, färbt um, löst die Gruppe auf oder schließt sie. Farben und
+Gruppen bleiben in der Sitzung erhalten.
+
 **Eingebettete Dateien.** `![[foto.png]]`, `![[clip.mp4]]`, `![[lied.mp3]]`
 und `![[bericht.pdf]]` zeigen die Datei in der Notiz, gefunden über ihren Namen
 irgendwo im Projekt (wie ein Link); `![[foto.png|300]]` oder `|300x200` geben
