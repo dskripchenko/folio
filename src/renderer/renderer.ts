@@ -106,6 +106,7 @@ const TEXT = {
     gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
     media: { zoomIn: 'Zoom in', zoomOut: 'Zoom out', fit: 'Fit to the view', actual: 'Actual size', external: 'Open in the system’s program', failed: 'folio cannot show {name} (a format or codec it does not read).' } as MediaText,
+    wrapLines: 'Wrap long lines',
     lsp: { none: 'no language server', install: 'To understand the code, install a language server: {install}', untrusted: '{server}: the project is not trusted', failed: '{server} did not start', log: 'Language server output', definitions: 'Definitions', references: 'References' },
     problems: { title: 'Problems', close: 'Close', none: 'No problems. A task\'s errors and warnings come here.', from: 'From the task {task}' } as ProblemsText,
     tasks2: { run: 'Run a task', none: 'No tasks here: scripts of package.json or composer.json, Makefile targets, justfile recipes, or .folio/settings.json.' },
@@ -171,6 +172,7 @@ const TEXT = {
     gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
     media: { zoomIn: 'Увеличить', zoomOut: 'Уменьшить', fit: 'Вписать в окно', actual: 'Исходный размер', external: 'Открыть в системной программе', failed: 'folio не может показать {name} (формат или кодек, которого он не читает).' } as MediaText,
+    wrapLines: 'Переносить длинные строки',
     lsp: { none: 'без языкового сервера', install: 'Чтобы folio понимал код, поставьте языковой сервер: {install}', untrusted: '{server}: проекту не доверяют', failed: '{server} не запустился', log: 'Вывод языкового сервера', definitions: 'Определения', references: 'Ссылки' },
     problems: { title: 'Проблемы', close: 'Закрыть', none: 'Проблем нет. Сюда попадают ошибки и предупреждения задач.', from: 'Из задачи {task}' } as ProblemsText,
     tasks2: { run: 'Запустить задачу', none: 'Задач нет: скрипты package.json или composer.json, цели Makefile, рецепты justfile или .folio/settings.json.' },
@@ -359,8 +361,37 @@ function mediaOptions(tab: Tab): ViewOptions['media'] {
   }
 }
 
+/** Prose (plain text, Markdown, logs) or code: wrapping is chosen for each, and remembered. */
+const wrapKind = (language: string | null): 'prose' | 'code' => (language === null || language === 'markdown' || language === 'log' ? 'prose' : 'code')
+
+/** Whether lines wrap for a kind of text: prose wraps, code does not, unless Alt+Z said otherwise. */
+function wrapFor(language: string | null): boolean {
+  const kind = wrapKind(language)
+  try {
+    const saved = localStorage.getItem(`folio.wrap.${kind}`)
+    if (saved !== null) return saved === '1'
+  } catch {
+    // No storage: the defaults.
+  }
+  return kind === 'prose'
+}
+
+/** Alt+Z, as in VS Code: wrapping on or off in the editor in view, and for its kind of text from now on. */
+function toggleWrap(): void {
+  const editor = codeEditorOf(active)
+  if (!editor) return
+  const on = !editor.lineWrapping
+  editor.lineWrapping = on
+  try {
+    localStorage.setItem(`folio.wrap.${wrapKind(editor.language)}`, on ? '1' : '0')
+  } catch {
+    // Not remembered: this editor still changed.
+  }
+}
+
 function viewOptions(tab: Tab, main = false): ViewOptions {
   return {
+    wrap: wrapFor,
     media: mediaOptions(tab),
     base: tab.doc?.base,
     name: tab.doc?.name ?? titleOf(tab),
@@ -2303,6 +2334,7 @@ function commands(): Command[] {
     { id: 'template-insert', group: c.notes, title: c.insertTemplate, icon: 'note', when: () => !!active && formatOf(active) === 'markdown' && !active.version, run: () => void chooseTemplate((path) => void insertTemplate(path)) },
     { id: 'template-new', group: c.notes, title: c.newFromTemplate, icon: 'note', run: () => void chooseTemplate((path) => void noteFromTemplate(path)) },
     { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: hasText, run: () => openFind() },
+    { id: 'toggle-wrap', group: view, title: t.wrapLines, keys: '⌥Z', icon: 'source', when: () => !!codeEditorOf(active), run: () => toggleWrap() },
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },
     { id: 'symbol-project', group: c.edit, title: t.symbols.project, keys: `${mod}⌥O`, icon: 'search', run: () => goToSymbol('project') },
@@ -2527,6 +2559,13 @@ window.addEventListener(
     // Ctrl with a letter in a console is the shell's (^W, ^E, ^P…), not folio's: off a Mac the shortcuts stay out.
     // Except Ctrl+F: the find bar over the output (as in VS Code's terminal).
     if (folio.platform !== 'darwin' && (event.target as HTMLElement | null)?.closest?.('.dsk-term') && !(event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'f')) return
+    // Alt+Z, as in VS Code: long lines wrapped or not.
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.code === 'KeyZ' && codeEditorOf(active)) {
+      event.preventDefault()
+      event.stopPropagation()
+      toggleWrap()
+      return
+    }
     // F1, as in code editors: the commands.
     if (event.key === 'F1' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
       event.preventDefault()

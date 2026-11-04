@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@dskripchenko/embed': link:../embed
+  '@dskripchenko/code-editor': link:../code-editor
 
 importers:
 
@@ -16,8 +17,8 @@ importers:
         version: 1.1.0
     devDependencies:
       '@dskripchenko/code-editor':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: link:../code-editor
+        version: link:../code-editor
       '@dskripchenko/diagrams':
         specifier: ^1.4.0
         version: 1.4.0
@@ -75,16 +76,8 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@dskripchenko/code-editor@0.3.0':
-    resolution: {integrity: sha512-UyD1SYxXfs3fVRlbCFs2fRnhdTLp5HcmYck3h3oWu9owuwJL3cjXdUc1PYNPsbF8CODTGaUecfQPFYr3qMk3lQ==}
-    engines: {node: '>=20'}
-
   '@dskripchenko/diagrams@1.4.0':
     resolution: {integrity: sha512-5IF96MS+QKkEZNecMwRBw0IFmFqLh9tJ5q084R0rLAidmjlxXXahZr5QvUwkIcO2Omo4k/O8vcY06m8vndj93A==}
-    engines: {node: '>=20'}
-
-  '@dskripchenko/syntax@0.5.0':
-    resolution: {integrity: sha512-rpea99C5y+oVqbUAlXWqavFJVvPjfQQhuwpiU1XVv7n+putN1jqn2RR3bTShvtAp8ZRxUYAzGRmo8OAhQ3p+1Q==}
     engines: {node: '>=20'}
 
   '@dskripchenko/syntax@0.6.0':
@@ -2105,13 +2098,7 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@dskripchenko/code-editor@0.3.0':
-    dependencies:
-      '@dskripchenko/syntax': 0.5.0
-
   '@dskripchenko/diagrams@1.4.0': {}
-
-  '@dskripchenko/syntax@0.5.0': {}
 
   '@dskripchenko/syntax@0.6.0': {}
 

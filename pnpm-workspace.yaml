@@ -3,3 +3,4 @@ onlyBuiltDependencies:
   - node-pty
 overrides:
   "@dskripchenko/embed": "link:../embed"
+  "@dskripchenko/code-editor": "link:../code-editor"

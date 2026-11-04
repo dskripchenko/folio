@@ -71,6 +71,8 @@ export interface ViewOptions {
   hover?: CodeEditorOptions['hover']
   signatureHelp?: CodeEditorOptions['signatureHelp']
   onModClick?: CodeEditorOptions['onModClick']
+  /** Long lines wrap at the view's width (null: folio's choice for the kind of text). */
+  wrap?: (language: string | null) => boolean
   /** A picture, a video or a sound: its URL, the words of its controls, the system's program, its size once known. */
   media?: { src: string; text: MediaText; external(): void; info(info: MediaInfo): void }
 }
@@ -230,6 +232,7 @@ function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (te
   const editor = new CodeEditor(host, {
     value: text,
     language: languageFor(format, o.name, text) ?? undefined,
+    lineWrapping: o.wrap?.(languageFor(format, o.name, text)) ?? false,
     ...(o.completion ? { completion: o.completion } : {}),
     ...(o.keymap?.length ? { keymap: o.keymap } : {}),
     ...(o.hover ? { hover: o.hover } : {}),
