@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-04
+
 ### Added
 
 - folio's MCP server (ADR-006, R7): an agent shows you its changes and waits
@@ -17,6 +19,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `open_file` at a line; `list_worktrees`. The server listens on 127.0.0.1
   with a token; the agent reaches it through a small bridge run by folio's own
   executable, which tells it to start folio while folio is closed.
+
+### Changed
+
+- The README's screenshots are taken by a script (`pnpm readme:shots`).
+- Steadier tests: under test a window lets the system's pointer pass through;
+  the Windows shell and sync tests wait for slow processes.
 
 ## [1.7.1] - 2026-11-04
 
@@ -453,7 +461,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.7.1...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/dskripchenko/folio/compare/v1.7.1...v1.8.0
 [1.7.1]: https://github.com/dskripchenko/folio/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/dskripchenko/folio/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/dskripchenko/folio/compare/v1.5.1...v1.6.0
