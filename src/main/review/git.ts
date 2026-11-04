@@ -1,10 +1,11 @@
 import { execFile } from 'node:child_process'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { findHunk, stageHunk, unstageHunk, discardHunk, type Hunk } from '../../common/hunks'
+import { findHunk, hunksOf, splitLines, stageHunk, unstageHunk, discardHunk, type Hunk } from '../../common/hunks'
 import type { ChangedFile, ChangeSpec, Changeset, FileChange, FileTexts, Worktree } from '../../common/review'
 import { writeFileWhileBusy } from '../busy'
 import { GitError } from '../git'
+import type { Checkpoint } from './store'
 
 /**
  * The review's git (ADR-006, R1): the system's git, which knows worktrees,
@@ -111,6 +112,7 @@ export class ReviewGit {
       for (const path of others) files.push({ path, status: 'added', untracked: true, ...countLines(join(root, path)) })
     }
     files.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : 0))
+    if (after === 'disk') for (const f of files) f.mtime = mtimeOf(join(root, ...f.path.split('/')))
     const subject = spec.kind === 'commit' ? (await this.run(root, ['log', '-1', '--format=%s', spec.oid]).catch(() => '')).trim() : ''
     return { spec, root, before, after, files, ...(subject ? { subject } : {}) }
   }
@@ -136,6 +138,73 @@ export class ReviewGit {
     if ((before !== null && before.includes('\0')) || (after !== null && after.includes('\0'))) return { before: null, after: null, binary: true }
     const index = set.spec.kind === 'working' ? await this.textAt(set.root, '', file.path) : undefined
     return { before, after, ...(index !== undefined ? { index } : {}) }
+  }
+
+  // Since the last look (R3) -------------------------------------------------
+
+  /** What is seen now: the commit, and the text of every file that differs from it. */
+  async snapshot(repo: string, only?: string[]): Promise<Checkpoint> {
+    const head = await this.resolve(repo, 'HEAD')
+    const set = await this.changeset({ kind: 'working', repo })
+    const files: Record<string, string | null> = {}
+    for (const f of set.files) {
+      if (only && !only.includes(f.path)) continue
+      if (f.binary) continue
+      files[f.path] = f.status === 'deleted' ? null : readText(join(repo, ...f.path.split('/')))
+    }
+    return { head, time: Date.now(), files }
+  }
+
+  /** A file as it was seen: its text in the checkpoint, else in the commit then. */
+  private async seen(repo: string, cp: Checkpoint, path: string): Promise<string | null> {
+    if (path in cp.files) return cp.files[path] ?? null
+    return cp.head ? this.textAt(repo, cp.head, path) : null
+  }
+
+  /**
+   * What changed since the checkpoint: every file that differs now from how it
+   * was seen — edited, made, deleted, committed meanwhile (an agent commits too).
+   */
+  async since(repo: string, cp: Checkpoint | null): Promise<Changeset> {
+    const spec = { kind: 'since' as const, repo }
+    const head = await this.resolve(repo, 'HEAD')
+    const point: Checkpoint = cp ?? { head, time: 0, files: {} }
+    const now = await this.changeset({ kind: 'working', repo })
+    const paths = new Set<string>([...now.files.map((f) => f.path), ...Object.keys(point.files)])
+    if (point.head && head && point.head !== head) {
+      const committed = await this.run(repo, ['diff', '--name-only', '-z', '--no-renames', point.head, head, '--']).catch(() => '')
+      for (const p of committed.split('\0').filter(Boolean)) paths.add(p)
+    }
+    const files: ChangedFile[] = []
+    for (const path of paths) {
+      const disk = join(repo, ...path.split('/'))
+      const before = await this.seen(repo, point, path)
+      const after = readText(disk)
+      if (before === after) continue
+      const binary = (before ?? '').includes('\0') || (after ?? '').includes('\0')
+      let add = 0
+      let del = 0
+      if (!binary && (before?.length ?? 0) <= MAX_TEXT && (after?.length ?? 0) <= MAX_TEXT) {
+        for (const h of hunksOf(splitLines(before ?? ''), splitLines(after ?? ''))) {
+          add += h.bEnd - h.b
+          del += h.aEnd - h.a
+        }
+      }
+      files.push({ path, status: before === null ? 'added' : after === null ? 'deleted' : 'modified', binary, add, del, mtime: mtimeOf(disk) })
+    }
+    // The newest first: what the agent just did on top.
+    files.sort((x, y) => (y.mtime ?? 0) - (x.mtime ?? 0) || (x.path < y.path ? -1 : 1))
+    return { spec, root: repo, before: 'checkpoint', after: 'disk', files }
+  }
+
+  /** A file's texts since the checkpoint. */
+  async sinceTexts(repo: string, cp: Checkpoint | null, path: string): Promise<FileTexts> {
+    const point: Checkpoint = cp ?? { head: await this.resolve(repo, 'HEAD'), time: 0, files: {} }
+    const before = await this.seen(repo, point, path)
+    const after = readText(join(repo, ...path.split('/')))
+    if ((before?.length ?? 0) > MAX_TEXT || (after?.length ?? 0) > MAX_TEXT) return { before: null, after: null, tooBig: true }
+    if ((before ?? '').includes('\0') || (after ?? '').includes('\0')) return { before: null, after: null, binary: true }
+    return { before, after }
   }
 
   // The working copy's actions -------------------------------------------------
@@ -263,6 +332,14 @@ export class ReviewGit {
       }
     }
     for (const path of others) writeFileWhileBusy(join(repo, ...path.split('/')), readFileSync(join(worktree, ...path.split('/'))))
+  }
+}
+
+function mtimeOf(path: string): number | undefined {
+  try {
+    return Math.round(statSync(path).mtimeMs)
+  } catch {
+    return undefined
   }
 }
 

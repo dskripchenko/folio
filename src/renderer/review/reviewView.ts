@@ -27,6 +27,8 @@ export interface ReviewDeps {
   open: (path: string, line: number | null, edit: boolean) => void
   /** The tab's title changed. */
   titled: () => void
+  /** Another set in a tab of its own (the working copy → since the last look). */
+  openSet: (spec: ChangeSpec) => void
 }
 
 interface FileView {
@@ -164,6 +166,18 @@ export class ReviewView {
     const onlyText = document.createElement('span')
     only.append(box, onlyText)
     tools.append(layoutBtn('unified', ''), layoutBtn('split', ''), only, button('', 'review-refresh', () => void this.refresh()))
+    // Since the last look: from the working copy, opened; in it, everything marked as seen.
+    const s = this.spec
+    if (s.kind === 'working') tools.prepend(button('', 'review-open-since', () => this.deps.openSet({ kind: 'since', repo: s.repo })))
+    if (s.kind === 'since')
+      tools.prepend(
+        button('', 'review-all-seen', () =>
+          void folio().reviewCheckpoint(s.repo).then((r) => {
+            if (!('ok' in r)) this.say(this.failure(r))
+            return this.refresh()
+          }),
+        ),
+      )
     this.head.append(tools)
     this.applyText()
   }
@@ -171,10 +185,11 @@ export class ReviewView {
   /** The words again (a language chosen meanwhile). */
   applyText(): void {
     const t = this.t
-    const [u, s, , r] = [...this.head.querySelectorAll<HTMLElement>('.rv-tools > *')]
-    if (u) u.textContent = t.unified
-    if (s) s.textContent = t.split
-    if (r) r.textContent = t.refresh
+    const q = (id: string) => this.head.querySelector<HTMLElement>(`[data-testid="${id}"]`)
+    for (const [id, text] of [['review-unified', t.unified], ['review-split', t.split], ['review-refresh', t.refresh], ['review-open-since', t.sinceButton], ['review-all-seen', t.allSeen]] as const) {
+      const b = q(id)
+      if (b) b.textContent = text
+    }
     const only = this.head.querySelector('.rv-only span')
     if (only) only.textContent = t.unviewedOnly
     this.syncHead()
@@ -233,7 +248,6 @@ export class ReviewView {
   }
 
   private async load(): Promise<void> {
-    if (this.spec.kind === 'since') return
     const r = await folio().reviewChangeset(this.spec)
     if (!('ok' in r)) {
       this.say(this.failure(r))
@@ -367,7 +381,10 @@ export class ReviewView {
     box.addEventListener('change', () => this.markViewed(fv, box.checked))
     viewed.append(box, ` ${t.viewed}`)
     actions.append(viewed)
-    fv.head.replaceChildren(fold, status, name, stats, actions)
+    const when = document.createElement('span')
+    when.className = 'rv-when'
+    when.textContent = this.spec.kind === 'since' || this.spec.kind === 'working' ? this.ago(f.mtime) : ''
+    fv.head.replaceChildren(fold, status, name, stats, when, actions)
     fv.section.toggleAttribute('data-viewed', fv.viewed)
     fv.section.toggleAttribute('data-folded', fv.folded)
     // Its line in the list of files.
@@ -379,7 +396,10 @@ export class ReviewView {
     const navDir = document.createElement('span')
     navDir.className = 'rv-nav-dir'
     navDir.textContent = slash >= 0 ? f.path.slice(0, slash) : ''
-    fv.nav.replaceChildren(navStatus, navName, navDir)
+    const navWhen = document.createElement('span')
+    navWhen.className = 'rv-nav-when'
+    navWhen.textContent = this.spec.kind === 'since' ? this.ago(f.mtime) : ''
+    fv.nav.replaceChildren(navStatus, navName, navDir, navWhen)
     fv.nav.toggleAttribute('data-viewed', fv.viewed)
   }
 
@@ -390,6 +410,11 @@ export class ReviewView {
   }
 
   private markViewed(fv: FileView, on: boolean): void {
+    // Since the last look: seen now — the checkpoint takes the file as it is, and it leaves the set.
+    if (this.spec.kind === 'since') {
+      if (on) void folio().reviewCheckpointFile(this.spec.repo, fv.file.path).then(() => this.refresh())
+      return
+    }
     fv.viewed = on
     if (this.set) {
       const key = this.keyOf(fv.file)
@@ -417,6 +442,7 @@ export class ReviewView {
       const texts = r.texts
       const hash = hashOf(`${texts.before ?? '\u0001'}\u0000${texts.after ?? '\u0001'}`)
       const same = fv.loaded && hash === fv.hash && (texts.index ?? null) === (fv.texts?.index ?? null)
+      const changedInView = fv.loaded && hash !== fv.hash
       fv.texts = texts
       fv.hash = hash
       fv.loaded = true
@@ -424,6 +450,8 @@ export class ReviewView {
       fv.viewed = !!this.set && this.viewed[this.keyOf(fv.file)] === hash
       if (fv.viewed !== wasViewed) fv.folded = fv.viewed
       if (!same) {
+        // Changed while in view (an agent at work): marked for a moment.
+        this.flash(fv, changedInView)
         fv.diff = texts.binary || texts.tooBig ? null : fileDiff(texts.before, texts.after)
         this.renderBody(fv)
       }
@@ -432,6 +460,25 @@ export class ReviewView {
     } finally {
       fv.loading = false
     }
+  }
+
+  private flash(fv: FileView, on: boolean): void {
+    if (!on) return
+    fv.section.removeAttribute('data-fresh')
+    void fv.section.offsetWidth
+    fv.section.setAttribute('data-fresh', '')
+    setTimeout(() => fv.section.removeAttribute('data-fresh'), 2500)
+  }
+
+  /** How long ago a file changed, in the window's language. */
+  private ago(ms: number | undefined): string {
+    if (!ms) return ''
+    const s = Math.round((ms - Date.now()) / 1000)
+    const rtf = new Intl.RelativeTimeFormat(this.deps.lang(), { numeric: 'auto', style: 'short' })
+    if (s > -60) return rtf.format(s, 'second')
+    if (s > -3600) return rtf.format(Math.round(s / 60), 'minute')
+    if (s > -86400) return rtf.format(Math.round(s / 3600), 'hour')
+    return rtf.format(Math.round(s / 86400), 'day')
   }
 
   private firstChangedLine(fv: FileView): number | null {

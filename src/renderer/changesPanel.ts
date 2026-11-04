@@ -24,6 +24,7 @@ export interface ChangesText {
   title: string
   close: string
   review: string
+  since: string
   message: string
   commit: string
   staged: string
@@ -64,6 +65,9 @@ export interface ChangesDeps {
   open(root: string, path: string): void
   /** The repository's changes in a review tab (ADR-006). */
   review(root: string): void
+  /** Files changed since the last look (null: never looked), and that set in a review tab. */
+  sinceCount(root: string): Promise<number | null>
+  reviewSince(root: string): void
   /** The last commit's message (amending it). */
   lastMessage(root: string): Promise<string | null>
   /** Changes put aside: listed, put aside, taken back, dropped (asks first). A string is a refusal to say. */
@@ -87,6 +91,15 @@ export class ChangesPanel {
   private readonly list: HTMLElement
   private path: string | null = null
   private view: ChangesView | null = null
+  private readonly sinceButton: HTMLButtonElement
+
+  private async syncSince(seq: number): Promise<void> {
+    const root = this.view?.root
+    const n = root ? await this.deps.sinceCount(root) : null
+    if (seq !== this.seq) return
+    this.sinceButton.hidden = !n
+    this.sinceButton.textContent = this.text.since.replace('{n}', String(n ?? 0))
+  }
 
   /** The repository in view. */
   get root(): string | null {
@@ -116,7 +129,17 @@ export class ChangesPanel {
       if (root) this.deps.review(root)
     })
     reviewButton.dataset.testid = 'changes-review'
-    header.append(title, reviewButton, this.stashButton, iconButton('close', text.close, () => this.setVisible(false)))
+    // What changed since the last look (an agent at work): a count to open.
+    this.sinceButton = document.createElement('button')
+    this.sinceButton.type = 'button'
+    this.sinceButton.className = 'changes-since'
+    this.sinceButton.dataset.testid = 'changes-since'
+    this.sinceButton.hidden = true
+    this.sinceButton.addEventListener('click', () => {
+      const root = this.view?.root
+      if (root) this.deps.reviewSince(root)
+    })
+    header.append(title, this.sinceButton, reviewButton, this.stashButton, iconButton('close', text.close, () => this.setVisible(false)))
     this.message = document.createElement('textarea')
     this.message.className = 'changes-message'
     this.message.dataset.testid = 'changes-message'
@@ -203,6 +226,7 @@ export class ChangesPanel {
     if (seq !== this.seq) return
     this.view = view
     this.syncButton()
+    void this.syncSince(seq)
     void this.drawStashes(seq)
     const key = JSON.stringify(view)
     if (key === this.drawn) return

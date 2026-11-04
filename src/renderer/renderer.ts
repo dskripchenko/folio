@@ -21,7 +21,7 @@ import { ConsolePanel } from './consolePanel'
 import { icon, iconButton, type IconName } from './icons'
 import { popMenu, popMenuAt, type MenuItem } from './menu'
 import { ReviewView } from './review/reviewView'
-import type { ChangeSpec } from '../common/review'
+import { rootOf, type ChangeSpec } from '../common/review'
 import { TAB_COLORS, freeColor, groupAt, isTabColor, keepTogether, type GroupData, type TabColor } from '../common/tabGroups'
 import { openCloneDialog } from './clone'
 import { openPdfDialog, type PdfTarget } from './pdfDialog'
@@ -1469,7 +1469,8 @@ function activate(tab: Tab | null): void {
   tagsPanel?.show(tab?.path ?? null)
   graphPanel?.show(tab?.path ?? null)
   tasksPanel?.show(tab?.path ?? null)
-  changesPanel?.show(tab?.path ?? null)
+  // A review's tab: the changes of its repository.
+  changesPanel?.show(tab?.review ? rootOf(tab.review.spec) : (tab?.path ?? null))
   syncStatus()
   showBanners()
   // A tab coming into its view gets its own scroll back; one already shown keeps where it is.
@@ -2024,6 +2025,7 @@ function openReview(spec: ChangeSpec, focus = true, look: Partial<Pick<Tab, 'col
     lang: () => lang,
     open: (path, line, edit) => void openToEdit(path, line, edit),
     titled: () => tab && syncLabel(tab),
+    openSet: (s) => void openReview(s),
   })
   tab = makeTab({ path: null, text: '', saved: '', review, ...look })
   void review.refresh()
@@ -2707,6 +2709,13 @@ function commands(): Command[] {
     { id: 'blame', group: view, title: t.blame, icon: 'history', when: () => !!codeEditorOf(active), run: () => void toggleBlame() },
     { id: 'changes', group: view, title: t.changes.title, keys: 'Ctrl+⇧G', icon: 'commit', run: () => changesPanel?.setVisible(!changesPanel.visible) },
     { id: 'review-changes', group: view, title: c.reviewChanges, icon: 'commit', run: () => void reviewWorking() },
+    {
+      id: 'review-since',
+      group: view,
+      title: c.reviewSince,
+      icon: 'commit',
+      run: () => void repoInView().then((repo) => repo && void openReview({ kind: 'since', repo })),
+    },
     { id: 'graph', group: view, title: t.graph.title, icon: 'graph', run: () => graphPanel?.setVisible(!graphPanel.visible) },
     ...(['system', 'light', 'dark'] as const).map((value): Command => ({ id: `theme-${value}`, group: view, title: t.themes[value], icon: 'settings', when: () => theme !== value, run: () => applyTheme(value) })),
   ]
@@ -2785,6 +2794,11 @@ changesPanel = new ChangesPanel(
     commit: (root, message, amend) => folio.gitCommitStaged(root, message, amend),
     open: (root, path) => void folio.open(`${root}/${path}`).then((result) => add(result)),
     review: (root) => void openReview({ kind: 'working', repo: root }),
+    sinceCount: async (root) => {
+      const r = await folio.reviewSinceCount(root)
+      return 'ok' in r ? r.count : null
+    },
+    reviewSince: (root) => void openReview({ kind: 'since', repo: root }),
     lastMessage: (root) => folio.gitLastMessage(root),
     stashes: async (root) => {
       const r = await folio.gitStashList(root)

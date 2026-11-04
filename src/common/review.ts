@@ -24,6 +24,8 @@ export interface ChangedFile {
   del: number
   /** Not known to git yet (working copy, worktree). */
   untracked?: boolean
+  /** When the file on disk last changed (ms), for a set against the disk. */
+  mtime?: number
 }
 
 export interface Changeset {

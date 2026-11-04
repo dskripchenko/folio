@@ -828,3 +828,9 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .rv-split { table-layout: fixed; }
 .rv-split .rv-col-n { width: 6ch; }
 .rv-split td.rv-code { width: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Since the last look: when each file changed; a file changed while in view, marked for a moment. */
+.rv-nav-when, .rv-when { margin-left: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.rv-when { margin-left: 4px; }
+.rv-file[data-fresh] { animation: rv-fresh 2.5s ease-out; }
+@keyframes rv-fresh { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
+.changes-since { margin-right: auto; margin-left: 8px; padding: 1px 8px; border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }

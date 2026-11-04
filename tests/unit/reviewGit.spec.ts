@@ -162,3 +162,30 @@ describe('worktrees', () => {
     expect(git(repo, 'branch', '--list', 'agent-x')).toBe('')
   })
 })
+
+describe('since the last look', () => {
+  it('nothing looked at: the working copy; then only what changed after the look, commits meanwhile too', async () => {
+    write('a.txt', 'a\nB\nc\nd\ne\nf\n')
+    expect((await g.since(repo, null)).files.map((f) => f.path)).toEqual(['a.txt'])
+    const cp = await g.snapshot(repo)
+    expect(cp.files).toEqual({ 'a.txt': 'a\nB\nc\nd\ne\nf\n' })
+    expect((await g.since(repo, cp)).files).toEqual([])
+
+    // An agent: one more edit to a.txt, a new file, and a commit of another file.
+    write('a.txt', 'a\nB\nc\nD\ne\nf\n')
+    write('new.md', 'x\n')
+    write('gone.txt', 'changed\n')
+    git(repo, 'commit', '-q', '-m', 'agent', '--', 'gone.txt')
+    const set = await g.since(repo, cp)
+    expect(set.files.map((f) => [f.path, f.status, f.add, f.del]).sort()).toEqual([
+      ['a.txt', 'modified', 1, 1],
+      ['gone.txt', 'modified', 1, 1],
+      ['new.md', 'added', 1, 0],
+    ])
+    expect(set.files.every((f) => typeof f.mtime === 'number')).toBe(true)
+    // The texts: as seen, and as now.
+    expect(await g.sinceTexts(repo, cp, 'a.txt')).toEqual({ before: 'a\nB\nc\nd\ne\nf\n', after: 'a\nB\nc\nD\ne\nf\n' })
+    expect(await g.sinceTexts(repo, cp, 'gone.txt')).toEqual({ before: 'bye\n', after: 'changed\n' })
+  })
+})
+

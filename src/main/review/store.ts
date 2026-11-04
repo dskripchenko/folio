@@ -12,6 +12,17 @@ export interface RepoReview {
   viewed: Record<string, string>
 }
 
+/**
+ * What was looked at (ADR-006, R3): the commit then, and the text of each
+ * file that differed from it (null: the file was not there). A file not named
+ * is as the commit had it.
+ */
+export interface Checkpoint {
+  head: string | null
+  time: number
+  files: Record<string, string | null>
+}
+
 export class ReviewStore {
   private readonly cache = new Map<string, RepoReview>()
 
@@ -29,6 +40,20 @@ export class ReviewStore {
       this.cache.set(root, r)
     }
     return r
+  }
+
+  private checkpointFile(root: string): string {
+    return this.file(root).replace(/\.json$/, '.checkpoint.json')
+  }
+
+  checkpoint(root: string): Checkpoint | null {
+    const c = readJson<Partial<Checkpoint> | null>(this.checkpointFile(root), null)
+    if (!c || typeof c.time !== 'number' || !c.files || typeof c.files !== 'object') return null
+    return { head: typeof c.head === 'string' ? c.head : null, time: c.time, files: c.files }
+  }
+
+  setCheckpoint(root: string, c: Checkpoint): void {
+    writeJson(this.checkpointFile(root), c)
   }
 
   setViewed(root: string, key: string, hash: string | null): void {

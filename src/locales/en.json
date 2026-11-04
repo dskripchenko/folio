@@ -349,7 +349,8 @@
       "pop": "Take back",
       "drop": "Delete",
       "stashed": "Put aside: the files are as last committed.",
-      "review": "Review the changes"
+      "review": "Review the changes",
+      "since": "Since last look · {n}"
     },
     "gitMarks": {
       "was": "Before the change",
@@ -533,7 +534,8 @@
       "newCanvas": "New whiteboard",
       "present": "Show as slides",
       "slidesPdf": "Export the slides as PDF",
-      "reviewChanges": "Review the changes"
+      "reviewChanges": "Review the changes",
+      "reviewSince": "Review what changed since the last look"
     },
     "goToFile": {
       "placeholder": "Go to a file by its name",
@@ -693,7 +695,9 @@
         "renamed": "R",
         "copied": "C",
         "typechange": "T"
-      }
+      },
+      "sinceButton": "Since last look",
+      "allSeen": "All seen"
     }
   },
   "print": {

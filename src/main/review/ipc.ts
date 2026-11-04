@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Hunk } from '../../common/hunks'
 import type { ChangedFile, ChangeSpec } from '../../common/review'
@@ -100,13 +100,51 @@ export function registerReview(deps: ReviewDeps): void {
 
   handle('review:available', async () => ({ ok: true, available: (await deps.systemGit()) !== null }))
 
-  handle('review:changeset', async (spec) => ({ ok: true, set: await (await need()).changeset(await specOf(spec)) }))
+  /** A set since the last look: its repository, or null for another kind. */
+  const sinceOf = async (v: unknown): Promise<string | null> => {
+    const s = (v ?? {}) as Record<string, unknown>
+    return s.kind === 'since' ? repo(s.repo) : null
+  }
+
+  handle('review:changeset', async (spec) => {
+    const g = await need()
+    const since = await sinceOf(spec)
+    if (since) return { ok: true, set: await g.since(since, store.checkpoint(since)) }
+    return { ok: true, set: await g.changeset(await specOf(spec)) }
+  })
+
+  // Since the last look (R3): the checkpoint taken — of everything, or of one file seen.
+  handle('review:checkpoint', async (path) => {
+    const root = await repo(path)
+    store.setCheckpoint(root, await (await need()).snapshot(root))
+    deps.changed(root)
+    return { ok: true }
+  })
+  handle('review:checkpoint-file', async (path, file) => {
+    const g = await need()
+    const root = await repo(path)
+    const rel = relPath(file)
+    const cp = store.checkpoint(root) ?? { ...(await g.snapshot(root, [])), files: {} }
+    const disk = join(root, ...rel.split('/'))
+    cp.files[rel] = existsSync(disk) ? readFileSync(disk, 'utf8') : null
+    store.setCheckpoint(root, cp)
+    return { ok: true }
+  })
+  /** How many files changed since the last look; null before the first look. */
+  handle('review:since-count', async (path) => {
+    const root = await repo(path)
+    const cp = store.checkpoint(root)
+    if (!cp) return { ok: true, count: null }
+    return { ok: true, count: (await (await need()).since(root, cp)).files.length }
+  })
 
   handle('review:texts', async (spec, file) => {
     const g = await need()
-    const s = await specOf(spec)
     const f = (file ?? {}) as Partial<ChangedFile>
     const path = relPath(f.path)
+    const since = await sinceOf(spec)
+    if (since) return { ok: true, texts: await g.sinceTexts(since, store.checkpoint(since), path) }
+    const s = await specOf(spec)
     const sides = await g.sidesOf(s)
     const status = typeof f.status === 'string' ? f.status : 'modified'
     return { ok: true, texts: await g.texts({ spec: s, ...sides }, { path, oldPath: f.oldPath ? relPath(f.oldPath) : undefined, status, binary: f.binary === true }) }
