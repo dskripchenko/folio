@@ -12,6 +12,8 @@ test('git beyond committing: put aside and taken back, the last commit amended, 
   writeFileSync(join(proj, 'a.txt'), 'one\n')
   const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@example.com', ...args], { cwd: proj, encoding: 'utf8' })
   git('init', '-q', '--initial-branch=main')
+  // Line breaks as written, whatever the machine's git does (Git for Windows checks out CRLF).
+  git('config', 'core.autocrlf', 'false')
   git('add', '.')
   git('commit', '-qm', 'start')
   writeFileSync(join(proj, 'a.txt'), 'two\n')
