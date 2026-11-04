@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+- The welcome document tells of tabs (colours, groups, closing many).
+- Docs: what `folio-data/` holds and the two files folio writes into your
+  folders when asked; what needs the system's git; reviewing an agent's work in
+  the README; the source layout, the icon and the quiet end-to-end mode in the
+  development guide.
+
 ## [1.7.0] - 2026-11-04
 
 ### Added

@@ -23,7 +23,10 @@ installing anything.
 > with git changes and blame, an outline of symbols, tasks and their problems,
 > and the language servers on the machine (go to definition, rename, fixes);
 > prints and exports PDF;
-> runs consoles; and updates itself.
+> runs consoles; reviews an AI agent's work — changes as a pull request,
+> what changed since the last look, its worktrees, comments sent to its
+> console; keeps tabs in coloured groups; speaks English and Russian (and
+> languages of your own); and updates itself.
 
 Documentation: [English](docs/en/) · [Русский](docs/ru/) · [Deutsch](docs/de/) ·
 [中文](docs/zh/)
@@ -59,6 +62,14 @@ place, and printed as one. It opens:
   pictures and attachments by relative path, the whole folder printed as one
   PDF. "Shared" holds the documents common to everything; any folder on disk
   can be added as a project.
+
+It is also made to sit beside an **AI agent working in a terminal** (Claude
+Code and the like), where you mostly read what it changed and edit a little:
+its changes open as a pull request's files, with viewed marks and runs staged
+or thrown away; **since the last look** shows only what it did after you
+looked; its **worktrees** — a subagent's each — are listed, reviewed against
+the base, taken or removed; comments on lines go to its console as one paste;
+and, connected, Claude Code tells folio which session edited what.
 
 A folder that is a git repository keeps its history in folio too — versions of
 a document, what changed between them, going back to one — with commits made as
@@ -123,6 +134,13 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 7 | PDF: page size and margins, headers and footers, contents and bookmarks, a folder as one PDF — **done** |
 | 8 | Portable builds and updating itself — **done** |
 | 9 | Releases: checksums, provenance, a virus scan report — **1.0** |
+| 10 | A light IDE: its own code editor, projects of code, git changes, tasks and problems — **1.1** |
+| 11 | Language servers: go to definition, references, rename, fixes — **1.2** |
+| 12 | Pictures, video and sound in its own viewer and players — **1.3** |
+| 13 | Everyday gaps: tabs, embeds, wrapping, CSV, comparing, git beyond commits, PDF, HTML and Word export, settings — **1.4** |
+| 14 | Languages of the interface and the welcome document — **1.5** |
+| 15 | Tabs closed many at once, coloured, grouped — **1.6** |
+| 16 | Reviewing an AI agent's work: review tabs, since the last look, worktrees, comments to its console, Claude Code's hook — **1.7** |
 
 ## Development
 

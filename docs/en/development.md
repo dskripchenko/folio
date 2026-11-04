@@ -23,6 +23,13 @@ directory; `FOLIO_DATA=/some/dir pnpm start` puts it elsewhere. `FOLIO_COMMIT_PA
 On Linux without a display, run the end-to-end tests under a virtual one:
 `xvfb-run --auto-servernum pnpm test:e2e`.
 
+The end-to-end tests run folio quietly (`FOLIO_E2E=1`, set by the Playwright
+config): no Dock icon, windows that do not take the focus, no "reopen windows"
+dialog afterwards; two at a time on a desk, as many as the machine has in CI.
+The welcome document opens on a first start only when a test asks for it
+(`FOLIO_WELCOME=1`). The review's tests (sets of changes, worktrees, the hook)
+drive the system's git, so they need git installed.
+
 ## Portable builds
 
 ```sh
@@ -46,6 +53,10 @@ checksums and provenance.
 | `src/main/` | the main process: windows, the disk, the network rules |
 | `src/preload/` | the bridge a window may call |
 | `src/renderer/` | the window's page |
+| `src/common/` | what both use: the line diff, runs of changes, tab groups, sets of changes, the languages |
+| `src/locales/` | the dictionaries: `en.json` the base, `ru.json` the second (ADR-005) |
+| `src/welcome/` | the read-only welcome document, a language each |
+| `build/icons/` | the icon: `folio.svg` (48 px and up), `folio-small.svg` (16–32 px); `node scripts/icons.mjs` draws the PNGs, `.icns` and `.ico` from them |
 | `scripts/build.mjs` | esbuild: main, preload and page into `dist/` |
 | `tests/unit/` | unit tests |
 | `tests/e2e/` | the built app, started and driven |

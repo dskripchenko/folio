@@ -1,7 +1,7 @@
 # folio
 
 一款桌面应用，用于阅读、编辑和打印带有实时图表、API 参考和编辑器的 Markdown——
-支持 macOS、Windows 和 Linux，无需安装。
+支持 macOS、Windows 和 Linux，无需安装。同时也是一个轻量 IDE，适合与终端中的 AI 智能体配合使用：像审阅拉取请求一样审阅它的更改、查看自上次查看以来的变化、管理它的 worktree、把评论直接发送到它的控制台。
 
 > 状态：**1.7** —— 从[最新版本](https://github.com/dskripchenko/folio/releases/latest)下载适合你系统的压缩包。
 

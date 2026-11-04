@@ -386,7 +386,11 @@ a repository on branch `main` and a first commit of what is there.
   `~/.gitconfig`, else the system user.
 
 git is inside folio (isomorphic-git, pure JavaScript), so this works on a
-machine without git.
+machine without git. A few things need git installed on the system and say so
+when it is not: the review of changes and worktrees (below), putting changes
+aside and undoing a commit, and a worktree opened as a project — isomorphic-git
+cannot read one, so its changes, history and gutter marks go through the system
+git there.
 
 ### Changes
 
@@ -706,6 +710,10 @@ file dragged from the tree (or the system) is typed as its path. The right
 click has copy, paste, select all, find, clear, split, the panel beside the page
 or on the whole window. `FOLIO_SHELL_INTEGRATION=0` starts shells as they are. Drawn by `@dskripchenko/terminal`; the shell runs in `node-pty`.
 
+Review comments go to a console as one paste (see *Reviewing an agent's work*):
+folio pastes only into a program that takes a paste as one — zsh, bash 5.1+,
+PowerShell, an agent's CLI — and never presses Enter.
+
 ## Where the data lives
 
 Electron keeps its data in the user profile by default. folio moves all of it —
@@ -722,6 +730,19 @@ settings, caches, session data, logs — to `folio-data/` beside the program:
 Deleting the program's folder therefore removes everything it ever wrote. The
 flip side: the folder must be writable, so do not unpack folio into a place
 only an administrator can write to.
+
+Inside it: the workspace and settings (`workspace.json`), keys of your own
+(`keybindings.json`), the network consents (`consent.json`), sync logins kept
+encrypted (`logins.json`), Shared (`library/`), the open tabs and unsaved edits
+(`session/`), the review's marks — files viewed, comments, checkpoints of the
+last look and the edits Claude Code reported (`review/`) — languages of your own
+(`locales/`), updates (`update/`), logs, and Chromium's own data (`chromium/`).
+
+Two things are written into your folders, and only when asked: a project's
+settings from the settings window go to its `.folio/settings.json`, and
+**Connect Claude Code to folio** adds a hook to the repository's
+`.claude/settings.local.json` (a local file, not committed) — **Disconnect
+Claude Code** takes it out. Deleting folio leaves both.
 
 ## Updates
 
