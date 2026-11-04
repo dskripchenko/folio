@@ -14,6 +14,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   text turns into a small diagram — Markdown becoming a drawing; a simpler
   page for 16–32 px.
 
+### Fixed
+- Windows: a rename, a move or a saved setting no longer fails when another
+  program (an antivirus, the search indexer) holds the file for a moment —
+  tried again for a little while.
+
 ## [1.5.0] - 2026-11-04
 
 ### Added

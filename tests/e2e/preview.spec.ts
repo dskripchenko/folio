@@ -70,9 +70,13 @@ test('a note previewed while the pointer rests on a link to it: at its heading; 
     // A small window: the preview shorter, never over its link.
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(640, 480))
     const link = pane.locator('a[data-wikilink="Plan#Goals"]')
-    await restOn(link)
-    const [l, p] = await Promise.all([link.boundingBox(), preview.boundingBox()])
-    expect(p!.y >= l!.y + l!.height || p!.y + p!.height <= l!.y).toBe(true)
+    // Measured while it shows (the system's own cursor may close it meanwhile): tried again whole.
+    await expect(async () => {
+      await restOn(link)
+      const [l, p] = await Promise.all([link.boundingBox(), preview.boundingBox()])
+      expect(l && p).toBeTruthy()
+      expect(p!.y >= l!.y + l!.height || p!.y + p!.height <= l!.y).toBe(true)
+    }).toPass({ timeout: 30_000 })
   } finally {
     await app.close()
   }
