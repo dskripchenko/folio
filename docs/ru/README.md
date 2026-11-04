@@ -4,7 +4,7 @@
 схемами, справочниками API и конструкторами — на macOS, Windows и Linux, без
 установки.
 
-> Статус: **1.2** — архив для вашей системы — в [последнем выпуске](https://github.com/dskripchenko/folio/releases/latest).
+> Статус: **1.3** — архив для вашей системы — в [последнем выпуске](https://github.com/dskripchenko/folio/releases/latest).
 
 - [Как устроено](design.md) — окна, что может документ, где лежат данные
 - [Разработка](development.md) — сборка, запуск и тесты

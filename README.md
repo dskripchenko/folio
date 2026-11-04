@@ -11,11 +11,12 @@ notation, OpenAPI and AsyncAPI references, BPMN and DMN, draw.io, process
 flows, kanban boards, calendars and whiteboards, slides — on macOS, Windows and Linux, without
 installing anything.
 
-> Status: **1.2.** It reads a Markdown file with every block live, offline;
+> Status: **1.3.** It reads a Markdown file with every block live, offline;
 > edits it visually or as Markdown, keeping quick notes and unsaved edits
 > through restarts; keeps a git history per folder; links notes with
 > `[[links]]`, tags, aliases, embeds, a graph and a tasks panel; opens diagram,
-> API, kanban, calendar and whiteboard files in their editors; shows a note as
+> API, kanban, calendar and whiteboard files in their editors; shows pictures,
+> video and sound in its own viewer and players; shows a note as
 > slides; edits code and other text files in its own code editor —
 > highlighting, folding, checks and VS Code's keys; works in projects of code
 > with git changes and blame, an outline of symbols, tasks and their problems,
