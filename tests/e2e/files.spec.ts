@@ -15,7 +15,7 @@ test('files from the tree: made, renamed, moved by dragging, put in the trash; o
       dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: paths })) as typeof dialog.showOpenDialog
       // The trash: confirmed, and the file removed (a CI machine may have no trash).
       dialog.showMessageBox = (async () => ({ response: 0, checkboxChecked: false })) as typeof dialog.showMessageBox
-      shell.trashItem = async (p: string) => (process.getBuiltinModule('node:fs') as typeof import('node:fs')).rmSync(p, { recursive: true, force: true })
+      shell.trashItem = async (p: string) => (process.getBuiltinModule('node:fs') as typeof import('node:fs')).rmSync(p, { recursive: true, force: true, maxRetries: 5 })
     }, [proj])
     await win.getByTestId('add-project').click()
     await win.getByTestId('add-folder').click()

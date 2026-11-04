@@ -1,5 +1,6 @@
-import { cpSync, existsSync, mkdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, extname, join, relative, sep } from 'node:path'
+import { renameWhileBusy } from './busy'
 
 /**
  * Files and folders made, renamed, moved and copied from the tree. Names are
@@ -41,7 +42,7 @@ export function rename(path: string, name: string): string {
   if (target === path) return path
   // A change of letter case only (macOS, Windows): the same file to the file system.
   if (existsSync(target) && target.toLowerCase() !== path.toLowerCase()) throw new FileOpError('exists')
-  renameSync(path, target)
+  renameWhileBusy(path, target)
   return target
 }
 
@@ -53,12 +54,12 @@ export function move(path: string, dir: string): string {
   if (rel === '' || (!rel.startsWith('..') && !rel.startsWith(sep) && !/^[A-Za-z]:/.test(rel))) throw new FileOpError('inside')
   if (existsSync(target)) throw new FileOpError('exists')
   try {
-    renameSync(path, target)
+    renameWhileBusy(path, target)
   } catch (e) {
     // Another disk: copied there, then the original removed.
     if ((e as NodeJS.ErrnoException).code !== 'EXDEV') throw e
     cpSync(path, target, { recursive: true, errorOnExist: true })
-    rmSync(path, { recursive: true, force: true })
+    rmSync(path, { recursive: true, force: true, maxRetries: 5 })
   }
   return target
 }

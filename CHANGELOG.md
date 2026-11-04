@@ -7,10 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-04
+
 ### Changed
 - A new icon: a single page with a folded coral corner whose last line of
   text turns into a small diagram — Markdown becoming a drawing; a simpler
   page for 16–32 px.
+
+### Fixed
+- Windows: a rename, a move or a saved setting no longer fails when another
+  program (an antivirus, the search indexer) holds the file for a moment —
+  tried again for a little while.
 
 ## [1.5.0] - 2026-11-04
 
@@ -386,7 +393,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/dskripchenko/folio/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/dskripchenko/folio/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/dskripchenko/folio/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/dskripchenko/folio/compare/v1.2.1...v1.3.0
