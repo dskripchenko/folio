@@ -6,7 +6,7 @@ Installation. Dazu eine leichte IDE für die Arbeit neben einem KI-Agenten im
 Terminal: seine Änderungen als Pull-Request geprüft, was sich seit dem letzten
 Blick geändert hat, seine Worktrees, Kommentare direkt in seine Konsole.
 
-> Status: **1.7** — das Archiv für Ihr System liegt in der [neuesten Version](https://github.com/dskripchenko/folio/releases/latest).
+> Status: **1.8** — das Archiv für Ihr System liegt in der [neuesten Version](https://github.com/dskripchenko/folio/releases/latest).
 
 - [Wie es funktioniert](design.md) — die Fenster, was ein Dokument darf, wo die
   Daten liegen

@@ -6,7 +6,7 @@ anything. Also a light IDE made to sit beside an AI agent in a terminal: its
 changes reviewed as a pull request, what changed since the last look, its
 worktrees, comments sent to its console.
 
-> Status: **1.7** — download the archive for your system from the [latest release](https://github.com/dskripchenko/folio/releases/latest).
+> Status: **1.8** — download the archive for your system from the [latest release](https://github.com/dskripchenko/folio/releases/latest).
 
 - [How it works](design.md) — the windows, what a document may do, where the
   data lives
