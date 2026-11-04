@@ -12,7 +12,7 @@ export interface PdfText {
   portrait: string
   landscape: string
   margins: string
-  marginNames: [string, string, string, string]
+  marginNames: readonly string[]
   header: string
   footer: string
   toc: string

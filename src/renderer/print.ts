@@ -7,11 +7,14 @@
  */
 import type { Format } from './bridge'
 import { viewOf } from './formats'
+import { plural } from '../common/plural'
 import { slidesOf } from './slides'
 
 interface PdfJob {
   title: string
   lang: string
+  /** The page's words in folio's language (ADR-005). */
+  text: { contents: string; documents: string[] }
   options: { toc: boolean; slides?: boolean }
   docs: { name: string; text: string; base: string | null; format: Format; urls: string[] }[]
 }
@@ -21,10 +24,6 @@ type Embed = { configure(o: Record<string, unknown>): void; print: { prepare(roo
 const api = (window as unknown as { folio: Api }).folio
 const embed = (window as unknown as { DskEmbed?: Embed }).DskEmbed
 
-const TEXT = {
-  en: { contents: 'Contents', documents: (n: number) => `${n} document${n === 1 ? '' : 's'}` },
-  ru: { contents: 'Содержание', documents: (n: number) => `Документов: ${n}` },
-}
 
 const noExtension = (url: string) => url.replace(/\.(md|markdown|mdown|mkd|mdx)$/i, '')
 
@@ -69,7 +68,7 @@ function titleOf(section: HTMLElement, fallback: string): string {
 
 /** One document: its headings down to h3. A folder: each document, with its h2s. */
 function tableOfContents(job: PdfJob, sections: HTMLElement[]): HTMLElement {
-  const t = job.lang === 'ru' ? TEXT.ru : TEXT.en
+  const t = job.text
   const nav = document.createElement('nav')
   nav.className = 'pdf-toc'
   const h = document.createElement('h1')
@@ -78,7 +77,7 @@ function tableOfContents(job: PdfJob, sections: HTMLElement[]): HTMLElement {
   if (job.docs.length > 1) {
     const sub = document.createElement('p')
     sub.className = 'subtitle'
-    sub.textContent = `${t.contents} · ${t.documents(job.docs.length)}`
+    sub.textContent = `${t.contents} · ${plural(job.docs.length, t.documents, job.lang)}`
     nav.append(sub)
   }
   const list = (items: { text: string; href: string; children?: { text: string; href: string }[] }[]) => {

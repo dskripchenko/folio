@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell, systemPreferences } from 'electron'
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { userInfo } from 'node:os'
@@ -50,7 +50,8 @@ import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
 import { Session } from './session'
-import { labels } from './i18n'
+import { Languages, type Labels } from './i18n'
+import type { Dictionary } from '../common/i18n'
 import { listDir } from './tree'
 import { Ignores } from './ignore'
 import { visibilityOf, type ProjectKind } from './visibility'
@@ -61,7 +62,7 @@ import { parseQuery, pathPasses, replaceInFiles, searchFiles, tagsPass, type Sea
 import { patternOf } from '../common/pattern'
 import { Watcher } from './watcher'
 import { aliasIndex, aliasesOf, backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
-import { real, resolveInside } from './paths'
+import { isInside, real, realish, resolveInside } from './paths'
 import { tagIndex, tagsOf } from './tags'
 import { tasksOf, toggleTask } from './tasks'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
@@ -113,7 +114,17 @@ const autoCommit = new AutoCommitter({
 }, Number(process.env.FOLIO_COMMIT_PAUSE) || 3 * 60 * 1000)
 let gate: NetworkGate | null = null
 /** Native menus speak the system's language; known once the app is ready. */
-const L = () => labels(app.isReady() ? app.getLocale() : 'en')
+/** folio's languages (ADR-005), and the dictionary in use; set once the app is ready (the system's language is known then). */
+const languages = new Languages(join(data, 'locales'))
+let language = 'en'
+let dictionary: Dictionary = languages.dictionary('en')
+function useLanguage(): void {
+  language = languages.pick(workspace.language(), app.isReady() ? app.getLocale() : 'en')
+  dictionary = languages.dictionary(language)
+}
+const L = (): Labels => dictionary.main
+/** "Reveal in Finder" on macOS, "Show in folder" elsewhere. */
+const revealLabel = () => (process.platform === 'darwin' ? L().revealMac : L().reveal)
 const fileIndex = new FileIndex()
 const ignores = new Ignores()
 const watcher = new Watcher((changes) => {
@@ -155,9 +166,27 @@ const PARTITION = 'persist:documents'
 
 type Opened = OpenedDocument | { error: string; path: string }
 
+/** The welcome documents, one folder a language (ADR-005): part of the app, read-only. */
+const WELCOME = join(__dirname, 'welcome')
+
+/** The welcome document in the language in use, else in English. */
+function welcomePath(): string | null {
+  for (const code of [language, 'en']) {
+    try {
+      const name = readdirSync(join(WELCOME, code)).find((n) => n.endsWith('.md'))
+      if (name) return join(WELCOME, code, name)
+    } catch {
+      // No welcome in that language.
+    }
+  }
+  return null
+}
+
 function open(path: string): Opened {
   try {
-    const doc = openDocument(path, workspace, roots)
+    const opened = openDocument(path, workspace, roots)
+    // What the app ships is read, not edited.
+    const doc = isInside(realish(WELCOME), opened.path) ? { ...opened, readOnly: true } : opened
     // Its folder is watched: a change on disk reaches the open document, wherever it lives.
     watcher.add(doc.root, roots.dir(doc.root) ?? doc.folder)
     return doc
@@ -246,6 +275,25 @@ ipcMain.handle('update:restart', () => {
   return true
 })
 
+/** What the window speaks: the language, its dictionary's window section, the languages there are and the choice (null: the system's). */
+function i18nState() {
+  return { code: language, window: dictionary.window, languages: languages.list(), choice: workspace.language() }
+}
+ipcMain.handle('i18n:get', () => i18nState())
+/** The welcome document: what folio can do, in the language in use. */
+ipcMain.handle('welcome:open', () => {
+  const path = welcomePath()
+  return path ? open(path) : { error: 'No welcome document', path: '' }
+})
+/** Another language chosen (null: the system's): the menus built again, the window told. */
+ipcMain.handle('i18n:set', (_e, choice: unknown) => {
+  if (choice !== null && typeof choice !== 'string') return i18nState()
+  workspace.setLanguage(choice)
+  useLanguage()
+  buildMenu()
+  send('i18n:changed', i18nState())
+  return i18nState()
+})
 ipcMain.handle('spellcheck:get', () => workspace.spellcheck())
 ipcMain.handle('spellcheck:set', (_e, on: unknown) => {
   if (typeof on !== 'boolean') return workspace.spellcheck()
@@ -359,6 +407,7 @@ function buildMenu(): void {
       ],
     },
     { role: 'windowMenu' },
+    { role: 'help', submenu: [{ label: L().welcome, click: () => send('menu:welcome') }] },
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
@@ -1174,7 +1223,7 @@ ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
     { type: 'separator' },
     { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
     { label: L().consoleHere, click: () => send('menu:console', folder ? file : dirname(file)) },
-    { label: L().reveal, click: () => shell.showItemInFolder(file) },
+    { label: revealLabel(), click: () => shell.showItemInFolder(file) },
     // Two files compared: one chosen first, the other compared with it.
     ...(folder
       ? []
@@ -1225,7 +1274,7 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
     { type: 'separator' },
     { label: L().exportFolderPdf, click: () => send('menu:export-folder', project.path) },
     { label: L().consoleHere, click: () => send('menu:console', project.path) },
-    { label: L().reveal, click: () => void shell.openPath(project.path) },
+    { label: revealLabel(), click: () => void shell.openPath(project.path) },
     {
       label: L().remove,
       click: () => {
@@ -1595,6 +1644,8 @@ ipcMain.handle('git:status', async (_e, root: unknown, rel: unknown) => {
 interface PdfJob {
   title: string
   lang: string
+  /** The print page's words in the language in use. */
+  text: Dictionary['print']
   options: ReturnType<typeof pdfOptions>
   /** `urls`: the document's address from every root of the job — a link from another document is written against its own root. */
   docs: { name: string; text: string; base: string | null; format: string; urls: string[] }[]
@@ -1680,7 +1731,7 @@ ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) =>
   const result = await dialog.showSaveDialog(win, { defaultPath: where, filters: [{ name: 'PDF', extensions: ['pdf'] }] })
   if (result.canceled || !result.filePath) return { canceled: true }
   try {
-    await renderPdf({ title, lang: app.getLocale().startsWith('ru') ? 'ru' : 'en', options, docs }, result.filePath)
+    await renderPdf({ title, lang: language, text: dictionary.print, options, docs }, result.filePath)
     return { saved: result.filePath }
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) }
@@ -1717,7 +1768,10 @@ ipcMain.handle('app:startup', () => {
       active = tabs.length - 1
     }
   }
-  return { tabs, active, locale: app.getLocale(), shared: workspace.shared() }
+  // The first start: the welcome document opens by itself, once (under test only when a test asks for it).
+  const first = !workspace.welcomed() && (!underTest || process.env.FOLIO_WELCOME === '1')
+  if (first) workspace.setWelcomed()
+  return { tabs, active, locale: language, shared: workspace.shared(), i18n: i18nState(), welcome: first }
 })
 ipcMain.handle('doc:open-dialog', () => openDialog())
 ipcMain.handle('doc:open', (_e, path: unknown) => (typeof path === 'string' ? open(path) : { error: 'Not a path', path: '' }))
@@ -1906,6 +1960,8 @@ void app.whenReady().then(() => {
   const docs = electronSession.fromPartition(PARTITION)
   handleScheme(docs, join(__dirname, 'renderer'), roots)
   gate = gateNetwork(docs, (file) => consent.allows(file), (document, hosts) => send('net:blocked', { document, hosts }))
+  // The language: the one chosen, else the system's (known now the app is ready).
+  useLanguage()
   buildMenu()
   win = createWindow()
   updater.tidy()

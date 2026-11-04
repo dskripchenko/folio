@@ -1,6 +1,14 @@
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
 
+/** What the window speaks (ADR-005): the language, its words, the languages there are, the choice (null: the system's). */
+export interface I18nState {
+  code: string
+  window: unknown
+  languages: { code: string; name: string }[]
+  choice: string | null
+}
+
 /** A project's own settings (`.folio/settings.json`), as the settings window edits them. */
 export interface ProjectSettingsData {
   kind?: 'notes' | 'code'
@@ -75,6 +83,8 @@ export interface Opened {
   project: string | null
   /** A picture, a video or a sound: its size and when it changed. */
   media?: { size: number; modified: number }
+  /** Shown, never edited or saved (the welcome document). */
+  readOnly?: boolean
 }
 /** Opened; refused (an error tab); or handed to the system's program (a file that is not text). */
 export type OpenResult = Opened | { error: string; path: string } | { external: true; path: string }
@@ -180,7 +190,13 @@ export type UpdateState =
 
 export interface FolioBridge {
   platform: string
-  startup(): Promise<{ tabs: RestoredTab[]; active: number | null; locale: string; shared: string }>
+  startup(): Promise<{ tabs: RestoredTab[]; active: number | null; locale: string; shared: string; i18n: I18nState; welcome: boolean }>
+  /** The welcome document, read-only (ADR-005). */
+  openWelcome(): Promise<OpenResult>
+  onWelcome: Listener
+  /** Another language for folio (null: the system's). */
+  i18nSet(choice: string | null): Promise<I18nState>
+  onI18nChanged: Listener
   openDialog(): Promise<OpenResult[]>
   open(path: string): Promise<OpenResult>
   openUrl(url: string): Promise<OpenResult>

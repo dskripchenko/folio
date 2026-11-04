@@ -6,7 +6,7 @@
 
 export interface TableText {
   more: string
-  rows: [string, string, string] | [string, string]
+  rows: readonly string[]
 }
 
 const PAGE = 1000

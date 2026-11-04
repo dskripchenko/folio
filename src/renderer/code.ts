@@ -1,3 +1,5 @@
+import enLocale from '../locales/en.json'
+import { plural as pluralOf } from '../common/plural'
 /**
  * Code, data, logs: any text file with its lines numbered, in the colours of
  * its language. A data file is checked (errors at the line numbers, a count
@@ -54,31 +56,18 @@ function syntaxTheme(): void {
 
 const LANGUAGE_NAMES = new Map(languages().map((l) => [l.id, l.name]))
 
-const WORDS = {
-  ru: {
-    lines: ['строка', 'строки', 'строк'] as const,
-    errors: ['ошибка', 'ошибки', 'ошибок'] as const,
-    warnings: ['предупреждение', 'предупреждения', 'предупреждений'] as const,
-    next: 'К следующей',
-    levels: { error: 'Ошибки', warning: 'Предупреждения', info: 'Инфо', debug: 'Отладка', none: 'Прочее' },
-    filter: 'Показать или скрыть записи этого уровня',
-    cut: 'строка обрезана',
-  },
-  en: {
-    lines: ['line', 'lines'] as const,
-    errors: ['error', 'errors'] as const,
-    warnings: ['warning', 'warnings'] as const,
-    next: 'To the next one',
-    levels: { error: 'Errors', warning: 'Warnings', info: 'Info', debug: 'Debug', none: 'Other' },
-    filter: 'Show or hide the entries of this level',
-    cut: 'the line is cut',
-  },
+/** The view's words in folio's language (ADR-005), set by the window; English until then. */
+let WORDS: typeof enLocale.window.codeView = enLocale.window.codeView
+/** A count in its words, in the window's language. */
+const countOf = (n: number, forms: readonly string[]) => pluralOf(n, forms, document.documentElement.lang || 'en')
+
+export function setCodeWords(words: typeof enLocale.window.codeView): void {
+  WORDS = words
 }
 
 export function codeView(text: string, name: string, state: CodeState = {}): HTMLElement {
   syntaxTheme()
-  const ru = document.documentElement.lang === 'ru'
-  const w = ru ? WORDS.ru : WORDS.en
+  const w = WORDS
   const language = languageOf(name, text.slice(0, 200).split('\n')[0])
   // A final line break ends the last line; it does not start another.
   const source = text.replace(/\r?\n$/, '')
@@ -93,7 +82,7 @@ export function codeView(text: string, name: string, state: CodeState = {}): HTM
   const head = document.createElement('div')
   head.className = 'code-head'
   const label = document.createElement('span')
-  label.textContent = [language ? LANGUAGE_NAMES.get(language) : null, ru ? `строк: ${count.toLocaleString('ru')}` : plural(count, ru, WORDS.ru.lines, WORDS.en.lines)].filter(Boolean).join(' · ')
+  label.textContent = [language ? LANGUAGE_NAMES.get(language) : null, countOf(count, w.lines)].filter(Boolean).join(' · ')
   head.append(label)
 
   const diagnostics = language && whole && canValidate(language) ? validate(source, language) : []
@@ -359,7 +348,7 @@ export function codeView(text: string, name: string, state: CodeState = {}): HTM
       chip.dataset.testid = `level-${level}`
       chip.title = w.filter
       chip.setAttribute('aria-pressed', String(!hidden.has(level)))
-      chip.textContent = `${w.levels[level]} ${n.toLocaleString(ru ? 'ru' : 'en')}`
+      chip.textContent = `${w.levels[level]} ${n.toLocaleString(document.documentElement.lang || 'en')}`
       chip.addEventListener('click', () => {
         if (hidden.has(level)) hidden.delete(level)
         else hidden.add(level)
@@ -380,7 +369,7 @@ export function codeView(text: string, name: string, state: CodeState = {}): HTM
     step.className = 'code-problems'
     step.dataset.testid = 'code-problems'
     step.dataset.severity = errors > 0 ? 'error' : 'warning'
-    step.textContent = [errors ? plural(errors, ru, WORDS.ru.errors, WORDS.en.errors) : null, warnings ? plural(warnings, ru, WORDS.ru.warnings, WORDS.en.warnings) : null].filter(Boolean).join(', ')
+    step.textContent = [errors ? countOf(errors, w.errors) : null, warnings ? countOf(warnings, w.warnings) : null].filter(Boolean).join(', ')
     step.title = w.next
     const marked = [...byLine.keys()].sort((a, b) => a - b)
     let next = 0
@@ -410,10 +399,3 @@ export function codeView(text: string, name: string, state: CodeState = {}): HTM
   return box
 }
 
-function plural(n: number, ru: boolean, ruForms: readonly [string, string, string], en: readonly [string, string]): string {
-  if (!ru) return `${n.toLocaleString('en')} ${n === 1 ? en[0] : en[1]}`
-  const m10 = n % 10
-  const m100 = n % 100
-  const form = m10 === 1 && m100 !== 11 ? 0 : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 1 : 2
-  return `${n.toLocaleString('ru')} ${ruForms[form]}`
-}

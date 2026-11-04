@@ -546,6 +546,20 @@ auf jedem System funktioniert), ein Konflikt wird gezeigt; und die
 `.folio/settings.json` des Projekts als Formular, jeder Schlüssel, den folio
 nicht kennt, bleibt erhalten.
 
+## Sprachen und die Willkommensseite
+
+folio spricht von Haus aus Englisch und Russisch: die Sprache des Systems oder
+die im Einstellungsmenü gewählte (sofort, gemerkt). Jeder Text ist ein
+JSON-Wörterbuch (`src/locales/<code>.json`: `meta`, `main` für Menüs und
+Dialoge, `window`, `print`); eine weitere Sprache ist eine weitere solche
+Datei — im Repository oder in `folio-data/locales/<code>.json`, ohne folio neu
+zu bauen. Was sie auslässt, ist Englisch; Zahlformen sind eine Liste in der
+Reihenfolge von `Intl.PluralRules` (`["{n} Datei", "{n} Dateien"]`).
+
+*Was folio kann* (die Befehle, das Hilfe-Menü, das leere Fenster) öffnet eine
+schreibgeschützte Seite mit jeder Art Block, live gezeichnet; beim ersten
+Start öffnet sie sich von selbst, in der verwendeten Sprache.
+
 ## Ungespeichertes und schnelle Notizen
 
 Wie in Sublime Text: ein unbenannter Tab ist eine schnelle Notiz, und eine nicht

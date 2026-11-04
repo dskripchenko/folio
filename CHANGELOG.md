@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+- Languages: English and Russian built in, the system's or one chosen in the
+  settings menu, applied at once and kept. Every text is a JSON dictionary
+  (`src/locales`); another language is one more file — also in
+  `folio-data/locales` without rebuilding — English where it says nothing.
+- *What folio can do*: a read-only welcome page with every kind of block drawn
+  live, opened on the first start and from the commands, the Help menu and the
+  empty window, in the language in use.
+
 ## [1.4.0] - 2026-11-04
 
 ### Added

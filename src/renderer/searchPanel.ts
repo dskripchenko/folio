@@ -23,8 +23,8 @@ export interface SearchText {
   truncated: string
   none: string
   invalid: string
-  matches: [string, string, string] | [string, string]
-  files: [string, string, string] | [string, string]
+  matches: readonly string[]
+  files: readonly string[]
   toggleReplace: string
   replacePlaceholder: string
   replaceAll: string
