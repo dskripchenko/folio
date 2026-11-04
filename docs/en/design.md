@@ -449,6 +449,52 @@ remote's as last fetched and the tags, named on their commits, the
 checked-out one marked. Choosing a commit opens the file as it was then. The
 graph is drawn by `@dskripchenko/diagrams` (`renderCommitGraph`).
 
+## Tabs, tables, comparing, exporting, settings
+
+**Tabs.** `Cmd/Ctrl+Shift+T` brings back the tab closed last — at its place in
+the row, in its view, scrolled where it was. A tab is dragged to another place
+in the row, onto the right half of the view to open it beside the main one,
+and back onto the left half.
+
+**Embeds of files.** `![[photo.png]]`, `![[clip.mp4]]`, `![[song.mp3]]` and
+`![[report.pdf]]` show the file in the note, found by its name anywhere in the
+project (as a link is); `![[photo.png|300]]` or `|300x200` sizes it. A click on
+a picture opens it in its tab; the pointer resting on a link to one shows it.
+
+**Long lines** wrap at the view's width in prose (plain text, Markdown, logs)
+and not in code; `Alt+Z` (or *Wrap long lines* among the commands) changes it
+for the editor in view and remembers it for that kind of text.
+
+**PDF** opens in its tab in Chromium's own viewer: pages, zoom, search, its
+outline, printing.
+
+**CSV and TSV** are read as a table: the separator guessed, the header kept in
+view, a click on a column sorting by it (numbers by value), a thousand rows at
+a time; the source is edited in the code editor.
+
+**Two files compared**: *Select for compare* on one in the tree, then *Compare
+with* on the other — or *Compare the file with…* among the commands for the
+file in view. The changes, side by side, or the other file drawn; *Take its
+text* puts it into the editor.
+
+**Export.** *Export as HTML* writes one page with its pictures and diagrams
+inside and folio's look; *Export as Word (DOCX)* writes headings, emphasis,
+links, lists, quotes, code, tables and pictures, diagrams as pictures.
+
+**Git beyond committing.** In Changes: the box under the message amends the
+last commit (its message to start from); the save button puts every change
+aside, new files too (a stash, named by the message) — the list under the
+changes takes them back or deletes them. In the history: a commit's menu
+undoes it with a new commit (revert) or tags it (`v1.2.0 The message` makes
+an annotated tag); a tag goes out with the next sync. Branches are renamed and
+deleted in the branch menu. Stash and revert need git installed.
+
+**Settings** (`Cmd/Ctrl+,`, or the settings menu): every command of folio and
+of the code editor with its keys — *Set a key* takes the keys pressed (kept in
+`keybindings.json` with `Mod`, so the file works on every system), a clash is
+shown; and the project's `.folio/settings.json` as a form, every key folio does
+not know kept.
+
 ## Unsaved changes and quick notes
 
 As in Sublime Text: an untitled tab is a quick note, and an edit you have not

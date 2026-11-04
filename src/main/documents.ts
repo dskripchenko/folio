@@ -57,7 +57,7 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
   const byName = formatByName(path)
   // A picture, a video or a sound is streamed to the window, never read here: any size.
   const media = isMedia(byName)
-  const limit = media ? Infinity : byName === 'text' || byName === 'data' ? MAX_TEXT_BYTES : MAX_BYTES
+  const limit = media ? Infinity : byName === 'text' || byName === 'data' || byName === 'csv' ? MAX_TEXT_BYTES : MAX_BYTES
   if (size > limit) throw new DocumentError(`${basename(path)} is larger than ${limit / 1024 / 1024} MB`)
 
   // The root a document may read from: its project, Shared, or its own folder.

@@ -31,8 +31,10 @@ export function kindOf(name: string): Kind {
   // Any other text with a known language — code, data, logs, configuration — is shown highlighted.
   if (format === 'text') return languageOf(name) ? 'code' : 'other'
   if (format === 'data' && lower.endsWith('.json')) return /openapi|swagger|asyncapi/.test(lower) ? 'diagram' : 'code'
+  // A table: code's place in the tree (data), drawn as a table.
+  if (format === 'csv') return 'code'
   // Pictures (an SVG too), video and sound: shown in folio.
-  if (format === 'svg' || format === 'image' || format === 'video' || format === 'audio') return 'media'
+  if (format === 'svg' || format === 'image' || format === 'video' || format === 'audio' || format === 'pdf') return 'media'
   return 'diagram'
 }
 

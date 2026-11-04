@@ -39,6 +39,8 @@ describe('document formats', () => {
     expect(kindOf('photo.png')).toBe('media')
     expect(opensInFolio('a.bpmn')).toBe(true)
     expect(opensInFolio('a.txt')).toBe(true)
-    expect(opensInFolio('report.pdf')).toBe(false)
+    // A PDF shows in Chromium's viewer in its tab (ADR-004 D5); an archive stays the system's.
+    expect(opensInFolio('report.pdf')).toBe(true)
+    expect(opensInFolio('bundle.zip')).toBe(false)
   })
 })

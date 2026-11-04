@@ -6,6 +6,8 @@
  */
 import { renderCommitGraph } from '@dskripchenko/diagrams'
 import { folio, prefs, type GitInfo, type GitRefusal, type Version } from './bridge'
+import { iconButton } from './icons'
+import { popMenuAt } from './menu'
 
 export interface HistoryText {
   title: string
@@ -26,6 +28,15 @@ export interface HistoryText {
   branches: string
   newBranch: string
   create: string
+  renameBranch: string
+  deleteBranch: string
+  revertCommit: string
+  tagHere: string
+  tagName: string
+  deleteTag: string
+  copyId: string
+  reverted: string
+  tagged: string
   switched: string
   remotePlaceholder: string
   connect: string
@@ -205,6 +216,43 @@ export class HistoryPanel {
   private loginFor: string | null = null
   private branchesOpen = false
 
+  /** A word asked for in the panel (a branch's new name, a tag): its value, or null when given up. */
+  private ask(label: string, value: string): Promise<string | null> {
+    this.o.el.querySelector('.history-ask')?.remove()
+    const form = document.createElement('form')
+    form.className = 'history-ask inline-form'
+    form.dataset.testid = 'history-ask'
+    const input = document.createElement('input')
+    input.value = value
+    input.placeholder = label
+    input.setAttribute('aria-label', label)
+    const go = document.createElement('button')
+    go.type = 'submit'
+    go.className = 'action'
+    go.textContent = this.o.text().create
+    form.append(input, go)
+    this.o.el.prepend(form)
+    input.focus()
+    input.select()
+    return new Promise((resolve) => {
+      let done = false
+      const finish = (v: string | null) => {
+        if (done) return
+        done = true
+        form.remove()
+        resolve(v === null || v.trim() === '' ? null : v.trim())
+      }
+      form.addEventListener('submit', (e) => {
+        e.preventDefault()
+        finish(input.value)
+      })
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') finish(null)
+      })
+      input.addEventListener('blur', () => setTimeout(() => finish(null), 150))
+    })
+  }
+
   private say(kind: 'ok' | 'error', text: string): void {
     this.note = text === '' ? null : { kind, text }
   }
@@ -246,6 +294,10 @@ export class HistoryPanel {
     menu.className = 'branch-menu'
     menu.dataset.testid = 'branch-menu'
     for (const name of info.branches) {
+      const row = document.createElement('div')
+      row.className = 'branch-row'
+      row.dataset.testid = 'branch-row'
+      row.dataset.branch = name
       const b = document.createElement('button')
       b.type = 'button'
       b.textContent = name
@@ -257,7 +309,18 @@ export class HistoryPanel {
           this.say('ok', t.switched.replace('{branch}', name))
         }),
       )
-      menu.append(b)
+      // Renamed (the current one too), deleted (not the current one; asked first).
+      const rename = iconButton('visual', t.renameBranch, () =>
+        void this.ask(t.renameBranch, name).then((to) => {
+          if (to && to !== name) void this.act(() => folio().gitBranchRename(path, name, to), () => (this.branchesOpen = false))
+        }),
+      )
+      rename.dataset.testid = 'branch-rename'
+      const remove = iconButton('close', t.deleteBranch, () => void this.act(() => folio().gitBranchDelete(path, name), () => (this.branchesOpen = false)))
+      remove.dataset.testid = 'branch-delete'
+      remove.disabled = name === info.branch
+      row.append(b, rename, remove)
+      menu.append(row)
     }
     const form = document.createElement('form')
     form.className = 'inline-form'
@@ -518,6 +581,29 @@ export class HistoryPanel {
         this.o.open(path, v)
       }
       li.addEventListener('click', open)
+      // Its menu: undone by a new commit, a tag on it, its id copied.
+      li.addEventListener('contextmenu', (e) => {
+        e.preventDefault()
+        const summary = v.message.split('\n')[0] ?? ''
+        popMenuAt(e.clientX, e.clientY, [
+          { label: t.revertCommit, testid: 'commit-revert', action: () => void this.act(() => folio().gitRevert(path, v.oid, summary), (r) => r.ok && this.say('ok', t.reverted)) },
+          {
+            label: t.tagHere,
+            testid: 'commit-tag',
+            action: () =>
+              void this.ask(t.tagName, '').then((answer) => {
+                // `v1.2.0 The message` — a name, then (optionally) what the tag says.
+                const m = answer ? /^(\S+)\s*([\s\S]*)$/.exec(answer.trim()) : null
+                if (m) void this.act(() => folio().gitTagCreate(path, m[1]!, v.oid, m[2] ?? ''), () => this.say('ok', t.tagged.replace('{tag}', m[1]!)))
+              }),
+          },
+          ...v.refs
+            .filter((r) => r.startsWith('tag: '))
+            .map((r) => ({ label: t.deleteTag.replace('{tag}', r.slice(5)), testid: 'commit-untag', action: () => void this.act(() => folio().gitTagDelete(path, r.slice(5))) })),
+          { separator: true, label: '', action: () => {} },
+          { label: t.copyId, testid: 'commit-copy', action: () => void navigator.clipboard.writeText(v.oid) },
+        ])
+      })
       li.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') open()
       })

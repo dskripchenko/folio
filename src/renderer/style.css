@@ -652,3 +652,72 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .media-failed { margin: auto; padding: 32px; text-align: center; color: var(--muted); }
 .media-failed button { margin-top: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; cursor: pointer; }
 .source-editor .preview .media-view { height: 100%; }
+
+/* A tab dragged: where it goes in the row, and the half of the view that opens it beside (or back). */
+.tab.drop-before { box-shadow: inset 2px 0 0 var(--accent); }
+.tab.drop-after { box-shadow: inset -2px 0 0 var(--accent); }
+body.dragging-tab .tab { cursor: grabbing; }
+.beside-drop { position: absolute; top: 0; bottom: 0; right: 0; width: 50%; z-index: 30; pointer-events: none; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 2px dashed var(--accent); border-radius: 8px; box-sizing: border-box; }
+.beside-drop--left { left: 0; right: auto; }
+/* A picture, a video or a sound embedded in a note: never wider than the page; a picture opens in its tab. */
+.uid-markdown__embed.is-media { border: 0; padding: 0; background: none; }
+.embed-media { display: block; max-width: 100%; height: auto; margin: 8px 0; }
+.embed-image { cursor: zoom-in; border-radius: 4px; }
+img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-height: 40px; outline: 1px dashed var(--line); }
+
+/* A CSV file as a table: the header kept in view as it scrolls, a click on a column sorts by it. */
+.doc[data-format="csv"]:not([data-edit]) { max-width: none; }
+.csv-view { width: max-content; min-width: 100%; }
+.csv-table { border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.csv-table th, .csv-table td { max-width: 320px; padding: 4px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csv-table thead th { position: sticky; top: 0; z-index: 1; background: var(--tab); font-weight: 600; cursor: pointer; user-select: none; }
+.csv-table thead th[data-sort="up"]::after { content: ' ▲'; color: var(--accent); }
+.csv-table thead th[data-sort="down"]::after { content: ' ▼'; color: var(--accent); }
+.csv-table .csv-n { color: var(--muted); text-align: right; font-weight: normal; cursor: default; }
+.csv-table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.csv-more { margin: 12px 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; cursor: pointer; }
+
+/* Branches in the menu: switched to by name, renamed and deleted beside it. Changes put aside, below the changes. */
+.branch-menu .branch-row { display: flex; align-items: center; gap: 2px; }
+.branch-menu .branch-row > button:first-child { flex: 1; text-align: left; }
+.branch-menu .branch-row .icon-button { opacity: 0.6; }
+.branch-menu .branch-row .icon-button:hover { opacity: 1; }
+.history-ask { margin: 8px 12px; }
+.changes-amend { display: flex; align-items: center; gap: 6px; margin: 4px 12px; font-size: 12px; color: var(--muted); }
+.changes-actions--shown { visibility: visible !important; opacity: 1 !important; }
+.doc[data-format="pdf"] { max-width: none; height: 100%; margin: 0; padding: 0; }
+.pdf-frame { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--bg); }
+.embed-pdf { border: 1px solid var(--line); border-radius: 6px; }
+
+/* The settings window: keys of one's own, the project's own settings. */
+.settings-dialog { display: flex; flex-direction: column; width: min(860px, calc(100vw - 48px)); height: min(640px, calc(100vh - 80px)); margin: 40px auto 0; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25); overflow: hidden; font-size: 13px; }
+.settings-dialog > header { display: flex; align-items: center; gap: 16px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--tab); }
+.settings-tabs { display: flex; gap: 4px; flex: 1; }
+.settings-tabs button, .settings-close, .settings-tools button, .settings-set, .settings-add, .settings-list-row button, .settings-keyset kbd button { border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; padding: 4px 10px; cursor: pointer; }
+.settings-tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.settings-close { border: 0; background: none; font-size: 18px; padding: 0 6px; }
+.settings-keys, .settings-project { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; }
+.settings-tools { display: flex; gap: 8px; margin-bottom: 10px; position: sticky; top: -12px; background: var(--bg); padding: 4px 0; z-index: 1; }
+.settings-tools input { flex: 1; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+.settings-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 10px; align-items: center; padding: 5px 4px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.settings-name { display: flex; flex-direction: column; }
+.settings-group { color: var(--muted); font-size: 11px; }
+.settings-keyset { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.settings-keyset kbd { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--tab); }
+.settings-keyset kbd.own { border-color: var(--accent); }
+.settings-keyset kbd button { padding: 0 4px; border: 0; background: none; line-height: 1; }
+.settings-clash { color: var(--warn-line, #9e6a03); font-size: 11px; }
+.settings-set.capturing { border-color: var(--accent); color: var(--accent); }
+.settings-project h3 { margin: 0 0 2px; }
+.settings-hint { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+.settings-field { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 10px; align-items: center; margin: 8px 0; }
+.settings-field select, .settings-field input[type="number"], .settings-field input[type="text"], .settings-list-row input, input[name="formatterCommand"] { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+.settings-field[hidden] { display: none; }
+.settings-field input[type="checkbox"] { justify-self: start; }
+.settings-actions .action { padding: 6px 16px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+.settings-list { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; padding: 8px 10px; }
+.settings-list legend { padding: 0 4px; color: var(--muted); }
+.settings-list-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 6px; margin: 4px 0; }
+.settings-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.settings-said { color: var(--muted); }
+.settings-backdrop { padding-top: 0; }

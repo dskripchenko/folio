@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell, systemPreferences } from 'electron'
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -10,7 +10,7 @@ import { tasksOf as projectTasksOf } from './projectTasks'
 import { formatText } from './format'
 import { applyEdits, LspManager, type PositionEdit } from './lsp/manager'
 import { languageOf } from '@dskripchenko/syntax'
-import { readProjectSettings, type ProjectSettings } from './projectSettings'
+import { readProjectSettings, writeProjectSettings, type ProjectSettings } from './projectSettings'
 import { SymbolIndex, type SourceFile } from './symbolIndex'
 import {
   abortMerge,
@@ -39,6 +39,8 @@ import {
 import { Logins } from './logins'
 import { folderDocuments, pdfName, pdfOptions, printToPdfOptions, SLIDES_PDF } from './pdf'
 import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, systemTransport, type Transport } from './sync'
+import { buildDocx, type DocxModel } from './docx'
+import { amendLast, createTag, deleteBranch, deleteTag, lastMessage, renameBranch, revertCommit, stashApply, stashDrop, stashList, stashPush } from './gitOps'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
@@ -268,9 +270,12 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
       webSecurity: true,
       spellcheck: true,
+      // Chromium's PDF viewer for a PDF in its tab (ADR-004 D5); only `folio://app/pdf/` may be framed (index.html's CSP).
+      plugins: true,
     },
   })
-  w.once('ready-to-show', () => w.show())
+  // Under test the window shows without taking the focus from the person's own work.
+  w.once('ready-to-show', () => (underTest ? w.showInactive() : w.show()))
   spelling(w)
   // A link: another document of a root opens in a tab; the web goes to the system browser.
   const follow = (url: string) => {
@@ -526,6 +531,27 @@ ipcMain.handle('fs:lines', (_e, items: unknown) => {
 ipcMain.handle('project:settings', (_e, path: unknown) => {
   const owner = typeof path === 'string' ? workspace.ownerOf(path) : null
   return owner?.kind === 'project' ? settingsOf(owner.project.path) : {}
+})
+/** The project of a file and its settings, for the settings window (null outside a project). */
+ipcMain.handle('project:settings-of', (_e, path: unknown) => {
+  const owner = typeof path === 'string' ? workspace.ownerOf(path) : null
+  if (owner?.kind !== 'project') return null
+  return { name: owner.project.name, path: owner.project.path, settings: readProjectSettings(owner.project.path) }
+})
+/** The settings window's settings of a project written to its `.folio/settings.json`. */
+ipcMain.handle('project:settings-set', (_e, projectPath: unknown, settings: unknown) => {
+  const project = workspace.projects().find((p) => typeof projectPath === 'string' && resolve(p.path) === resolve(projectPath))
+  if (!project || !settings || typeof settings !== 'object') return null
+  const written = writeProjectSettings(project.path, settings as ProjectSettings)
+  settingsCache.delete(project.path)
+  return written
+})
+/** Keys of one's own written from the settings window. */
+ipcMain.handle('keybindings:set', (_e, list: unknown) => {
+  if (!Array.isArray(list)) return false
+  const clean = list.filter((b): b is { key: string; command: string } => !!b && typeof b.key === 'string' && typeof b.command === 'string' && b.key !== '' && b.command !== '')
+  writeFileSync(join(data, 'keybindings.json'), `${JSON.stringify(clean, null, 2)}\n`)
+  return true
 })
 /** Keys of one's own (`folio-data/keybindings.json`): `[{ "key": "Mod-Shift-d", "command": "copyLineDown" }]`. */
 ipcMain.handle('keybindings:get', () => {
@@ -819,7 +845,18 @@ ipcMain.handle('doc:peek', async (_e, from: unknown, link: unknown) => {
     file = documentOfUrl(l.url, roots)
     heading = decodeURIComponent(/#(.+)$/.exec(l.url)?.[1] ?? '') || null
   }
-  if (file === null || !isNote(file) || !existsSync(file)) return null
+  if (file === null || !existsSync(file)) return null
+  // A picture, a video, a sound (an SVG too): its URL to draw, never its bytes.
+  const kind = formatByName(file)
+  if (isMedia(kind) || kind === 'svg') {
+    try {
+      const doc = openDocument(file, workspace, roots)
+      return { path: doc.path, name: doc.name, text: '', base: doc.base, heading: null, media: kind }
+    } catch {
+      return null
+    }
+  }
+  if (!isNote(file)) return null
   try {
     if (statSync(file).size > 2 * 1024 * 1024) return null
     const doc = openDocument(file, workspace, roots)
@@ -1118,6 +1155,9 @@ ipcMain.handle('image:save', (_e, note: unknown, name: unknown, type: unknown, b
   })
 })
 
+/** A file chosen in the tree to compare another with ("Select for compare", as in VS Code). */
+let compareFrom: string | null = null
+
 ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
   const file = typeof root === 'string' && typeof rel === 'string' ? roots.resolve(root, rel) : null
   if (file === null || !win) return
@@ -1135,6 +1175,16 @@ ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
     { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
     { label: L().consoleHere, click: () => send('menu:console', folder ? file : dirname(file)) },
     { label: L().reveal, click: () => shell.showItemInFolder(file) },
+    // Two files compared: one chosen first, the other compared with it.
+    ...(folder
+      ? []
+      : [
+          { type: 'separator' as const },
+          { label: L().selectForCompare, click: () => (compareFrom = file) },
+          ...(compareFrom && compareFrom !== file && existsSync(compareFrom)
+            ? [{ label: L().compareWith.replace('{name}', basename(compareFrom)), click: () => send('compare:files', { a: compareFrom, b: file }) }]
+            : []),
+        ]),
     ...(folder
       ? []
       : [{ type: 'separator' as const }, workspace.bookmarks().includes(resolve(file))
@@ -1333,10 +1383,12 @@ ipcMain.handle('git:discard', async (_e, root: unknown, path: unknown) => {
   await discardFile(dir, files[0]!)
   return true
 })
-ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown) => {
+ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown, amend: unknown) => {
   const dir = await changesRoot(root)
   if (!dir || typeof message !== 'string' || message.trim() === '' || mergeHead(dir)) return null
-  const oid = await commitStaged(dir, message.trim(), authorOf(dir, fallbackAuthor()))
+  const author = authorOf(dir, fallbackAuthor())
+  // Amended: the last commit made again with what is staged (or only its message).
+  const oid = amend === true ? await amendLast(dir, message.trim(), author) : await commitStaged(dir, message.trim(), author)
   if (oid) send('git:committed', { path: dir })
   return oid
 })
@@ -1389,6 +1441,115 @@ ipcMain.handle('git:login', (_e, path: unknown, username: unknown, password: unk
     return { ok: true, saved: logins.set(remote.url, { username, password }, remember === true) }
   }),
 )
+/** The last commit's message (to amend it). */
+ipcMain.handle('git:last-message', async (_e, root: unknown) => {
+  const dir = await changesRoot(root)
+  return dir ? lastMessage(dir) : null
+})
+// Changes put aside and taken back (the system's git).
+// Read only: no gitAction (it tells the window git changed, and the panel would ask again, round and round).
+ipcMain.handle('git:stash-list', async (_e, path: unknown) => {
+  const root = typeof path === 'string' ? await repoOf(path) : null
+  if (!root) return { error: 'invalid', detail: [] }
+  const bin = await (systemGit ??= findSystemGit())
+  try {
+    return { ok: true, available: bin !== null, list: await stashList(bin, root) }
+  } catch (e) {
+    return { error: 'failed', detail: [e instanceof Error ? e.message : String(e)] }
+  }
+})
+ipcMain.handle('git:stash-push', (_e, path: unknown, message: unknown) =>
+  gitAction(path, async (root) => {
+    await autoCommit.flush()
+    await stashPush(await (systemGit ??= findSystemGit()), root, typeof message === 'string' ? message : '', authorOf(root, fallbackAuthor()))
+    send('fs:changed', [{ root: roots.register(root), dirs: [], files: [], all: true }])
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:stash-apply', (_e, path: unknown, index: unknown, pop: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof index !== 'number') throw new GitError('invalid')
+    await stashApply(await (systemGit ??= findSystemGit()), root, index, pop === true)
+    send('fs:changed', [{ root: roots.register(root), dirs: [], files: [], all: true }])
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:stash-drop', (_e, path: unknown, index: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof index !== 'number' || !(await confirm(L().stashDropQuestion, L().stashDropDetail, L().drop))) return { ok: false }
+    await stashDrop(await (systemGit ??= findSystemGit()), root, index)
+    return { ok: true }
+  }),
+)
+/** A commit undone by a new one (asked first). */
+ipcMain.handle('git:revert', (_e, path: unknown, oid: unknown, summary: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof oid !== 'string') throw new GitError('invalid')
+    if (!(await confirm(L().revertQuestion.replace('{commit}', typeof summary === 'string' ? summary : oid.slice(0, 7)), L().revertDetail, L().revert))) return { ok: false }
+    await autoCommit.flush()
+    await revertCommit(await (systemGit ??= findSystemGit()), root, oid, authorOf(root, fallbackAuthor()))
+    send('fs:changed', [{ root: roots.register(root), dirs: [], files: [], all: true }])
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:branch-rename', (_e, path: unknown, from: unknown, to: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof from !== 'string' || typeof to !== 'string' || to.trim() === '') throw new GitError('invalid')
+    await renameBranch(root, from, to.trim())
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:branch-delete', (_e, path: unknown, name: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string') throw new GitError('invalid')
+    if (!(await confirm(L().branchDeleteQuestion.replace('{branch}', name), L().branchDeleteDetail, L().delete))) return { ok: false }
+    await deleteBranch(root, name)
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:tag-create', (_e, path: unknown, name: unknown, oid: unknown, message: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string' || typeof oid !== 'string' || name.trim() === '') throw new GitError('invalid')
+    await createTag(root, name.trim(), oid, typeof message === 'string' ? message : '', authorOf(root, fallbackAuthor()))
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:tag-delete', (_e, path: unknown, name: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string') throw new GitError('invalid')
+    if (!(await confirm(L().tagDeleteQuestion.replace('{tag}', name), '', L().delete))) return { ok: false }
+    await deleteTag(root, name)
+    return { ok: true }
+  }),
+)
+
+/** A document exported (ADR-004 D6): one HTML page as given, or a Word file written from its blocks; where it goes is asked. */
+ipcMain.handle('export:save', async (_e, kind: unknown, name: unknown, payload: unknown) => {
+  if (!win || (kind !== 'html' && kind !== 'docx') || typeof name !== 'string') return { canceled: true }
+  const ext = kind === 'html' ? 'html' : 'docx'
+  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+    defaultPath: join(app.getPath('documents'), `${name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '-') || 'document'}.${ext}`),
+    filters: [{ name: kind === 'html' ? 'HTML' : 'Word', extensions: [ext] }],
+  })
+  if (canceled || !filePath) return { canceled: true }
+  try {
+    if (kind === 'html') {
+      if (typeof payload !== 'string') throw new Error('no page')
+      writeFileSync(filePath, payload)
+    } else writeFileSync(filePath, buildDocx(payload as DocxModel))
+    return { saved: filePath }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+/** A yes or no from the person, in a native dialog: true for yes. */
+async function confirm(message: string, detail: string, yes: string): Promise<boolean> {
+  if (!win) return false
+  const { response } = await dialog.showMessageBox(win, { type: 'warning', buttons: [yes, L().cancel], defaultId: 0, cancelId: 1, message, detail })
+  return response === 0
+}
+
 ipcMain.handle('git:merge-finish', (_e, path: unknown) =>
   gitAction(path, async (root) => ({ ok: true, oid: await finishMerge(root, authorOf(root, fallbackAuthor())) })),
 )
@@ -1730,7 +1891,16 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) win = createWindow()
 })
 
+/** Run by the e2e tests: out of the way of the person at the machine. */
+const underTest = process.env.FOLIO_E2E === '1'
+if (underTest && process.platform === 'darwin') {
+  // A test closes the app mid-flight; macOS would offer to reopen its windows next time (the development Electron's defaults only).
+  systemPreferences.setUserDefault('ApplePersistenceIgnoreState', 'boolean', true)
+}
+
 void app.whenReady().then(() => {
+  // No Dock icon for the tests' windows.
+  if (underTest) app.dock?.hide()
   // Run from the source on a Mac: the Dock shows folio's icon, not Electron's.
   if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(join(__dirname, 'icon.png'))
   const docs = electronSession.fromPartition(PARTITION)

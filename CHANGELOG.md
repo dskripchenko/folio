@@ -7,6 +7,35 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-04
+
+### Added
+- Tabs: the one closed last comes back with `Cmd/Ctrl+Shift+T` at its place,
+  in its view, scrolled where it was; tabs are dragged to another place in
+  the row, onto the view's right half to open beside, and back.
+- `![[photo.png]]`, `![[clip.mp4]]`, `![[song.mp3]]`, `![[report.pdf]]` show
+  the file in the note, found by name anywhere in the project; `|300` or
+  `|300x200` sizes it. A link to a picture previews it on hover.
+- Long lines wrap at the view's width in prose (plain text, Markdown, logs);
+  `Alt+Z` changes it and remembers it for that kind of text.
+- PDF files open in their tab in Chromium's viewer.
+- CSV and TSV as a table: separator guessed, header kept in view, sorted by a
+  column, a thousand rows at a time; the source in the code editor.
+- Any two files compared — from the tree (select for compare, compare with)
+  or the palette — in the history's views of the changes.
+- Export as one HTML page (pictures and diagrams inside) and as Word (DOCX,
+  written by folio itself: headings, emphasis, links, lists, quotes, code,
+  tables, pictures; diagrams as pictures).
+- Git: put changes aside and take them back (stash, new files too), amend the
+  last commit, undo a commit with a new one (revert), tag a commit (tags go
+  out with the next sync), rename and delete branches.
+- The settings window (`Cmd/Ctrl+,`): keys of one's own for every command of
+  folio and of the code editor, set by pressing them, clashes shown; the
+  project's `.folio/settings.json` as a form, unknown keys kept.
+
+### Fixed
+- A tab dragged over an editor is no longer taken by it as a drop.
+
 ## [1.3.0] - 2026-11-04
 
 ### Added
@@ -341,7 +370,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/dskripchenko/folio/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/dskripchenko/folio/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/dskripchenko/folio/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/dskripchenko/folio/compare/v1.1.0...v1.2.0

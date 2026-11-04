@@ -8,7 +8,8 @@ import { CodeEditor, type CodeEditorOptions, type CompletionSource, type KeyBind
 import { languageOf } from '@dskripchenko/syntax'
 import type { Format } from './bridge'
 import { codeView, type CodeState } from './code'
-import { audioView, imageView, videoView, type MediaInfo, type MediaText } from './mediaView'
+import { csvView, type TableText } from './csvView'
+import { audioView, imageView, pdfView, videoView, type MediaInfo, type MediaText } from './mediaView'
 
 export { READ_ONLY_BYTES } from './code'
 
@@ -71,6 +72,10 @@ export interface ViewOptions {
   hover?: CodeEditorOptions['hover']
   signatureHelp?: CodeEditorOptions['signatureHelp']
   onModClick?: CodeEditorOptions['onModClick']
+  /** A table's words, the language, its size once read. */
+  table?: { text: TableText; lang: string; info(rows: number, cols: number): void }
+  /** Long lines wrap at the view's width (null: folio's choice for the kind of text). */
+  wrap?: (language: string | null) => boolean
   /** A picture, a video or a sound: its URL, the words of its controls, the system's program, its size once known. */
   media?: { src: string; text: MediaText; external(): void; info(info: MediaInfo): void }
 }
@@ -124,11 +129,14 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
     }
     case 'image':
     case 'video':
-    case 'audio': {
+    case 'audio':
+    case 'pdf': {
       if (!o.media) return codeView('', o.name, o.code)
       const media = { ...o.media, name: o.name }
-      return format === 'image' ? imageView(media) : format === 'video' ? videoView(media) : audioView(media)
+      return format === 'image' ? imageView(media) : format === 'video' ? videoView(media) : format === 'pdf' ? pdfView(media) : audioView(media)
     }
+    case 'csv':
+      return o.table ? csvView({ text, name: o.name, t: o.table.text, lang: o.table.lang, info: o.table.info }) : codeView(text, o.name, o.code)
     case 'svg': {
       // Drawn from its text: what is being written shows as it is written.
       const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`
@@ -142,7 +150,7 @@ export function viewOf(format: Format, text: string, o: ViewOptions): HTMLElemen
 
 /** Formats with an editor of their own; draw.io has none (folio shows it, the source stays as is). */
 export function canEdit(format: Format): boolean {
-  return format !== 'drawio' && format !== 'image' && format !== 'video' && format !== 'audio'
+  return format !== 'drawio' && format !== 'image' && format !== 'video' && format !== 'audio' && format !== 'pdf'
 }
 
 /** The editor of a non-Markdown document; `changed` gets the new text after each edit. */
@@ -230,6 +238,7 @@ function sourceEditor(format: Format, text: string, o: ViewOptions, changed: (te
   const editor = new CodeEditor(host, {
     value: text,
     language: languageFor(format, o.name, text) ?? undefined,
+    lineWrapping: o.wrap?.(languageFor(format, o.name, text)) ?? false,
     ...(o.completion ? { completion: o.completion } : {}),
     ...(o.keymap?.length ? { keymap: o.keymap } : {}),
     ...(o.hover ? { hover: o.hover } : {}),

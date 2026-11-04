@@ -37,6 +37,19 @@ export interface ChangesText {
   /** The message is empty, or nothing is staged. */
   nothing: string
   committed: string
+  amend: string
+  stash: string
+  stashes: string
+  apply: string
+  pop: string
+  drop: string
+  stashed: string
+}
+
+export interface Stash {
+  index: number
+  message: string
+  time: number
 }
 
 export interface ChangesDeps {
@@ -46,8 +59,15 @@ export interface ChangesDeps {
   unstage(root: string, paths: string[]): Promise<void>
   /** Asks first; true when thrown away. */
   discard(root: string, path: string): Promise<boolean>
-  commit(root: string, message: string): Promise<string | null>
+  commit(root: string, message: string, amend: boolean): Promise<string | null>
   open(root: string, path: string): void
+  /** The last commit's message (amending it). */
+  lastMessage(root: string): Promise<string | null>
+  /** Changes put aside: listed, put aside, taken back, dropped (asks first). A string is a refusal to say. */
+  stashes(root: string): Promise<Stash[]>
+  stash(root: string, message: string): Promise<string | null>
+  applyStash(root: string, index: number, pop: boolean): Promise<string | null>
+  dropStash(root: string, index: number): Promise<string | null>
 }
 
 const LETTER: Record<ChangeKind, string> = { added: 'A', modified: 'M', deleted: 'D', untracked: 'U' }
@@ -56,6 +76,10 @@ export class ChangesPanel {
   readonly el: HTMLElement
   private readonly message: HTMLTextAreaElement
   private readonly commitButton: HTMLButtonElement
+  private readonly amend: HTMLInputElement
+  private readonly amendLabel: HTMLElement
+  private readonly stashButton: HTMLButtonElement
+  private readonly stashList: HTMLElement
   private readonly status: HTMLElement
   private readonly list: HTMLElement
   private path: string | null = null
@@ -76,7 +100,10 @@ export class ChangesPanel {
     const header = document.createElement('header')
     const title = document.createElement('span')
     title.className = 'changes-title'
-    header.append(title, iconButton('close', text.close, () => this.setVisible(false)))
+    // Every change put aside (new files too), the message (if any) naming them.
+    this.stashButton = iconButton('save', text.stash, () => void this.stashChanges())
+    this.stashButton.dataset.testid = 'changes-stash'
+    header.append(title, this.stashButton, iconButton('close', text.close, () => this.setVisible(false)))
     this.message = document.createElement('textarea')
     this.message.className = 'changes-message'
     this.message.dataset.testid = 'changes-message'
@@ -94,12 +121,30 @@ export class ChangesPanel {
     this.commitButton.className = 'changes-commit'
     this.commitButton.dataset.testid = 'changes-commit'
     this.commitButton.addEventListener('click', () => void this.commit())
+    // Amend: the last commit made again; its message to start from.
+    this.amendLabel = document.createElement('label')
+    this.amendLabel.className = 'changes-amend'
+    this.amend = document.createElement('input')
+    this.amend.type = 'checkbox'
+    this.amend.dataset.testid = 'changes-amend'
+    this.amend.addEventListener('change', () => {
+      const root = this.view?.root
+      if (this.amend.checked && root && this.message.value.trim() === '')
+        void this.deps.lastMessage(root).then((m) => {
+          if (m && this.amend.checked && this.message.value.trim() === '') this.message.value = m
+        })
+      this.syncButton()
+    })
+    this.amendLabel.append(this.amend, document.createElement('span'))
+    this.stashList = document.createElement('section')
+    this.stashList.className = 'changes-group changes-stashes'
+    this.stashList.dataset.testid = 'changes-stashes'
     this.status = document.createElement('div')
     this.status.className = 'changes-status'
     this.status.dataset.testid = 'changes-status'
     this.list = document.createElement('div')
     this.list.className = 'changes-list'
-    this.el.append(header, this.message, this.commitButton, this.status, this.list)
+    this.el.append(header, this.message, this.amendLabel, this.commitButton, this.status, this.list, this.stashList)
     this.setText(text)
   }
 
@@ -109,6 +154,9 @@ export class ChangesPanel {
     this.el.querySelector('.changes-title')!.textContent = text.title
     this.message.placeholder = text.message
     this.commitButton.textContent = text.commit
+    this.amendLabel.querySelector('span')!.textContent = text.amend
+    this.stashButton.title = text.stash
+    this.stashButton.setAttribute('aria-label', text.stash)
     void this.refresh()
   }
 
@@ -138,7 +186,8 @@ export class ChangesPanel {
     const view = await this.deps.load(this.path)
     if (seq !== this.seq) return
     this.view = view
-    this.commitButton.disabled = !view || view.staged.length === 0
+    this.syncButton()
+    void this.drawStashes(seq)
     const key = JSON.stringify(view)
     if (key === this.drawn) return
     this.drawn = key
@@ -227,15 +276,78 @@ export class ChangesPanel {
     await this.refresh()
   }
 
+  /** Commit asks for something staged — unless amending (a message of its own is enough). */
+  private syncButton(): void {
+    const view = this.view
+    this.commitButton.disabled = !view || (view.staged.length === 0 && !this.amend.checked)
+  }
+
+  private async drawStashes(seq: number): Promise<void> {
+    const root = this.view?.root
+    const list = root ? await this.deps.stashes(root) : []
+    if (seq !== this.seq) return
+    if (list.length === 0) {
+      this.stashList.replaceChildren()
+      this.stashList.hidden = true
+      return
+    }
+    this.stashList.hidden = false
+    const h = document.createElement('h3')
+    const label = document.createElement('span')
+    label.textContent = `${this.text.stashes} · ${list.length}`
+    h.append(label)
+    const rows = list.map((s) => {
+      const row = document.createElement('div')
+      row.className = 'changes-row'
+      row.dataset.testid = 'stash'
+      const name = document.createElement('span')
+      name.className = 'changes-name'
+      name.textContent = s.message || `stash@{${s.index}}`
+      name.title = new Date(s.time * 1000).toLocaleString()
+      const actions = document.createElement('span')
+      actions.className = 'changes-actions changes-actions--shown'
+      const run = (fn: () => Promise<string | null>) => () =>
+        void (async () => {
+          const refused = await fn()
+          this.status.textContent = refused ?? ''
+          await this.refresh()
+        })()
+      const apply = iconButton('undo', this.text.apply, run(() => this.deps.applyStash(root!, s.index, false)))
+      apply.dataset.testid = 'stash-apply'
+      const pop = iconButton('check', this.text.pop, run(() => this.deps.applyStash(root!, s.index, true)))
+      pop.dataset.testid = 'stash-pop'
+      const drop = iconButton('close', this.text.drop, run(() => this.deps.dropStash(root!, s.index)))
+      drop.dataset.testid = 'stash-drop'
+      actions.append(apply, pop, drop)
+      row.append(name, actions)
+      return row
+    })
+    this.stashList.replaceChildren(h, ...rows)
+  }
+
+  private async stashChanges(): Promise<void> {
+    const view = this.view
+    if (!view) return
+    const refused = await this.deps.stash(view.root, this.message.value)
+    if (refused !== null) this.status.textContent = refused
+    else {
+      this.message.value = ''
+      this.status.textContent = this.text.stashed
+    }
+    await this.refresh()
+  }
+
   private async commit(): Promise<void> {
     const view = this.view
     const message = this.message.value.trim()
-    if (!view || !message || view.staged.length === 0) {
+    const amend = this.amend.checked
+    if (!view || !message || (view.staged.length === 0 && !amend)) {
       this.status.textContent = this.text.nothing
       return
     }
-    const oid = await this.deps.commit(view.root, message)
+    const oid = await this.deps.commit(view.root, message, amend)
     if (oid) {
+      this.amend.checked = false
       this.message.value = ''
       this.status.textContent = this.text.committed.replace('{oid}', oid.slice(0, 7))
     }

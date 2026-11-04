@@ -20,6 +20,8 @@ export interface Transport {
   readonly kind: 'system' | 'builtin'
   fetch(root: string, remote: string): Promise<void>
   push(root: string, remote: string, branch: string): Promise<void>
+  /** The repository's tags sent (the ones the remote has are left as they are). */
+  pushTags(root: string, remote: string): Promise<void>
   clone(url: string, dir: string): Promise<void>
 }
 
@@ -57,6 +59,7 @@ export function systemTransport(bin: string): Transport {
     kind: 'system',
     fetch: (root, remote) => run(['fetch', '--prune', remote], root),
     push: (root, remote, branch) => run(['push', '--set-upstream', remote, `refs/heads/${branch}:refs/heads/${branch}`], root),
+    pushTags: (root, remote) => run(['push', remote, '--tags'], root),
     clone: (url, dir) => run(['clone', '--', url, dir]),
   }
 }
@@ -98,6 +101,13 @@ export function builtinTransport(login: (url: string) => Login | undefined): Tra
       if (!result.ok) throw new GitError('network', [result.error ?? 'push refused'])
       await setUpstream(root, branch, remote)
     },
+    async pushTags(root, remote) {
+      const url = await urlOf(root, remote)
+      for (const tag of await git.listTags({ fs, dir: root })) {
+        const result = await git.push({ fs, http, dir: root, remote, ref: `refs/tags/${tag}`, remoteRef: `refs/tags/${tag}`, ...auth(url) }).catch(fail(url))
+        if (!result.ok) throw new GitError('network', [result.error ?? 'push refused'])
+      }
+    },
     async clone(url, dir) {
       await git.clone({ fs, http, dir, url, ...auth(url) }).catch(fail(url))
     },
@@ -114,6 +124,16 @@ export type SyncResult =
  * the merge open (MERGE_HEAD), to be finished once they are resolved.
  */
 export async function syncRepo(root: string, transport: Transport, author: Author): Promise<SyncResult> {
+  const result = await syncBranch(root, transport, author)
+  // Tags made here go out too (a conflict waits: nothing was sent).
+  if (result.result !== 'conflict' && (await git.listTags({ fs, dir: root })).length > 0) {
+    const remote = await remoteOf(root)
+    if (remote) await transport.pushTags(root, remote.name)
+  }
+  return result
+}
+
+async function syncBranch(root: string, transport: Transport, author: Author): Promise<SyncResult> {
   if (mergeHead(root)) throw new GitError('merging')
   const branch = await branchOf(root)
   if (!branch) throw new GitError('detached')

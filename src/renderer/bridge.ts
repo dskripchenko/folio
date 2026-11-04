@@ -1,6 +1,17 @@
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
 
+/** A project's own settings (`.folio/settings.json`), as the settings window edits them. */
+export interface ProjectSettingsData {
+  kind?: 'notes' | 'code'
+  indentUnit?: string
+  tabSize?: number
+  tasks?: { name: string; command: string }[]
+  formatOnSave?: boolean
+  formatter?: string
+  lsp?: Record<string, string[] | false>
+}
+
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
 export type Format =
@@ -15,10 +26,12 @@ export type Format =
   | 'calendar'
   | 'board'
   | 'text'
+  | 'csv'
   | 'svg'
   | 'image'
   | 'video'
   | 'audio'
+  | 'pdf'
 
 /** A place in a note, as the links panel shows it. */
 export interface LinkPlace {
@@ -104,7 +117,7 @@ export interface GitInfo {
 
 /** A git action's refusal: a code the window has words for, and files, a host or git's words. */
 export interface GitRefusal {
-  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled'
+  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled' | 'no-git' | 'nothing' | 'failed' | 'conflict' | 'current'
   detail: string[]
 }
 
@@ -198,7 +211,17 @@ export interface FolioBridge {
   gitUnstage(root: string, paths: string[]): Promise<boolean>
   /** Asks first; true when the changes were thrown away. */
   gitDiscard(root: string, path: string): Promise<boolean>
-  gitCommitStaged(root: string, message: string): Promise<string | null>
+  gitCommitStaged(root: string, message: string, amend?: boolean): Promise<string | null>
+  gitLastMessage(root: string): Promise<string | null>
+  gitStashList(path: string): Promise<{ ok: true; available: boolean; list: { index: number; message: string; time: number }[] } | GitRefusal>
+  gitStashPush(path: string, message: string): Promise<{ ok: true } | GitRefusal>
+  gitStashApply(path: string, index: number, pop: boolean): Promise<{ ok: true } | GitRefusal>
+  gitStashDrop(path: string, index: number): Promise<{ ok: boolean } | GitRefusal>
+  gitRevert(path: string, oid: string, summary: string): Promise<{ ok: boolean } | GitRefusal>
+  gitBranchRename(path: string, from: string, to: string): Promise<{ ok: true } | GitRefusal>
+  gitBranchDelete(path: string, name: string): Promise<{ ok: boolean } | GitRefusal>
+  gitTagCreate(path: string, name: string, oid: string, message: string): Promise<{ ok: true } | GitRefusal>
+  gitTagDelete(path: string, name: string): Promise<{ ok: boolean } | GitRefusal>
   gitBranchCreate(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitBranchSwitch(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitRemote(path: string, url: string): Promise<{ ok: true } | GitRefusal>
@@ -239,6 +262,11 @@ export interface FolioBridge {
   /** Language servers (ADR-003): a file opened in its server, its changes, its saves; requests at positions. */
   /** A file of the workspace in the system's program for it. */
   openExternal(path: string): Promise<boolean>
+  projectSettingsOf(path: string): Promise<{ name: string; path: string; settings: ProjectSettingsData } | null>
+  setProjectSettings(projectPath: string, settings: ProjectSettingsData): Promise<ProjectSettingsData | null>
+  setKeybindings(list: { key: string; command: string }[]): Promise<boolean>
+  /** A document exported: where it was saved, or why not. */
+  exportFile(kind: 'html' | 'docx', name: string, payload: unknown): Promise<{ saved: string } | { canceled: true } | { error: string }>
   lspOpen(path: string, text: string): Promise<LspOpenResult>
   lspChange(path: string, edits: unknown[]): void
   lspSave(path: string): void
@@ -334,6 +362,8 @@ export interface FolioBridge {
   onOpened: Listener
   onBlocked: Listener
   onCloseTab: Listener
+  /** "Compare with" in the tree: the file chosen first (a) and the one compared with it (b). */
+  onCompareFiles: Listener
 }
 
 declare global {

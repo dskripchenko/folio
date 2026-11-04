@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { createTag } from '../../src/main/gitOps'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -108,6 +109,11 @@ function suite(name: string, make: () => Promise<{ transport: (root: string) => 
         expect(await aheadBehind(ann, 'main', 'origin')).toEqual({ ahead: 0, behind: 0 })
         expect(await syncRepo(ann, t.transport(ann), me)).toEqual({ result: 'up-to-date' })
         expect(await syncRepo(bob, t.transport(bob), bobAuthor)).toEqual({ result: 'pulled' })
+
+        // A tag made here goes out with the next sync, even with nothing else to send.
+        await createTag(ann, 'v1.0.0', execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ann }).toString().trim(), 'First release', me)
+        expect(await syncRepo(ann, t.transport(ann), me)).toEqual({ result: 'up-to-date' })
+        expect(sh(dir, '--git-dir', join(dir, 'remote.git'), 'tag', '--list')).toContain('v1.0.0')
       } finally {
         await t.done?.()
       }

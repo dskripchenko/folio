@@ -7,7 +7,8 @@
  */
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
-import { commands as editorCommands, editorConfigFor, indentOptions, keyName, normalizeKey, type CodeEditor, type CompletionSource, type KeyBinding } from '@dskripchenko/code-editor'
+import { commands as editorCommands, defaultKeymap, editorConfigFor, indentOptions, keyName, normalizeKey, type CodeEditor, type CompletionSource, type KeyBinding } from '@dskripchenko/code-editor'
+import { prettyKey, SettingsDialog, type KeyedCommand, type SettingsText } from './settingsDialog'
 import { canEdit, editorOf, READ_ONLY_BYTES, viewOf, type SourceEditorElement, type ViewOptions } from './formats'
 import type { CodeState } from './code'
 import { domTarget, editorTarget, fieldTarget, selectInField, type FindTarget, type WithFindTarget } from './find'
@@ -25,7 +26,7 @@ import { Sidebar, type SidebarText } from './sidebar'
 import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
-import { HoverPreview } from './hoverPreview'
+import { HoverPreview, type Peeked } from './hoverPreview'
 import { watchEmbeds } from './embeds'
 import { TasksPanel, type TasksText } from './tasksPanel'
 import { ChangesPanel, type ChangesText } from './changesPanel'
@@ -34,6 +35,8 @@ import { CodeNav, type NavItem } from './codeNav'
 import { SymbolPalette, type SymbolPaletteText } from './symbolPalette'
 import { parseProblems, ProblemsPanel, type ProblemsText, type ResolvedProblem } from './problems'
 import { bytes, duration, type MediaInfo, type MediaText } from './mediaView'
+import type { TableText } from './csvView'
+import { drawn, toDocx, toHtml } from './exportDoc'
 import {
   applyTextEdits,
   applyWorkspaceEdit,
@@ -54,7 +57,7 @@ import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outl
 import { CommandPalette, type Command, type PaletteText } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
-type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'goToLine' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
+type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'reopenTab' | 'find' | 'goToLine' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
 import type { GitRefusal, UpdateState, Version, WorkspaceView } from './bridge'
 
 const TEXT = {
@@ -94,7 +97,7 @@ const TEXT = {
     exportPdf: 'Export as PDF',
     settings: 'Settings',
     themes: { system: 'Theme: as the system', light: 'Theme: light', dark: 'Theme: dark' } as Record<'system' | 'light' | 'dark', string>,
-    historyPanel: { title: 'History', noFile: 'Open a file to see its history.', outside: 'This file is outside the projects and Shared: no history here.', noHistory: 'This folder keeps no history yet.', start: 'Keep a history', autoCommit: 'Commit when saved', commitNow: 'Commit now', commitPlaceholder: 'What changed…', commit: 'Commit', noVersions: 'No versions of this file yet.', nothingToCommit: 'Nothing to commit: the changes are in the history already.', close: 'Close', scopeFile: 'This file', scopeAll: 'All commits', graph: 'Commit graph', branches: 'Branches', newBranch: 'New branch', create: 'Create', switched: 'On branch {branch}.', remotePlaceholder: 'Remote: https://… or git@…', connect: 'Connect', sync: 'Sync', syncing: 'Syncing…', synced: { 'up-to-date': 'Up to date.', pushed: 'Sent.', pulled: 'Received.', merged: 'Merged and sent.', conflict: 'Conflicts: resolve them in the text, then finish the merge.' }, username: 'User', token: 'Token or password', remember: 'Remember on this computer', signIn: 'Sign in and sync', mergeConflicts: 'Merging: conflicts in {n} file(s). Edit the text between the <<<<<<< and >>>>>>> lines, save, then finish.', mergeReady: 'Merging: every conflict is resolved.', finishMerge: 'Finish the merge', abortMerge: 'Cancel the merge', mergeDone: 'Merged. Sync to send it.', errors: { dirty: 'Save or commit the changes first: {files}', merging: 'A merge is in progress: finish or cancel it first.', 'no-remote': 'No remote yet.', detached: 'Not on a branch.', auth: 'The remote asks for a login ({detail}).', authSystem: 'git could not log in ({detail}). Set up its credentials as for a terminal: a credential helper or an SSH key.', network: 'Could not reach the remote: {detail}', invalid: 'Not a valid name or address.', markers: 'Conflict markers are still in: {files}', exists: 'Already exists: {detail}', canceled: '' } } as HistoryText,
+    historyPanel: { title: 'History', noFile: 'Open a file to see its history.', outside: 'This file is outside the projects and Shared: no history here.', noHistory: 'This folder keeps no history yet.', start: 'Keep a history', autoCommit: 'Commit when saved', commitNow: 'Commit now', commitPlaceholder: 'What changed…', commit: 'Commit', noVersions: 'No versions of this file yet.', nothingToCommit: 'Nothing to commit: the changes are in the history already.', close: 'Close', scopeFile: 'This file', scopeAll: 'All commits', graph: 'Commit graph', branches: 'Branches', newBranch: 'New branch', create: 'Create', renameBranch: 'Rename the branch', deleteBranch: 'Delete the branch', revertCommit: 'Undo this commit (revert)', tagHere: 'Tag this commit…', tagName: 'Tag, then its message if any: v1.2.0 The first release', deleteTag: 'Delete the tag {tag}', copyId: 'Copy the commit id', reverted: 'Undone by a new commit.', tagged: 'Tagged {tag}: it goes out with the next sync.', switched: 'On branch {branch}.', remotePlaceholder: 'Remote: https://… or git@…', connect: 'Connect', sync: 'Sync', syncing: 'Syncing…', synced: { 'up-to-date': 'Up to date.', pushed: 'Sent.', pulled: 'Received.', merged: 'Merged and sent.', conflict: 'Conflicts: resolve them in the text, then finish the merge.' }, username: 'User', token: 'Token or password', remember: 'Remember on this computer', signIn: 'Sign in and sync', mergeConflicts: 'Merging: conflicts in {n} file(s). Edit the text between the <<<<<<< and >>>>>>> lines, save, then finish.', mergeReady: 'Merging: every conflict is resolved.', finishMerge: 'Finish the merge', abortMerge: 'Cancel the merge', mergeDone: 'Merged. Sync to send it.', errors: { dirty: 'Save or commit the changes first: {files}', merging: 'A merge is in progress: finish or cancel it first.', 'no-remote': 'No remote yet.', detached: 'Not on a branch.', auth: 'The remote asks for a login ({detail}).', authSystem: 'git could not log in ({detail}). Set up its credentials as for a terminal: a credential helper or an SSH key.', network: 'Could not reach the remote: {detail}', invalid: 'Not a valid name or address.', markers: 'Conflict markers are still in: {files}', exists: 'Already exists: {detail}', canceled: '', 'no-git': 'This needs git installed on the computer.', nothing: 'Nothing to put aside.', failed: 'git said: {detail}', conflict: 'It does not apply cleanly: nothing was changed.', current: 'Switch to another branch first.' } } as HistoryText,
     pdf: { title: 'Export as PDF', folderTitle: 'Export the folder as one PDF', pageSize: 'Page size', orientation: 'Orientation', portrait: 'Portrait', landscape: 'Landscape', margins: 'Margins', marginNames: ['None', 'Narrow', 'Normal', 'Wide'], header: 'Title at the top of each page', footer: 'Page numbers at the bottom', toc: 'Table of contents', outline: 'Bookmarks from the headings', background: 'Colours and backgrounds', export: 'Export…', exporting: 'Exporting…', cancel: 'Cancel', saved: 'Saved: {file}', failed: 'Not exported: {error}' } as PdfText,
     console: { title: 'Console', newConsole: 'New console', close: 'Close the console', hide: 'Hide the consoles (Ctrl+`)', ended: '[the shell ended, code {code}]', failed: 'The console did not start: {error}', split: 'Split: a console beside', toRight: 'Beside the page', toBottom: 'Under the page', maximize: 'The whole window', restore: 'Back to the panel', copy: 'Copy', paste: 'Paste', selectAll: 'Select all', clear: 'Clear', find: 'Find…', closePane: 'Close this console', running: 'Running: {command}' } as ConsoleText,
     search: { title: 'Search', placeholder: 'Search the files (tag: path: file:)', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', close: 'Close', everywhere: 'Everywhere', shared: 'Shared', searching: 'Searching…', summary: '{matches} in {files}', truncated: '(the first ones)', none: 'Nothing found', invalid: 'Invalid expression', matches: ['match', 'matches'], files: ['file', 'files'], toggleReplace: 'Replace', replacePlaceholder: 'Replace with', replaceAll: 'Replace all', confirm: 'Replace {matches} in {files}?', replaced: 'Replaced {matches} in {files}.', committed: 'Committed to the history.', skipped: 'Left out, open with unsaved changes: {n}.', include: 'Replace in this file' } as SearchText,
@@ -102,10 +105,20 @@ const TEXT = {
     tags: { title: 'Tags', close: 'Close', filter: 'Filter tags', none: 'No such tag', noTags: 'No tags in this project yet: write #tag in a note, or tags: in its properties.' } as TagsText,
     graph: { title: 'Graph', close: 'Close', local: 'This note', all: 'All', empty: 'No notes here yet.' } as GraphText,
     tasks: { title: 'Tasks', close: 'Close', open: 'Open', all: 'All', overdue: 'Overdue', today: 'Today', later: 'Later', noDate: 'No date', done: 'Done', none: 'No tasks here: write - [ ] in a note.', changed: 'The note has changed meanwhile: look again.' } as TasksText,
-    changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.' } as ChangesText,
+    changes: { title: 'Changes', close: 'Close', message: 'Message (Cmd/Ctrl+Enter commits)', commit: 'Commit', staged: 'Staged', changes: 'Changes', stage: 'Stage', unstage: 'Unstage', stageAll: 'Stage all', unstageAll: 'Unstage all', discard: 'Discard changes', none: 'No changes.', noRepo: 'Open a file of a folder under git.', nothing: 'Write a message and stage what goes into the commit.', committed: 'Committed {oid}.', amend: 'Amend the last commit', stash: 'Put the changes aside (stash)', stashes: 'Put aside', apply: 'Take back, keep in the list', pop: 'Take back', drop: 'Delete', stashed: 'Put aside: the files are as last committed.' } as ChangesText,
     gitMarks: { was: 'Before the change', added: 'Added lines', revert: 'Revert' } as GitMarksText,
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
     media: { zoomIn: 'Zoom in', zoomOut: 'Zoom out', fit: 'Fit to the view', actual: 'Actual size', external: 'Open in the system’s program', failed: 'folio cannot show {name} (a format or codec it does not read).' } as MediaText,
+    wrapLines: 'Wrap long lines',
+    settingsWindow: { menu: 'Keys and project settings…', title: 'Settings', keys: 'Keys', project: 'Project', search: 'Find a command or a key', set: 'Set a key', press: 'Press the keys…', remove: 'Remove', resetAll: 'Remove all my keys', clash: 'also on: {commands}', editor: 'Code editor', noProject: 'Open a file of a project to set the project’s own settings.', kind: 'Kind', kindAuto: 'As guessed', kindNotes: 'Notes', kindCode: 'Code', indent: 'Indentation', indentAuto: 'As .editorconfig or the file says', spaces: 'spaces', tab: 'Tab', tabSize: 'Tab width', formatOnSave: 'Format on save', formatter: 'Formatter', formatterNone: 'Found by the file', formatterOwn: 'A command of its own…', tasks: 'Tasks of its own', taskName: 'Name', taskCommand: 'Command', add: 'Add', servers: 'Language servers', language: 'Language (php, python…)', serverCommand: 'Command, or off', serverOff: 'A language server: its command and arguments, or "off" for none.', save: 'Save', saved: 'Saved to .folio/settings.json.', close: 'Close' } as SettingsText & { menu: string },
+    exportHtml: 'Export as HTML (one page)…',
+    exportDocx: 'Export as Word (DOCX)…',
+    exporting: 'Preparing the export…',
+    table: { more: 'Show {n} more', rows: ['row', 'rows'], size: '{rows} rows × {cols} columns' } as TableText & { size: string },
+    compareWithCommand: 'Compare the file with…',
+    comparedWith: 'Compared with {name}',
+    takeText: 'Take its text',
+    cannotCompare: 'Only text files can be compared.',
     lsp: { none: 'no language server', install: 'To understand the code, install a language server: {install}', untrusted: '{server}: the project is not trusted', failed: '{server} did not start', log: 'Language server output', definitions: 'Definitions', references: 'References' },
     problems: { title: 'Problems', close: 'Close', none: 'No problems. A task\'s errors and warnings come here.', from: 'From the task {task}' } as ProblemsText,
     tasks2: { run: 'Run a task', none: 'No tasks here: scripts of package.json or composer.json, Makefile targets, justfile recipes, or .folio/settings.json.' },
@@ -117,7 +130,7 @@ const TEXT = {
     spellcheck: 'Check spelling',
     update: { check: 'Check for updates', checking: 'Looking for a new version…', latest: 'folio {v} is the latest version.', downloading: 'Downloading folio {v}…', ready: 'folio {v} is downloaded: it takes over when folio closes.', restart: 'Restart to update to {v}', auto: 'Look for updates daily', failed: 'No update: {error}', source: 'folio run from its source is updated with git, not here.' },
     spellcheckFetch: 'Check spelling (fetches dictionaries)',
-    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', goToLine: 'Go to line…', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
+    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', reopenTab: 'Reopen the closed tab', find: 'Find in the document', goToLine: 'Go to line…', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
@@ -159,7 +172,7 @@ const TEXT = {
     exportPdf: 'Экспорт в PDF',
     settings: 'Настройки',
     themes: { system: 'Тема: как в системе', light: 'Тема: светлая', dark: 'Тема: тёмная' } as Record<'system' | 'light' | 'dark', string>,
-    historyPanel: { title: 'История', noFile: 'Откройте файл, чтобы увидеть его историю.', outside: 'Файл вне проектов и «Общих»: истории здесь нет.', noHistory: 'Эта папка пока не ведёт историю.', start: 'Вести историю', autoCommit: 'Фиксировать при сохранении', commitNow: 'Зафиксировать сейчас', commitPlaceholder: 'Что изменилось…', commit: 'Зафиксировать', noVersions: 'У этого файла пока нет версий.', nothingToCommit: 'Нечего фиксировать: изменения уже в истории.', close: 'Закрыть', scopeFile: 'Этот файл', scopeAll: 'Все коммиты', graph: 'Граф коммитов', branches: 'Ветки', newBranch: 'Новая ветка', create: 'Создать', switched: 'Ветка {branch}.', remotePlaceholder: 'Удалённый репозиторий: https://… или git@…', connect: 'Подключить', sync: 'Синхронизировать', syncing: 'Синхронизация…', synced: { 'up-to-date': 'Всё совпадает.', pushed: 'Отправлено.', pulled: 'Получено.', merged: 'Слито и отправлено.', conflict: 'Конфликты: разрешите их в тексте и завершите слияние.' }, username: 'Пользователь', token: 'Токен или пароль', remember: 'Запомнить на этом компьютере', signIn: 'Войти и синхронизировать', mergeConflicts: 'Слияние: конфликты в файлах — {n}. Поправьте текст между строками <<<<<<< и >>>>>>>, сохраните и завершите.', mergeReady: 'Слияние: все конфликты разрешены.', finishMerge: 'Завершить слияние', abortMerge: 'Отменить слияние', mergeDone: 'Слито. Синхронизируйте, чтобы отправить.', errors: { dirty: 'Сначала сохраните или зафиксируйте изменения: {files}', merging: 'Идёт слияние: сначала завершите или отмените его.', 'no-remote': 'Удалённого репозитория пока нет.', detached: 'Вы не на ветке.', auth: 'Удалённый репозиторий просит войти ({detail}).', authSystem: 'git не смог войти ({detail}). Настройте его вход как для терминала: помощник учётных данных или SSH-ключ.', network: 'Не удалось связаться с удалённым репозиторием: {detail}', invalid: 'Неверное имя или адрес.', markers: 'Маркеры конфликта ещё есть в: {files}', exists: 'Уже существует: {detail}', canceled: '' } } as HistoryText,
+    historyPanel: { title: 'История', noFile: 'Откройте файл, чтобы увидеть его историю.', outside: 'Файл вне проектов и «Общих»: истории здесь нет.', noHistory: 'Эта папка пока не ведёт историю.', start: 'Вести историю', autoCommit: 'Фиксировать при сохранении', commitNow: 'Зафиксировать сейчас', commitPlaceholder: 'Что изменилось…', commit: 'Зафиксировать', noVersions: 'У этого файла пока нет версий.', nothingToCommit: 'Нечего фиксировать: изменения уже в истории.', close: 'Закрыть', scopeFile: 'Этот файл', scopeAll: 'Все коммиты', graph: 'Граф коммитов', branches: 'Ветки', newBranch: 'Новая ветка', create: 'Создать', renameBranch: 'Переименовать ветку', deleteBranch: 'Удалить ветку', revertCommit: 'Отменить этот коммит (revert)', tagHere: 'Поставить тег…', tagName: 'Тег, затем, если нужно, его текст: v1.2.0 Первый выпуск', deleteTag: 'Удалить тег {tag}', copyId: 'Скопировать id коммита', reverted: 'Отменено новым коммитом.', tagged: 'Тег {tag}: уйдёт со следующей синхронизацией.', switched: 'Ветка {branch}.', remotePlaceholder: 'Удалённый репозиторий: https://… или git@…', connect: 'Подключить', sync: 'Синхронизировать', syncing: 'Синхронизация…', synced: { 'up-to-date': 'Всё совпадает.', pushed: 'Отправлено.', pulled: 'Получено.', merged: 'Слито и отправлено.', conflict: 'Конфликты: разрешите их в тексте и завершите слияние.' }, username: 'Пользователь', token: 'Токен или пароль', remember: 'Запомнить на этом компьютере', signIn: 'Войти и синхронизировать', mergeConflicts: 'Слияние: конфликты в файлах — {n}. Поправьте текст между строками <<<<<<< и >>>>>>>, сохраните и завершите.', mergeReady: 'Слияние: все конфликты разрешены.', finishMerge: 'Завершить слияние', abortMerge: 'Отменить слияние', mergeDone: 'Слито. Синхронизируйте, чтобы отправить.', errors: { dirty: 'Сначала сохраните или зафиксируйте изменения: {files}', merging: 'Идёт слияние: сначала завершите или отмените его.', 'no-remote': 'Удалённого репозитория пока нет.', detached: 'Вы не на ветке.', auth: 'Удалённый репозиторий просит войти ({detail}).', authSystem: 'git не смог войти ({detail}). Настройте его вход как для терминала: помощник учётных данных или SSH-ключ.', network: 'Не удалось связаться с удалённым репозиторием: {detail}', invalid: 'Неверное имя или адрес.', markers: 'Маркеры конфликта ещё есть в: {files}', exists: 'Уже существует: {detail}', canceled: '', 'no-git': 'Для этого на компьютере нужен git.', nothing: 'Откладывать нечего.', failed: 'git ответил: {detail}', conflict: 'Не применяется чисто: ничего не изменено.', current: 'Сначала переключитесь на другую ветку.' } } as HistoryText,
     pdf: { title: 'Экспорт в PDF', folderTitle: 'Экспорт папки одним PDF', pageSize: 'Размер страницы', orientation: 'Ориентация', portrait: 'Книжная', landscape: 'Альбомная', margins: 'Поля', marginNames: ['Без полей', 'Узкие', 'Обычные', 'Широкие'], header: 'Название вверху каждой страницы', footer: 'Номера страниц внизу', toc: 'Оглавление', outline: 'Закладки по заголовкам', background: 'Цвета и фоны', export: 'Экспортировать…', exporting: 'Экспорт…', cancel: 'Отмена', saved: 'Сохранено: {file}', failed: 'Не экспортировано: {error}' } as PdfText,
     console: { title: 'Консоль', newConsole: 'Новая консоль', close: 'Закрыть консоль', hide: 'Скрыть консоли (Ctrl+`)', ended: '[оболочка завершилась, код {code}]', failed: 'Консоль не запустилась: {error}', split: 'Разделить: консоль рядом', toRight: 'Справа от страницы', toBottom: 'Под страницей', maximize: 'На всё окно', restore: 'Вернуть в панель', copy: 'Копировать', paste: 'Вставить', selectAll: 'Выделить всё', clear: 'Очистить', find: 'Найти…', closePane: 'Закрыть эту консоль', running: 'Выполняется: {command}' } as ConsoleText,
     search: { title: 'Поиск', placeholder: 'Искать в файлах (tag: path: file:)', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', close: 'Закрыть', everywhere: 'Везде', shared: 'Общие', searching: 'Поиск…', summary: '{matches} в {files}', truncated: '(первые)', none: 'Ничего не найдено', invalid: 'Неверное выражение', matches: ['совпадение', 'совпадения', 'совпадений'], files: ['файле', 'файлах', 'файлах'], toggleReplace: 'Заменить', replacePlaceholder: 'Заменить на', replaceAll: 'Заменить всё', confirm: 'Заменить {matches} в {files}?', replaced: 'Заменено: {matches} в {files}.', committed: 'Зафиксировано в истории.', skipped: 'Пропущены открытые с несохранёнными правками: {n}.', include: 'Заменять в этом файле' } as SearchText,
@@ -167,10 +180,20 @@ const TEXT = {
     tags: { title: 'Теги', close: 'Закрыть', filter: 'Найти тег', none: 'Нет такого тега', noTags: 'В этом проекте пока нет тегов: напишите #тег в заметке или tags: в её свойствах.' } as TagsText,
     graph: { title: 'Граф', close: 'Закрыть', local: 'Эта заметка', all: 'Все', empty: 'Заметок здесь пока нет.' } as GraphText,
     tasks: { title: 'Задачи', close: 'Закрыть', open: 'Открытые', all: 'Все', overdue: 'Просрочено', today: 'Сегодня', later: 'Позже', noDate: 'Без даты', done: 'Сделано', none: 'Задач нет: напишите - [ ] в заметке.', changed: 'Заметка тем временем изменилась: посмотрите снова.' } as TasksText,
-    changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.' } as ChangesText,
+    changes: { title: 'Изменения', close: 'Закрыть', message: 'Сообщение (Cmd/Ctrl+Enter — коммит)', commit: 'Коммит', staged: 'В индексе', changes: 'Изменения', stage: 'В индекс', unstage: 'Из индекса', stageAll: 'Всё в индекс', unstageAll: 'Всё из индекса', discard: 'Отменить изменения', none: 'Изменений нет.', noRepo: 'Откройте файл папки под git.', nothing: 'Напишите сообщение и добавьте в индекс то, что войдёт в коммит.', committed: 'Коммит {oid}.', amend: 'Исправить последний коммит', stash: 'Отложить изменения (stash)', stashes: 'Отложено', apply: 'Вернуть, оставив в списке', pop: 'Вернуть', drop: 'Удалить', stashed: 'Отложено: файлы как в последнем коммите.' } as ChangesText,
     gitMarks: { was: 'До изменения', added: 'Добавленные строки', revert: 'Вернуть' } as GitMarksText,
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
     media: { zoomIn: 'Увеличить', zoomOut: 'Уменьшить', fit: 'Вписать в окно', actual: 'Исходный размер', external: 'Открыть в системной программе', failed: 'folio не может показать {name} (формат или кодек, которого он не читает).' } as MediaText,
+    wrapLines: 'Переносить длинные строки',
+    settingsWindow: { menu: 'Клавиши и настройки проекта…', title: 'Настройки', keys: 'Клавиши', project: 'Проект', search: 'Найти команду или клавишу', set: 'Назначить', press: 'Нажмите клавиши…', remove: 'Убрать', resetAll: 'Убрать все мои клавиши', clash: 'также у: {commands}', editor: 'Редактор кода', noProject: 'Откройте файл проекта, чтобы задать его собственные настройки.', kind: 'Вид', kindAuto: 'Как определено', kindNotes: 'Заметки', kindCode: 'Код', indent: 'Отступ', indentAuto: 'Как в .editorconfig или файле', spaces: 'пробела', tab: 'Табуляция', tabSize: 'Ширина табуляции', formatOnSave: 'Форматировать при сохранении', formatter: 'Форматтер', formatterNone: 'По файлу', formatterOwn: 'Своя команда…', tasks: 'Свои задачи', taskName: 'Название', taskCommand: 'Команда', add: 'Добавить', servers: 'Языковые серверы', language: 'Язык (php, python…)', serverCommand: 'Команда или off', serverOff: 'Языковой сервер: команда с аргументами или "off" — без сервера.', save: 'Сохранить', saved: 'Сохранено в .folio/settings.json.', close: 'Закрыть' } as SettingsText & { menu: string },
+    exportHtml: 'Экспорт в HTML (одна страница)…',
+    exportDocx: 'Экспорт в Word (DOCX)…',
+    exporting: 'Готовлю экспорт…',
+    table: { more: 'Показать ещё {n}', rows: ['строку', 'строки', 'строк'], size: 'Строк: {rows} × столбцов: {cols}' } as TableText & { size: string },
+    compareWithCommand: 'Сравнить файл с…',
+    comparedWith: 'Сравнение с {name}',
+    takeText: 'Взять его текст',
+    cannotCompare: 'Сравнивать можно только текстовые файлы.',
     lsp: { none: 'без языкового сервера', install: 'Чтобы folio понимал код, поставьте языковой сервер: {install}', untrusted: '{server}: проекту не доверяют', failed: '{server} не запустился', log: 'Вывод языкового сервера', definitions: 'Определения', references: 'Ссылки' },
     problems: { title: 'Проблемы', close: 'Закрыть', none: 'Проблем нет. Сюда попадают ошибки и предупреждения задач.', from: 'Из задачи {task}' } as ProblemsText,
     tasks2: { run: 'Запустить задачу', none: 'Задач нет: скрипты package.json или composer.json, цели Makefile, рецепты justfile или .folio/settings.json.' },
@@ -182,7 +205,7 @@ const TEXT = {
     spellcheck: 'Проверять орфографию',
     update: { check: 'Проверить обновления', checking: 'Ищем новую версию…', latest: 'folio {v} — последняя версия.', downloading: 'Скачиваем folio {v}…', ready: 'folio {v} скачан: он заменит эту версию, когда folio закроется.', restart: 'Перезапустить и обновить до {v}', auto: 'Проверять обновления раз в день', failed: 'Обновление не удалось: {error}', source: 'folio, запущенный из исходников, обновляется через git, а не здесь.' },
     spellcheckFetch: 'Проверять орфографию (скачает словари)',
-    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', goToLine: 'Перейти к строке…', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
+    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', reopenTab: 'Вернуть закрытую вкладку', find: 'Найти в документе', goToLine: 'Перейти к строке…', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
@@ -251,7 +274,15 @@ interface Tab {
   blocked: string[]
   scroll: number
   /** A version from the history shown instead of the document. */
-  version: { oid: string; text: string; message: string; time: number; mode: 'version' | 'diff' | 'side' } | null
+  version: {
+    oid: string
+    text: string
+    message: string
+    time: number
+    mode: 'version' | 'diff' | 'side'
+    /** Another file compared with this one (its name), not a version from the history. */
+    compare?: string
+  } | null
   timer: ReturnType<typeof setTimeout> | null
   pane: HTMLElement
   button: HTMLButtonElement
@@ -326,7 +357,7 @@ function markLayout(tab: Tab): void {
   if (tab.view === 'edit' && !tab.version) {
     if (format === 'markdown') edit = tab.mode === 'visual' ? '' : tab.mode
     else if (format === 'diagram' || format === 'asyncapi' || format === 'svg') edit = 'split'
-    else if (format === 'text') edit = 'source'
+    else if (format === 'text' || format === 'csv') edit = 'source'
   }
   if (edit) tab.pane.dataset.edit = edit
   else delete tab.pane.dataset.edit
@@ -341,7 +372,7 @@ function formatOf(tab: Tab): Format {
 /** What is known of a shown picture, video or sound (its size, its length), for the status line. */
 const mediaInfo = new WeakMap<Tab, MediaInfo>()
 
-const isMediaFormat = (format: Format): boolean => format === 'image' || format === 'video' || format === 'audio' || format === 'svg'
+const isMediaFormat = (format: Format): boolean => format === 'image' || format === 'video' || format === 'audio' || format === 'svg' || format === 'pdf'
 
 /** A picture's, a video's or a sound's URL, its controls' words, the system's program, its size once known. */
 function mediaOptions(tab: Tab): ViewOptions['media'] {
@@ -359,8 +390,48 @@ function mediaOptions(tab: Tab): ViewOptions['media'] {
   }
 }
 
+/** Prose (plain text, Markdown, logs) or code: wrapping is chosen for each, and remembered. */
+const wrapKind = (language: string | null): 'prose' | 'code' => (language === null || language === 'markdown' || language === 'log' ? 'prose' : 'code')
+
+/** Whether lines wrap for a kind of text: prose wraps, code does not, unless Alt+Z said otherwise. */
+function wrapFor(language: string | null): boolean {
+  const kind = wrapKind(language)
+  try {
+    const saved = localStorage.getItem(`folio.wrap.${kind}`)
+    if (saved !== null) return saved === '1'
+  } catch {
+    // No storage: the defaults.
+  }
+  return kind === 'prose'
+}
+
+/** Alt+Z, as in VS Code: wrapping on or off in the editor in view, and for its kind of text from now on. */
+function toggleWrap(): void {
+  const editor = codeEditorOf(active)
+  if (!editor) return
+  const on = !editor.lineWrapping
+  editor.lineWrapping = on
+  try {
+    localStorage.setItem(`folio.wrap.${wrapKind(editor.language)}`, on ? '1' : '0')
+  } catch {
+    // Not remembered: this editor still changed.
+  }
+}
+
+/** A table's size (rows below its header, columns), for the status line. */
+const tableInfo = new WeakMap<Tab, { rows: number; cols: number }>()
+
 function viewOptions(tab: Tab, main = false): ViewOptions {
   return {
+    wrap: wrapFor,
+    table: {
+      text: t.table,
+      lang,
+      info: (rows, cols) => {
+        tableInfo.set(tab, { rows, cols })
+        if (tab === active) syncStatus()
+      },
+    },
     media: mediaOptions(tab),
     base: tab.doc?.base,
     name: tab.doc?.name ?? titleOf(tab),
@@ -401,8 +472,13 @@ function renderVersion(tab: Tab): void {
   title.className = 'title'
   const date = new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v.time * 1000))
   const strong = document.createElement('strong')
-  strong.textContent = t.versionOf.replace('{date}', date)
-  title.append(strong, ` — ${v.message.split('\n')[0] ?? ''}`)
+  if (v.compare) {
+    strong.textContent = t.comparedWith.replace('{name}', v.compare)
+    title.append(strong)
+  } else {
+    strong.textContent = t.versionOf.replace('{date}', date)
+    title.append(strong, ` — ${v.message.split('\n')[0] ?? ''}`)
+  }
   bar.append(title)
   const modes: [typeof v.mode, string][] = [['version', t.showVersion], ['diff', t.showDiff], ['side', t.showSide]]
   for (const [mode, label] of modes) {
@@ -420,7 +496,7 @@ function renderVersion(tab: Tab): void {
   const restore = document.createElement('button')
   restore.type = 'button'
   restore.className = 'restore'
-  restore.textContent = t.restore
+  restore.textContent = v.compare ? t.takeText : t.restore
   restore.addEventListener('click', () => {
     // Into the editor as an unsaved edit: saving it is the person's call.
     tab.text = v.text
@@ -456,7 +532,8 @@ function renderVersion(tab: Tab): void {
   } else {
     const grid = document.createElement('div')
     grid.className = 'side-by-side'
-    for (const [label, text] of [[t.then, v.text], [t.now, tab.text]] as const) {
+    const labels = v.compare ? [v.compare, titleOf(tab)] : [t.then, t.now]
+    for (const [label, text] of [[labels[0]!, v.text], [labels[1]!, tab.text]] as const) {
       const col = document.createElement('section')
       const h = document.createElement('h4')
       h.textContent = label
@@ -770,6 +847,7 @@ function openSettings(anchor: HTMLElement): void {
     { label: `${t.update.check} (${update.current})`, disabled: update.state.status === 'checking' || update.state.status === 'downloading', testid: 'update-check', action: () => checkUpdate() },
     { label: t.update.auto, checked: update.auto, testid: 'update-auto', action: () => void folio.setAutoUpdate(!update.auto).then((on) => (update.auto = on)) },
     { separator: true, label: '', action: () => undefined },
+    { label: t.settingsWindow.menu, icon: 'settings', testid: 'open-settings', action: () => void settingsDialog.open() },
     { label: t.commands.dailyFolder, icon: 'calendar', testid: 'daily-folder', action: () => void folio.chooseFolder('daily') },
     { label: t.commands.templatesFolder, icon: 'note', testid: 'templates-folder', action: () => void folio.chooseFolder('templates') },
   ], 'end')
@@ -870,6 +948,9 @@ function syncStatus(): void {
   if (!statusBar) return
   const editor = tab && !tab.version ? codeEditorOf(tab) : null
   if (editor) return statusBar.showEditor(editor, lspStatus.get(editor) ?? null)
+  // A table read: its rows and columns.
+  const table = tab && !tab.version && formatOf(tab) === 'csv' && tab.view === 'read' ? tableInfo.get(tab) : undefined
+  if (table) return statusBar.showParts([t.table.size.replace('{rows}', table.rows.toLocaleString(lang)).replace('{cols}', String(table.cols))])
   // A picture, a video, a sound: its size and length, its bytes, its kind.
   if (tab && !tab.version && tab.doc && isMediaFormat(tab.doc.format)) {
     const info = mediaInfo.get(tab)
@@ -975,7 +1056,10 @@ let folioKeys = new Map<string, string>()
 /** The editor's keys of one's own: in the editor they are its, over folio's own shortcuts. */
 let editorKeys = new Set<string>()
 
-void folio.keybindings().then((list) => {
+void folio.keybindings().then((list) => applyKeybindings(list))
+
+/** Keys of one's own put to work: the editor's (for editors opened from now on) and folio's (at once). */
+function applyKeybindings(list: { key: string; command: string }[]): void {
   const mac = folio.platform === 'darwin'
   const table = editorCommands as unknown as Record<string, unknown>
   editorKeymap = list.flatMap((b): KeyBinding[] => {
@@ -986,7 +1070,43 @@ void folio.keybindings().then((list) => {
   })
   folioKeys = new Map(list.filter((b) => b.command.startsWith('folio.')).map((b) => [normalizeKey(b.key, mac), b.command.slice(6)]))
   editorKeys = new Set(editorKeymap.map((b) => normalizeKey(mac ? (b.mac ?? b.key) : (b.other ?? b.key), mac)))
+}
+
+/** Every command a key can be given: folio's (as the palette has them) and the code editor's (with its own keys). */
+function keyedCommands(): KeyedCommand[] {
+  const mac = folio.platform === 'darwin'
+  const table = editorCommands as unknown as Record<string, unknown>
+  const nameOf = new Map<unknown, string>(Object.entries(table).map(([name, fn]) => [fn, name]))
+  const editorDefaults = new Map<string, string[]>()
+  for (const b of defaultKeymap) {
+    const name = typeof b.run === 'string' ? b.run : nameOf.get(b.run)
+    if (!name) continue
+    const key = mac ? (b.mac ?? b.key) : (b.other ?? b.key)
+    editorDefaults.set(name, [...(editorDefaults.get(name) ?? []), prettyKey(key, mac)])
+  }
+  const editorNames = new Set([...EDITOR_ACTIONS, ...Object.entries(table).filter(([n, fn]) => typeof fn === 'function' && (fn as () => void).length >= 1 && n !== 'insertText' && n !== 'typeText').map(([n]) => n)])
+  // copyLineDown → Copy line down.
+  const human = (name: string) => name.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).replace(/ ([A-Z])/g, (_, c: string) => ` ${c.toLowerCase()}`)
+  return [
+    ...commands().map((c) => ({ command: `folio.${c.id}`, title: c.title, group: c.group, defaults: c.keys ? [c.keys] : [] })),
+    ...[...editorNames].sort().map((n) => ({ command: n, title: human(n), group: t.settingsWindow.editor, defaults: editorDefaults.get(n) ?? [] })),
+  ]
+}
+
+const settingsDialog = new SettingsDialog({
+  text: () => t.settingsWindow,
+  mac: folio.platform === 'darwin',
+  commands: () => keyedCommands(),
+  bindings: () => folio.keybindings(),
+  saveBindings: async (list) => {
+    await folio.setKeybindings(list)
+    applyKeybindings(list)
+  },
+  keyName: (e) => keyName(e),
+  project: () => (active?.path ? folio.projectSettingsOf(active.path) : Promise.resolve(null)),
+  saveProject: async (path, settings) => (await folio.setProjectSettings(path, settings)) !== null,
 })
+document.body.append(settingsDialog.el)
 
 /** A key of one's own for a folio command: run it; true when it was one. */
 function folioKey(event: KeyboardEvent): boolean {
@@ -1564,6 +1684,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   watchEmbeds(pane, () => (formatOf(tab) === 'markdown' ? tab.path : null), {
     peek: (from, link) => folio.peek(from, link),
     draw: (note, text) => viewOf('markdown', text, { base: note.base, name: note.name }),
+    media: embeddedMedia,
   })
   button.addEventListener('click', (event) => {
     if ((event.target as HTMLElement).classList.contains('close')) void close(tab)
@@ -1571,6 +1692,20 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   })
   button.addEventListener('auxclick', (event) => {
     if (event.button === 1) void close(tab)
+  })
+  // Dragged: to another place in the row, or onto the view's right half to open beside.
+  button.draggable = true
+  button.addEventListener('dragstart', (event) => {
+    draggedTab = tab
+    event.dataTransfer!.effectAllowed = 'move'
+    event.dataTransfer!.setData(TAB_MIME, String(tab.id))
+    document.body.classList.add('dragging-tab')
+  })
+  button.addEventListener('dragend', () => {
+    draggedTab = null
+    document.body.classList.remove('dragging-tab')
+    tabsEl.querySelectorAll('.drop-before, .drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-after'))
+    besideDrop.hidden = true
   })
   // Its menu: beside the main view, or back; closed.
   button.addEventListener('contextmenu', (event) => {
@@ -1611,15 +1746,173 @@ async function add(result: OpenResult, focus = true): Promise<void> {
   else report()
 }
 
+/**
+ * A picture, a video or a sound embedded in a note (`![[photo.png|300]]`): at
+ * the size asked or its own (never wider than the page); a picture opens in its
+ * tab on a click.
+ */
+function embeddedMedia(file: Peeked, size: { width?: number; height?: number }): HTMLElement {
+  const src = `${file.base}${encodeURIComponent(file.name)}`
+  const fit = (el: HTMLElement) => {
+    if (size.width) el.style.width = `${size.width}px`
+    if (size.height) el.style.height = `${size.height}px`
+  }
+  // A PDF: its pages in the viewer, as tall as asked (or a page's worth).
+  if (file.media === 'pdf') {
+    const frame = document.createElement('iframe')
+    frame.className = 'embed-media embed-pdf'
+    frame.src = src.replace(/^folio:\/\/app\/r\//, 'folio://app/pdf/')
+    frame.title = file.name
+    frame.style.width = size.width ? `${size.width}px` : '100%'
+    frame.style.height = `${size.height ?? 600}px`
+    return frame
+  }
+  if (file.media === 'video' || file.media === 'audio') {
+    const player = document.createElement(file.media === 'video' ? 'dsk-video' : 'dsk-audio')
+    player.setAttribute('src', src)
+    player.setAttribute(file.media === 'video' ? 'label' : 'track-title', file.name)
+    player.setAttribute('preload', 'metadata')
+    player.className = 'embed-media'
+    fit(player)
+    return player
+  }
+  const img = document.createElement('img')
+  img.className = 'embed-media embed-image'
+  img.src = src
+  img.alt = file.name
+  img.loading = 'lazy'
+  img.title = file.name
+  fit(img)
+  img.addEventListener('click', () => void folio.open(file.path).then((r) => add(r)))
+  return img
+}
+
+/** The last closed tab again, at its place, in its view, scrolled where it was (one gone from disk is skipped). */
+async function reopenClosed(): Promise<void> {
+  while (closedTabs.length) {
+    const last = closedTabs.shift()!
+    if (tabs.some((x) => x.path === last.path)) continue
+    const result = await folio.open(last.path)
+    if (!isOpened(result)) continue
+    await add(result, false)
+    const tab = tabs.find((x) => x.path === result.path)
+    if (!tab) return
+    moveTab(tab, last.index)
+    tab.mode = last.mode
+    if (last.view !== tab.view && (last.view === 'read' || canEdit(formatOf(tab)))) {
+      tab.view = last.view
+      render(tab)
+    }
+    tab.scroll = last.scroll
+    activate(tab)
+    // Its document is drawn a moment later (widgets, a slow machine): scrolled once it is tall enough.
+    // (A timer, not frames: a window in the background gets few frames.)
+    const scroller = scrollerOf(tab)
+    let tries = 40
+    const settle = () => {
+      if (active !== tab) return
+      scroller.scrollTop = last.scroll
+      tab.scroll = last.scroll
+      if (Math.abs(scroller.scrollTop - last.scroll) > 1 && --tries > 0) setTimeout(settle, 50)
+    }
+    setTimeout(settle, 0)
+    return
+  }
+}
+
+/** A tab to another place in the row (and its session order). */
+function moveTab(tab: Tab, index: number): void {
+  const from = tabs.indexOf(tab)
+  if (from < 0) return
+  tabs.splice(from, 1)
+  tabs.splice(Math.max(0, Math.min(index, tabs.length)), 0, tab)
+  const after = tabs[tabs.indexOf(tab) + 1]
+  if (after) tabsEl.insertBefore(tab.button, after.button)
+  else tabsEl.append(tab.button)
+  report()
+}
+
+// A tab dragged: to another place in the row, or onto the view's right half to open beside it.
+const TAB_MIME = 'application/x-folio-tab'
+let draggedTab: Tab | null = null
+const besideDrop = document.createElement('div')
+besideDrop.className = 'beside-drop'
+besideDrop.dataset.testid = 'beside-drop'
+besideDrop.hidden = true
+document.querySelector<HTMLElement>('.content')!.append(besideDrop)
+
+/** Where in the row a point falls: the tab it is before (null: the end). */
+function tabAt(x: number): Tab | null {
+  for (const tab of tabs) {
+    const r = tab.button.getBoundingClientRect()
+    if (x < r.left + r.width / 2) return tab
+  }
+  return null
+}
+
+tabsEl.addEventListener('dragover', (event) => {
+  if (!draggedTab) return
+  event.preventDefault()
+  event.dataTransfer!.dropEffect = 'move'
+  tabsEl.querySelectorAll('.drop-before, .drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-after'))
+  const before = tabAt(event.clientX)
+  if (before) before.button.classList.add('drop-before')
+  else tabs.at(-1)?.button.classList.add('drop-after')
+})
+tabsEl.addEventListener('drop', (event) => {
+  const tab = draggedTab
+  if (!tab) return
+  event.preventDefault()
+  const before = tabAt(event.clientX)
+  const without = tabs.filter((x) => x !== tab)
+  moveTab(tab, before && before !== tab ? without.indexOf(before) : before === tab ? tabs.indexOf(tab) : without.length)
+})
+const contentEl = document.querySelector<HTMLElement>('.content')!
+// Caught on the way down: the editors inside (a contenteditable takes drops) never see a tab dragged.
+contentEl.addEventListener('dragover', (event) => {
+  if (!draggedTab) return
+  event.stopPropagation()
+  const box = contentEl.getBoundingClientRect()
+  const right = event.clientX > box.left + box.width / 2
+  // The right half: beside (when there is another tab for the main view); the left: back to the main view.
+  const can = right ? draggedTab !== beside && tabs.length > 1 : draggedTab === beside
+  besideDrop.hidden = !can
+  besideDrop.classList.toggle('beside-drop--left', !right)
+  if (!can) return
+  event.preventDefault()
+  event.dataTransfer!.dropEffect = 'move'
+}, true)
+contentEl.addEventListener('dragleave', (event) => {
+  if (!contentEl.contains(event.relatedTarget as Node | null)) besideDrop.hidden = true
+})
+contentEl.addEventListener('drop', (event) => {
+  const tab = draggedTab
+  besideDrop.hidden = true
+  if (!tab) return
+  event.preventDefault()
+  event.stopPropagation()
+  const box = contentEl.getBoundingClientRect()
+  if (event.clientX > box.left + box.width / 2) openBeside(tab)
+  else if (tab === beside) closeBeside()
+}, true)
+
 function newNote(): void {
   const tab = makeTab({ path: null, text: '', saved: null, view: 'edit' })
   activate(tab)
   requestAnimationFrame(() => (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { focus(): void }) | null)?.focus())
 }
 
+/** Closed tabs of files, last first: reopened with Cmd/Ctrl+Shift+T where they were. */
+const closedTabs: { path: string; index: number; view: Tab['view']; mode: EditorMode; scroll: number }[] = []
+
 function remove(tab: Tab): void {
   const i = tabs.indexOf(tab)
   if (i < 0) return
+  if (tab.path) {
+    const scroll = tab === mainTab ? viewEl.scrollTop : tab === beside ? besideEl.scrollTop : tab.scroll
+    closedTabs.unshift({ path: tab.path, index: i, view: tab.view, mode: tab.mode, scroll })
+    closedTabs.splice(30)
+  }
   if (tab.timer) clearTimeout(tab.timer)
   tabs.splice(i, 1)
   if (tab === beside) backToMain(tab)
@@ -1947,7 +2240,8 @@ besideEl.addEventListener('click', onLinkClick)
 // A note's preview while the pointer rests on a link to it.
 const preview = new HoverPreview({
   peek: (from, link) => folio.peek(from, link),
-  draw: (note) => viewOf('markdown', note.text, { base: note.base, name: note.name }),
+  // A link to a picture or a video: the file itself in the preview.
+  draw: (note) => (note.media ? embeddedMedia(note, {}) : viewOf('markdown', note.text, { base: note.base, name: note.name })),
   reveal: (container, heading, scroller) => revealHeading(container, heading, scroller),
   open: (note) =>
     void folio.open(note.path).then(async (result) => {
@@ -2065,6 +2359,35 @@ function openFind(): void {
 document.querySelector('.content')!.append(findBar.el)
 const goToFile = new GoToFile(t.goToFile, () => folio.allFiles(), (f) => void folio.openEntry(f.root, f.path).then((result) => add(result)))
 document.body.append(goToFile.el)
+
+/**
+ * Two files compared: `other` (chosen first, or in the picker) against
+ * `path`, in `path`'s tab — the history's view of a version: the changes, side
+ * by side, or the other file as drawn; its text taken into the editor on asking.
+ */
+async function compareFiles(other: string, path: string): Promise<void> {
+  const [a, b] = await Promise.all([folio.open(other), folio.open(path)])
+  if (!isOpened(a) || !isOpened(b) || a.media || b.media) {
+    notify(t.cannotCompare)
+    return
+  }
+  await add(b)
+  const tab = tabs.find((x) => x.path === b.path)
+  if (!tab) return
+  tab.version = { oid: '', text: a.text, message: '', time: 0, mode: 'diff', compare: a.name }
+  render(tab)
+  scrollerOf(tab).scrollTop = 0
+}
+folio.onCompareFiles((value) => {
+  const { a, b } = value as { a: string; b: string }
+  void compareFiles(a, b)
+})
+/** The file in view compared with one chosen like going to a file. */
+function compareWithChosen(): void {
+  const path = active?.path
+  if (!path) return
+  void goToFile.open((f) => void folio.openEntry(f.root, f.path).then((r) => (isOpened(r) ? compareFiles(r.path, path) : undefined)))
+}
 folio.onGoToFile(() => void goToFile.open())
 
 // Daily notes and templates ----------------------------------------------------------------
@@ -2138,9 +2461,12 @@ function commands(): Command[] {
     { id: 'save-as', group: file, title: c.saveAs, keys: `${mod}⇧S`, icon: 'save', when: has, run: () => active && void save(active, true) },
     { id: 'print', group: file, title: t.print, keys: `${mod}P`, icon: 'print', when: hasText, run: () => void printActive() },
     { id: 'export-pdf', group: file, title: t.exportPdf, keys: `${mod}⇧P`, icon: 'pdf', when: hasText, run: () => exportActive() },
+    { id: 'export-html', group: file, title: t.exportHtml, icon: 'file', when: hasText, run: () => void exportAs('html') },
+    { id: 'export-docx', group: file, title: t.exportDocx, icon: 'file', when: hasText, run: () => void exportAs('docx') },
     { id: 'present', group: view, title: c.present, keys: 'F5', icon: 'present', when: isNote, run: () => present() },
     { id: 'export-slides', group: file, title: c.slidesPdf, icon: 'pdf', when: isNote, run: () => void exportSlides() },
     { id: 'close-tab', group: file, title: c.closeTab, keys: `${mod}W`, icon: 'close', when: has, run: () => active && void close(active) },
+    { id: 'reopen-tab', group: file, title: c.reopenTab, keys: `${mod}⇧T`, icon: 'undo', when: () => closedTabs.length > 0, run: () => void reopenClosed() },
     { id: 'daily', group: c.notes, title: c.daily, keys: `${mod}⇧D`, icon: 'calendar', run: () => void openDaily(0) },
     { id: 'daily-prev', group: c.notes, title: c.dailyPrev, icon: 'calendar', when: isDaily, run: () => void openDaily(-1) },
     { id: 'daily-next', group: c.notes, title: c.dailyNext, icon: 'calendar', when: isDaily, run: () => void openDaily(1) },
@@ -2152,6 +2478,9 @@ function commands(): Command[] {
     { id: 'template-insert', group: c.notes, title: c.insertTemplate, icon: 'note', when: () => !!active && formatOf(active) === 'markdown' && !active.version, run: () => void chooseTemplate((path) => void insertTemplate(path)) },
     { id: 'template-new', group: c.notes, title: c.newFromTemplate, icon: 'note', run: () => void chooseTemplate((path) => void noteFromTemplate(path)) },
     { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: hasText, run: () => openFind() },
+    { id: 'compare-with', group: file, title: t.compareWithCommand, icon: 'split', when: () => !!active?.path && !active.doc?.media, run: () => compareWithChosen() },
+    { id: 'settings', group: view, title: t.settingsWindow.title, keys: `${mod},`, icon: 'settings', run: () => void settingsDialog.open() },
+    { id: 'toggle-wrap', group: view, title: t.wrapLines, keys: '⌥Z', icon: 'source', when: () => !!codeEditorOf(active), run: () => toggleWrap() },
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },
     { id: 'symbol-project', group: c.edit, title: t.symbols.project, keys: `${mod}⌥O`, icon: 'search', run: () => goToSymbol('project') },
@@ -2234,6 +2563,11 @@ problemsPanel = new ProblemsPanel(
 )
 document.querySelector('.content')!.insertBefore(problemsPanel.el, document.querySelector('.history'))
 
+/** A git refusal in words (null: done). */
+function refusalOf(r: { ok: boolean } | GitRefusal): string | null {
+  return 'error' in r ? describeRefusal(t.historyPanel.errors, r) : null
+}
+
 changesPanel = new ChangesPanel(
   t.changes,
   {
@@ -2241,8 +2575,16 @@ changesPanel = new ChangesPanel(
     stage: async (root, paths) => void (await folio.gitStage(root, paths)),
     unstage: async (root, paths) => void (await folio.gitUnstage(root, paths)),
     discard: (root, path) => folio.gitDiscard(root, path),
-    commit: (root, message) => folio.gitCommitStaged(root, message),
+    commit: (root, message, amend) => folio.gitCommitStaged(root, message, amend),
     open: (root, path) => void folio.open(`${root}/${path}`).then((result) => add(result)),
+    lastMessage: (root) => folio.gitLastMessage(root),
+    stashes: async (root) => {
+      const r = await folio.gitStashList(root)
+      return 'list' in r ? r.list : []
+    },
+    stash: async (root, message) => refusalOf(await folio.gitStashPush(root, message)),
+    applyStash: async (root, index, pop) => refusalOf(await folio.gitStashApply(root, index, pop)),
+    dropStash: async (root, index) => refusalOf(await folio.gitStashDrop(root, index)),
   },
   () => syncRail(),
 )
@@ -2376,6 +2718,13 @@ window.addEventListener(
     // Ctrl with a letter in a console is the shell's (^W, ^E, ^P…), not folio's: off a Mac the shortcuts stay out.
     // Except Ctrl+F: the find bar over the output (as in VS Code's terminal).
     if (folio.platform !== 'darwin' && (event.target as HTMLElement | null)?.closest?.('.dsk-term') && !(event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'f')) return
+    // Alt+Z, as in VS Code: long lines wrapped or not.
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.code === 'KeyZ' && codeEditorOf(active)) {
+      event.preventDefault()
+      event.stopPropagation()
+      toggleWrap()
+      return
+    }
     // F1, as in code editors: the commands.
     if (event.key === 'F1' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
       event.preventDefault()
@@ -2438,8 +2787,11 @@ window.addEventListener(
       },
       b: () => sidebar.toggleCollapsed(),
       f: () => (event.shiftKey ? void searchPanel.open() : openFind()),
-      t: () => void goToFile.open(),
+      // Cmd/Ctrl+T: go to a file; with Shift, as in browsers: the tab just closed.
+      t: () => (event.shiftKey ? void reopenClosed() : void goToFile.open()),
       k: () => palette.open(),
+      // Cmd/Ctrl+, as in every app: the settings.
+      ',': () => void settingsDialog.open(),
       d: () => {
         if (event.shiftKey) void openDaily(0)
       },
@@ -2449,7 +2801,7 @@ window.addEventListener(
       ...(folio.platform === 'darwin' ? { g: () => findBar.step(event.shiftKey ? -1 : 1) } : {}),
     }
     const fn = act[key]
-    if (!fn || (key !== 's' && key !== 'h' && key !== 'p' && key !== 'g' && key !== 'f' && key !== 'd' && event.shiftKey) || ((key === 'h' || key === 'd') && !event.shiftKey)) return
+    if (!fn || (key !== 's' && key !== 'h' && key !== 'p' && key !== 'g' && key !== 'f' && key !== 'd' && key !== 't' && event.shiftKey) || ((key === 'h' || key === 'd') && !event.shiftKey)) return
     event.preventDefault()
     event.stopPropagation()
     fn()
@@ -2489,6 +2841,24 @@ folio.onPrint(() => void printActive())
 function exportPdf(target: PdfTarget): void {
   openPdfDialog(t.pdf, target, notify)
 }
+/** The document in view as one HTML page or a Word file: drawn out of sight as when read, then saved where asked. */
+async function exportAs(kind: 'html' | 'docx'): Promise<void> {
+  const tab = active
+  if (!tab || tab.doc?.media) return
+  const name = titleOf(tab)
+  notify(t.exporting)
+  const page = await drawn(viewOf(formatOf(tab), tab.text, { ...viewOptions(tab), main: false }), theme)
+  let payload: unknown
+  try {
+    payload = kind === 'html' ? await toHtml(page.root, name.replace(/\.[^.]+$/, ''), lang) : await toDocx(page.root, name.replace(/\.[^.]+$/, ''))
+  } finally {
+    page.done()
+  }
+  const result = await folio.exportFile(kind, name, payload)
+  if ('canceled' in result) noticeEl.hidden = true
+  else notify('saved' in result ? t.pdf.saved.replace('{file}', result.saved) : t.pdf.failed.replace('{error}', result.error))
+}
+
 function exportActive(): void {
   if (!active || active.doc?.media) return
   exportPdf({ kind: 'doc', path: active.path, text: active.text, name: titleOf(active) })

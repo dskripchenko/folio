@@ -12,6 +12,8 @@ export interface Peeked {
   text: string
   base: string
   heading: string | null
+  /** A picture, a video or a sound (not a note): drawn as itself. */
+  media?: 'image' | 'video' | 'audio' | 'svg' | 'pdf'
 }
 
 export interface HoverPreviewDeps {
@@ -50,7 +52,8 @@ export class HoverPreview {
     this.el.className = 'hover-preview'
     this.el.dataset.testid = 'hover-preview'
     this.el.hidden = true
-    document.addEventListener('mousemove', (e) => (this.pointer = { x: e.clientX, y: e.clientY }), { passive: true })
+    // Caught on the way down: a move another handler stops on its way up is still seen.
+    window.addEventListener('mousemove', (e) => (this.pointer = { x: e.clientX, y: e.clientY }), { capture: true, passive: true })
     this.el.addEventListener('mouseenter', () => this.stay())
     this.el.addEventListener('mouseleave', () => this.leaveSoon())
     this.el.addEventListener('click', (e) => {
