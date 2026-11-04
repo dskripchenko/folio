@@ -14,8 +14,8 @@ function languageName(language: string | null): string | null {
 }
 
 export interface StatusText {
-  words: [string, string, string] | [string, string]
-  chars: [string, string, string] | [string, string]
+  words: readonly string[]
+  chars: readonly string[]
   /** `~{n} min` */
   read: string
   /** `Ln {line}, Col {col}` */

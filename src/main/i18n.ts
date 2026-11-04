@@ -1,175 +1,57 @@
-/** The labels of folio's native menus, in the system's language (ru or en). */
-const LABELS = {
-  en: {
-    file: 'File',
-    open: 'Open…',
-    addProject: 'Add Project Folder…',
-    closeTab: 'Close Tab',
-    view: 'View',
-    toggleSidebar: 'Toggle Sidebar',
-    pin: 'Pin to the top',
-    kindNotes: 'A Project of Notes',
-    lspTrust: 'Trust the Project',
-    lspDistrust: 'Not Now',
-    lspTrustQuestion: 'Run the language server of “{project}” ({server})?',
-    lspTrustDetail: 'It is a program of the project itself (in node_modules, vendor or .venv): running it runs the project’s code. Servers installed on the system run without asking.',
-    discardConfirm: 'Discard Changes',
-    discardQuestion: 'Discard the changes to “{name}”?',
-    discardDetail: 'The file goes back to its last staged or committed version. This cannot be undone.',
-    kindCode: 'A Project of Code',
-    unpin: 'Unpin',
-    rename: 'Rename…',
-    group: 'Group…',
-    hide: 'Hide',
-    show: 'Show',
-    reveal: process.platform === 'darwin' ? 'Reveal in Finder' : 'Show in folder',
-    remove: 'Remove from folio',
-    newNote: 'New Note',
-    save: 'Save',
-    saveAs: 'Save As…',
-    commands: 'Commands…',
-    newBoardName: 'Board',
-    newCalendarName: 'Calendar',
-    newCanvasName: 'Canvas',
-    boardTodo: 'To do',
-    boardDoing: 'In progress',
-    boardDone: 'Done',
-    boardFirst: 'The first card',
-    calendarFirst: 'The calendar begins',
-    noSuggestions: 'No suggestions',
-    addToDictionary: 'Add to the dictionary',
-    bookmark: 'Add to bookmarks',
-    unbookmark: 'Remove from bookmarks',
-    toggleEdit: 'Edit / Read',
-    print: 'Print…',
-    exportPdf: 'Export as PDF…',
-    selectForCompare: 'Select for compare',
-    stashDropQuestion: 'Delete the changes put aside?',
-    stashDropDetail: 'They cannot be taken back afterwards.',
-    drop: 'Delete',
-    delete: 'Delete',
-    revert: 'Revert',
-    revertQuestion: 'Undo “{commit}” with a new commit?',
-    revertDetail: 'A new commit takes its changes back; the history keeps both.',
-    branchDeleteQuestion: 'Delete the branch “{branch}”?',
-    branchDeleteDetail: 'Its commits stay only if another branch or a tag has them.',
-    tagDeleteQuestion: 'Delete the tag “{tag}”?',
-    compareWith: 'Compare with “{name}”',
-    exportFolderPdf: 'Export Folder as PDF…',
-    dontSave: "Don't Save",
-    cancel: 'Cancel',
-    unsavedQuestion: 'Save the changes to {name}?',
-    unsavedDetail: 'Without saving, the changes are lost.',
-    history: 'History',
-    cloneRepo: 'Clone Repository…',
-    openableFiles: 'Documents and diagrams',
-    diagramFiles: 'Diagrams',
-    allFiles: 'All files',
-    cloneInto: 'Where to clone the repository',
-    edit: 'Edit',
-    goToFile: 'Go to File…',
-    findInFiles: 'Find in Files…',
-    console: 'Console',
-    newNoteHere: 'New Note',
-    newFolder: 'New Folder',
-    renameEntry: 'Rename…',
-    duplicate: 'Duplicate',
-    trash: 'Move to Trash',
-    trashConfirm: 'Move to Trash',
-    trashQuestion: 'Move “{name}” to the Trash?',
-    trashDetail: 'It can be put back from the Trash (the Recycle Bin).',
-    consoleHere: 'Open a Console Here',
-    find: 'Find…',
-    findNext: 'Find Next',
-    findPrevious: 'Find Previous',
-  },
-  ru: {
-    file: 'Файл',
-    open: 'Открыть…',
-    addProject: 'Добавить папку проекта…',
-    closeTab: 'Закрыть вкладку',
-    view: 'Вид',
-    toggleSidebar: 'Боковая панель',
-    pin: 'Закрепить сверху',
-    kindNotes: 'Проект заметок',
-    lspTrust: 'Доверять проекту',
-    lspDistrust: 'Не сейчас',
-    lspTrustQuestion: 'Запустить языковой сервер проекта «{project}» ({server})?',
-    lspTrustDetail: 'Это программа самого проекта (в node_modules, vendor или .venv): её запуск — это запуск кода проекта. Серверы, установленные в системе, запускаются без вопроса.',
-    discardConfirm: 'Отменить изменения',
-    discardQuestion: 'Отменить изменения в «{name}»?',
-    discardDetail: 'Файл вернётся к последней версии в индексе или в коммите. Это нельзя отменить.',
-    kindCode: 'Проект кода',
-    unpin: 'Открепить',
-    rename: 'Переименовать…',
-    group: 'Группа…',
-    hide: 'Скрыть',
-    show: 'Показать',
-    reveal: process.platform === 'darwin' ? 'Показать в Finder' : 'Показать в папке',
-    remove: 'Убрать из folio',
-    newNote: 'Новая заметка',
-    save: 'Сохранить',
-    saveAs: 'Сохранить как…',
-    commands: 'Команды…',
-    newBoardName: 'Доска',
-    newCalendarName: 'Календарь',
-    newCanvasName: 'Холст',
-    boardTodo: 'Сделать',
-    boardDoing: 'В работе',
-    boardDone: 'Готово',
-    boardFirst: 'Первая карточка',
-    calendarFirst: 'Календарь начат',
-    noSuggestions: 'Нет вариантов',
-    addToDictionary: 'Добавить в словарь',
-    bookmark: 'В закладки',
-    unbookmark: 'Убрать из закладок',
-    toggleEdit: 'Править / читать',
-    print: 'Печать…',
-    exportPdf: 'Экспорт в PDF…',
-    selectForCompare: 'Выбрать для сравнения',
-    stashDropQuestion: 'Удалить отложенные изменения?',
-    stashDropDetail: 'Вернуть их потом будет нельзя.',
-    drop: 'Удалить',
-    delete: 'Удалить',
-    revert: 'Отменить',
-    revertQuestion: 'Отменить «{commit}» новым коммитом?',
-    revertDetail: 'Новый коммит вернёт его изменения назад; история сохранит оба.',
-    branchDeleteQuestion: 'Удалить ветку «{branch}»?',
-    branchDeleteDetail: 'Её коммиты останутся, только если они есть в другой ветке или у тега.',
-    tagDeleteQuestion: 'Удалить тег «{tag}»?',
-    compareWith: 'Сравнить с «{name}»',
-    exportFolderPdf: 'Экспорт папки в PDF…',
-    dontSave: 'Не сохранять',
-    cancel: 'Отмена',
-    unsavedQuestion: 'Сохранить изменения в «{name}»?',
-    unsavedDetail: 'Без сохранения изменения пропадут.',
-    history: 'История',
-    cloneRepo: 'Клонировать репозиторий…',
-    openableFiles: 'Документы и схемы',
-    diagramFiles: 'Схемы',
-    allFiles: 'Все файлы',
-    cloneInto: 'Куда клонировать репозиторий',
-    edit: 'Правка',
-    goToFile: 'Перейти к файлу…',
-    findInFiles: 'Найти в файлах…',
-    console: 'Консоль',
-    newNoteHere: 'Новая заметка',
-    newFolder: 'Новая папка',
-    renameEntry: 'Переименовать…',
-    duplicate: 'Дублировать',
-    trash: 'Удалить в корзину',
-    trashConfirm: 'Удалить в корзину',
-    trashQuestion: 'Удалить «{name}» в корзину?',
-    trashDetail: 'Его можно будет вернуть из корзины.',
-    consoleHere: 'Открыть консоль здесь',
-    find: 'Найти…',
-    findNext: 'Найти далее',
-    findPrevious: 'Найти назад',
-  },
-}
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { BUILT_IN, chooseLanguage, languageOf, overBase, type Dictionary, type Language } from '../common/i18n'
 
-export type Labels = (typeof LABELS)['en']
+/** The labels of folio's native menus and dialogs. */
+export type Labels = Dictionary['main']
 
-export function labels(locale: string): Labels {
-  return locale.toLowerCase().startsWith('ru') ? LABELS.ru : LABELS.en
+/**
+ * The languages folio speaks (ADR-005): English and Russian built in, and
+ * any `folio-data/locales/<code>.json` laid beside them — read again when
+ * asked, so a file dropped there is listed without a restart.
+ */
+export class Languages {
+  constructor(private readonly dir: string) {}
+
+  /** The dictionaries of the folder, by their code (a broken file left out). */
+  private own(): Map<string, unknown> {
+    const out = new Map<string, unknown>()
+    let names: string[]
+    try {
+      names = readdirSync(this.dir).filter((n) => n.endsWith('.json'))
+    } catch {
+      return out
+    }
+    for (const name of names) {
+      try {
+        const dictionary = JSON.parse(readFileSync(join(this.dir, name), 'utf8')) as unknown
+        const lang = languageOf(dictionary)
+        if (lang) out.set(lang.code, dictionary)
+      } catch {
+        // Not JSON: not a language.
+      }
+    }
+    return out
+  }
+
+  /** Every language there is: the built-in ones, then the folder's (one of its own over a built-in of the same code). */
+  list(): Language[] {
+    const out = new Map<string, Language>()
+    for (const d of Object.values(BUILT_IN)) out.set(d.meta.code, { code: d.meta.code, name: d.meta.name })
+    for (const [code, d] of this.own()) out.set(code, languageOf(d) ?? { code, name: code })
+    return [...out.values()]
+  }
+
+  /** The language to use: the one chosen, else the system's, else English. */
+  pick(choice: string | null, system: string): string {
+    return chooseLanguage(choice, system, this.list().map((l) => l.code))
+  }
+
+  /** A language's dictionary over English: the folder's own, else the built-in one. */
+  dictionary(code: string): Dictionary {
+    const own = this.own().get(code)
+    const built = BUILT_IN[code]
+    // A built-in language completed by the folder's file of it, if any.
+    return overBase(overBase(BUILT_IN.en!, built), own)
+  }
 }

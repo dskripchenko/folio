@@ -16,6 +16,8 @@ cpSync('src/renderer/index.html', 'dist/renderer/index.html')
 cpSync('src/renderer/style.css', 'dist/renderer/style.css')
 cpSync('src/renderer/print.html', 'dist/renderer/print.html')
 cpSync('src/renderer/print.css', 'dist/renderer/print.css')
+// The welcome document of each language (ADR-005): read-only, opened from the app.
+cpSync('src/welcome', 'dist/welcome', { recursive: true })
 // The app's icon for the window and the Dock (build/icons, made by scripts/icons.mjs).
 cpSync('build/icons/png/512.png', 'dist/icon.png')
 // embed's fat bundle, inside the app: every widget, nothing fetched at run time.

@@ -721,3 +721,7 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .settings-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 .settings-said { color: var(--muted); }
 .settings-backdrop { padding-top: 0; }
+.welcome-open { margin-top: 12px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); color: var(--accent); font: inherit; cursor: pointer; }
+.welcome-open:hover { border-color: var(--accent); }
+.settings-language { flex: 1; overflow: auto; padding: 12px 14px; }
+.settings-radio { grid-template-columns: auto 1fr; justify-content: start; }

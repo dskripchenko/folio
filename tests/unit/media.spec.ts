@@ -26,7 +26,7 @@ describe('pictures, video and sound', () => {
   it('sizes and lengths as people read them', () => {
     expect(bytes(512, 'en')).toBe('512 B')
     expect(bytes(8500, 'en')).toBe('8.3 KB')
-    expect(bytes(3 * 1024 * 1024, 'ru')).toBe('3 МБ')
+    expect(bytes(3 * 1024 * 1024, 'ru', ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'])).toBe('3 МБ')
     expect(duration(2)).toBe('0:02')
     expect(duration(125.4)).toBe('2:05')
     expect(duration(3725)).toBe('1:02:05')

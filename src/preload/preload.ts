@@ -181,5 +181,9 @@ contextBridge.exposeInMainWorld('folio', {
   onOpened: listen('doc:opened'),
   onBlocked: listen('net:blocked'),
   onCloseTab: listen('menu:close-tab'),
+  onI18nChanged: listen('i18n:changed'),
+  onWelcome: listen('menu:welcome'),
+  openWelcome: () => ipcRenderer.invoke('welcome:open'),
+  i18nSet: (choice: string | null) => ipcRenderer.invoke('i18n:set', choice),
   onCompareFiles: listen('compare:files'),
 })

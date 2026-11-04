@@ -275,6 +275,12 @@ git 内置于 folio（isomorphic-git，纯 JavaScript），因此在未安装 gi
 
 **设置**（`Cmd/Ctrl+,` 或设置菜单）：folio 和代码编辑器的所有命令及其按键——“设置按键”会记录按下的按键（以 `Mod` 写入 `keybindings.json`，因此在任何系统上都可用），冲突会被提示；项目的 `.folio/settings.json` 以表单形式编辑，folio 不认识的键会原样保留。
 
+## 语言与欢迎页
+
+folio 开箱即支持英语和俄语：跟随系统语言，或使用设置菜单中所选的语言（立即生效并记住）。所有文本都是 JSON 词典（`src/locales/<code>.json`：`meta`、用于菜单和对话框的 `main`、`window`、`print`）；新增一种语言就是再添加一个这样的文件——放在仓库中，或放在 `folio-data/locales/<code>.json` 中，无需重新构建 folio。文件中缺少的内容使用英语；数字的复数形式按 `Intl.PluralRules` 的顺序写成列表（`["{n} file", "{n} files"]`）。
+
+“folio 能做什么”（命令、帮助菜单、空窗口）会打开一个只读页面，其中各类块都实时绘制；首次启动时会自动打开，使用当前界面语言。
+
 ## 未保存的内容与快速笔记
 
 与 Sublime Text 一样：无标题标签页就是快速笔记，未保存的修改不会写入文件。两者都会在你

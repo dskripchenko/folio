@@ -10,6 +10,9 @@ export interface SettingsText {
   title: string
   keys: string
   project: string
+  languageTab: string
+  languageSystem: string
+  languageHint: string
   search: string
   set: string
   press: string
@@ -64,6 +67,9 @@ export interface SettingsDeps {
   /** The project of the file in view, and its settings. */
   project(): Promise<{ name: string; path: string; settings: ProjectSettingsData } | null>
   saveProject(path: string, settings: ProjectSettingsData): Promise<boolean>
+  /** The languages there are and the one chosen (null: the system's); another chosen. */
+  languages(): { list: { code: string; name: string }[]; choice: string | null }
+  chooseLanguage(code: string | null): Promise<void>
 }
 
 const KNOWN_FORMATTERS = ['prettier', 'pint', 'gofmt', 'ruff', 'rustfmt', 'black', 'lsp']
@@ -103,7 +109,7 @@ function sameKey(a: string, b: string, mac: boolean): boolean {
 export class SettingsDialog {
   readonly el: HTMLElement
   private readonly box: HTMLElement
-  private pane: 'keys' | 'project' = 'keys'
+  private pane: 'keys' | 'project' | 'language' = 'keys'
   private list: { key: string; command: string }[] = []
   private filter = ''
   private capturing: string | null = null
@@ -147,7 +153,7 @@ export class SettingsDialog {
     )
   }
 
-  async open(pane: 'keys' | 'project' = 'keys'): Promise<void> {
+  async open(pane: 'keys' | 'project' | 'language' = 'keys'): Promise<void> {
     this.returnFocus = document.activeElement
     this.pane = pane
     this.list = await this.deps.bindings()
@@ -168,7 +174,7 @@ export class SettingsDialog {
     title.textContent = t.title
     const tabs = document.createElement('div')
     tabs.className = 'settings-tabs'
-    for (const [pane, label] of [['keys', t.keys], ['project', t.project]] as const) {
+    for (const [pane, label] of [['keys', t.keys], ['project', t.project], ['language', t.languageTab]] as const) {
       const b = document.createElement('button')
       b.type = 'button'
       b.textContent = label
@@ -187,8 +193,34 @@ export class SettingsDialog {
     close.setAttribute('aria-label', t.close)
     close.addEventListener('click', () => this.close())
     head.append(title, tabs, close)
-    const body = this.pane === 'keys' ? this.keysPane() : await this.projectPane()
+    const body = this.pane === 'keys' ? this.keysPane() : this.pane === 'language' ? this.languagePane() : await this.projectPane()
     this.box.replaceChildren(head, body)
+  }
+
+  // Language ---------------------------------------------------------------------------
+
+  private languagePane(): HTMLElement {
+    const t = this.deps.text()
+    const { list, choice } = this.deps.languages()
+    const pane = document.createElement('div')
+    pane.className = 'settings-language'
+    const options: [string | null, string][] = [[null, t.languageSystem], ...list.map((l): [string, string] => [l.code, l.name])]
+    for (const [code, name] of options) {
+      const row = document.createElement('label')
+      row.className = 'settings-field settings-radio'
+      const radio = Object.assign(document.createElement('input'), { type: 'radio', name: 'language', checked: choice === code })
+      radio.dataset.testid = `settings-language-${code ?? 'system'}`
+      radio.addEventListener('change', () => void this.deps.chooseLanguage(code).then(() => this.draw()))
+      const span = document.createElement('span')
+      span.textContent = name
+      row.append(radio, span)
+      pane.append(row)
+    }
+    const hint = document.createElement('p')
+    hint.className = 'settings-hint'
+    hint.textContent = t.languageHint
+    pane.append(hint)
+    return pane
   }
 
   // Keys -------------------------------------------------------------------------------

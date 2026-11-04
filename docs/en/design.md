@@ -495,6 +495,20 @@ of the code editor with its keys — *Set a key* takes the keys pressed (kept in
 shown; and the project's `.folio/settings.json` as a form, every key folio does
 not know kept.
 
+## Languages and the welcome page
+
+folio speaks English and Russian out of the box: the system's language, or the
+one chosen in the settings menu (at once, kept). Every text is a JSON
+dictionary (`src/locales/<code>.json`: `meta`, `main` for the menus and
+dialogs, `window`, `print`); another language is one more such file — in the
+repository, or in `folio-data/locales/<code>.json` without rebuilding folio.
+What it leaves out is English; forms of a number are a list in the order of
+`Intl.PluralRules` (`["{n} file", "{n} files"]`, or one, few, many).
+
+*What folio can do* (the commands, the Help menu, the empty window) opens a
+read-only page with every kind of block drawn live; it opens by itself on the
+first start, in the language in use.
+
 ## Unsaved changes and quick notes
 
 As in Sublime Text: an untitled tab is a quick note, and an edit you have not

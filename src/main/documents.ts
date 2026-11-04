@@ -25,6 +25,8 @@ export interface OpenedDocument {
   project: string | null
   /** The root it reads from (its id): watched while it is open. */
   root: string
+  /** Shown, never edited or saved (the welcome document, part of the app). */
+  readOnly?: boolean
   /** A picture, a video or a sound: its size in bytes and when it last changed (a new one draws it again). */
   media?: { size: number; modified: number }
 }

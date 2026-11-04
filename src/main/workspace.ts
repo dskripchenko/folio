@@ -39,6 +39,10 @@ export interface WorkspaceData {
   bookmarks?: string[]
   /** Spelling checked as text is written; unset — on where the system checks it (macOS, Windows). */
   spellcheck?: boolean
+  /** The language chosen for folio (ADR-005); unset — the system's. */
+  language?: string
+  /** The welcome document was shown on a first start. */
+  welcomed?: boolean
   /** A new version looked for once a day at start; unset — on. */
   updates?: boolean
 }
@@ -55,6 +59,8 @@ export class Workspace {
       ...(loaded.dailyFolder ? { dailyFolder: loaded.dailyFolder } : {}),
       ...(loaded.templatesFolder ? { templatesFolder: loaded.templatesFolder } : {}),
       ...(typeof loaded.spellcheck === 'boolean' ? { spellcheck: loaded.spellcheck } : {}),
+      ...(typeof loaded.language === 'string' ? { language: loaded.language } : {}),
+      ...(loaded.welcomed === true ? { welcomed: true } : {}),
       ...(typeof loaded.updates === 'boolean' ? { updates: loaded.updates } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
@@ -108,6 +114,26 @@ export class Workspace {
 
   setSpellcheck(on: boolean): void {
     this.data.spellcheck = on
+    this.save()
+  }
+
+  welcomed(): boolean {
+    return this.data.welcomed === true
+  }
+
+  setWelcomed(): void {
+    this.data.welcomed = true
+    this.save()
+  }
+
+  /** The language chosen for folio, or null for the system's. */
+  language(): string | null {
+    return this.data.language ?? null
+  }
+
+  setLanguage(code: string | null): void {
+    if (code === null) delete this.data.language
+    else this.data.language = code
     this.save()
   }
 

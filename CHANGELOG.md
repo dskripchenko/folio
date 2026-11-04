@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-04
+
+### Added
+- Languages: English and Russian built in, the system's or one chosen in the
+  settings menu, applied at once and kept. Every text is a JSON dictionary
+  (`src/locales`); another language is one more file — also in
+  `folio-data/locales` without rebuilding — English where it says nothing.
+- *What folio can do*: a read-only welcome page with every kind of block drawn
+  live, opened on the first start and from the commands, the Help menu and the
+  empty window, in the language in use.
+
 ## [1.4.0] - 2026-11-04
 
 ### Added
@@ -370,7 +381,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/dskripchenko/folio/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/dskripchenko/folio/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/dskripchenko/folio/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/dskripchenko/folio/compare/v1.2.0...v1.2.1

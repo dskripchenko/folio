@@ -294,8 +294,7 @@ function failed(o: MediaOptions): HTMLElement {
 }
 
 /** A size in bytes as people read it. */
-export function bytes(n: number, lang: string): string {
-  const units = lang === 'ru' ? ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'] : ['B', 'KB', 'MB', 'GB', 'TB']
+export function bytes(n: number, lang: string, units: readonly string[] = ['B', 'KB', 'MB', 'GB', 'TB']): string {
   let i = 0
   while (n >= 1024 && i < units.length - 1) {
     n /= 1024
