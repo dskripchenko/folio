@@ -31,6 +31,41 @@ installing anything.
 Documentation: [English](docs/en/) · [Русский](docs/ru/) · [Deutsch](docs/de/) ·
 [中文](docs/zh/)
 
+## A look
+
+**Reviewing an AI agent's work.** The changes as a pull request's files: files
+marked as viewed, words changed within a line marked, runs staged or thrown
+away, a comment on a line — and which Claude Code session made each change.
+
+![The review of the working copy: viewed files, a comment on a line, the agent's session on each file](docs/images/review.png)
+
+**A subagent's worktree**, reviewed against the base, with where it stands and
+what the agent did last.
+
+![A worktree reviewed against main beside the worktrees panel](docs/images/worktrees.png)
+
+**Every block live.** Diagrams of every notation, boards and calendars, API
+references you can try — drawn from the Markdown, offline.
+
+![Diagrams: a flowchart, a sequence diagram and an entity-relationship diagram drawn from Markdown](docs/images/diagrams.png)
+
+![A kanban board and a calendar in a note](docs/images/boards.png)
+
+![An OpenAPI reference with Try it](docs/images/api.png)
+
+**Editing** visually, with the diagram still drawn as you write.
+
+![A note edited visually: a sequence diagram, a table and a quote](docs/images/edit.png)
+
+**A light IDE**: its own code editor with changes in the gutter and the language
+server's checks, git, and a console.
+
+![Code with git marks in the gutter and a type error from the language server, a console below](docs/images/code.png)
+
+**Tabs in coloured groups**, and the dark theme.
+
+![Tabs in groups named Code and Review, in the dark theme](docs/images/dark.png)
+
 ## Download
 
 From the [latest release](https://github.com/dskripchenko/folio/releases/latest):
