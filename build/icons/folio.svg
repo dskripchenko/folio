@@ -1,45 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- folio: an open book — text on one page, a diagram on the other — and its ribbon. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bg" x1="0.15" y1="0" x2="0.85" y2="1">
       <stop offset="0" stop-color="#17a08a"/>
       <stop offset="1" stop-color="#0b5566"/>
     </linearGradient>
-    <linearGradient id="left" gradientUnits="userSpaceOnUse" x1="236" y1="0" x2="512" y2="0">
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#fffaf0"/>
-      <stop offset="1" stop-color="#efe5d0"/>
+      <stop offset="1" stop-color="#f4ead6"/>
     </linearGradient>
-    <linearGradient id="right" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="788" y2="0">
-      <stop offset="0" stop-color="#e9dfc8"/>
-      <stop offset="1" stop-color="#fdf7ea"/>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9a78"/>
+      <stop offset="1" stop-color="#ec6443"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#06303a" flood-opacity="0.45"/>
-    </filter>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0b5566" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#0b5566" stop-opacity="1"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="16"/></filter>
+    <filter id="fsoft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
   </defs>
-  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
-  <g filter="url(#shadow)">
-    <!-- The pages beneath: the book's thickness. -->
-    <path d="M512 356 C440 316 320 314 236 344 V752 C320 724 440 726 512 768 C584 726 704 724 788 752 V344 C704 314 584 316 512 356 Z" fill="#d8c7a2"/>
-    <path d="M512 332 C440 292 320 290 236 320 V728 C320 700 440 702 512 744 Z" fill="url(#left)"/>
-    <path d="M512 332 C584 292 704 290 788 320 V728 C704 700 584 702 512 744 Z" fill="url(#right)"/>
-  </g>
-  <!-- Text on the left page. -->
-  <g stroke="#8fb3ad" stroke-width="22" stroke-linecap="round" fill="none">
-    <path d="M290 410 C350 396 410 398 462 416"/>
-    <path d="M290 470 C350 456 410 458 462 476"/>
-    <path d="M290 530 C350 516 410 518 462 536"/>
-    <path d="M290 590 C330 581 370 581 400 588"/>
-  </g>
-  <!-- A diagram on the right page. -->
-  <g stroke="#14806f" stroke-width="16" stroke-linecap="round" fill="none">
-    <path d="M628 440 L726 440"/>
-    <path d="M628 440 L677 560"/>
-    <path d="M726 440 L677 560"/>
-  </g>
-  <circle cx="628" cy="440" r="30" fill="#14806f"/>
-  <circle cx="726" cy="440" r="30" fill="#ff7a59"/>
-  <circle cx="677" cy="560" r="30" fill="#14806f"/>
-  <!-- The ribbon. -->
-  <path d="M530 300 H570 V486 L550 466 L530 486 Z" fill="#ff7a59"/>
+
+  <!-- body -->
+  <rect x="100" y="116" width="824" height="824" rx="185" fill="#022a33" opacity="0.30" filter="url(#shadow)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#gloss)"/>
+
+  <!-- the leaf -->
+  <path d="M320,218 H602 L732,348 V814 Q732,842 704,842 H320 Q292,842 292,814 V246 Q292,218 320,218 Z" fill="#03323c" opacity="0.38" filter="url(#soft)"/>
+  <path d="M320,200 H602 L732,330 V796 Q732,824 704,824 H320 Q292,824 292,796 V228 Q292,200 320,200 Z" fill="url(#paper)"/>
+
+  <!-- folded corner: the coral back of the leaf -->
+  <path d="M594,206 V320 Q594,344 618,344 H726 Z" fill="#0b5566" opacity="0.16" filter="url(#fsoft)"/>
+  <path d="M602,200 L732,330 H630 Q602,330 602,302 Z" fill="url(#fold)"/>
+
+  <!-- lines of text -->
+  <rect x="352" y="276" width="210" height="24" rx="12" fill="#0b5566" opacity="0.24"/>
+  <rect x="352" y="326" width="164" height="24" rx="12" fill="#0b5566" opacity="0.24"/>
+  <!-- third line turns into the diagram -->
+  <path d="M364,388 H488 Q512,388 512,412 V436" fill="none" stroke="url(#ink)" stroke-width="24" stroke-linecap="round"/>
+
+  <!-- diagram -->
+  <rect x="452" y="436" width="120" height="84" rx="24" fill="#0b5566"/>
+  <path d="M512,520 V556 M412,612 V588 Q412,556 444,556 H580 Q612,556 612,588 V612" fill="none" stroke="#0b5566" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="368" y="612" width="88" height="88" rx="24" fill="#0b5566"/>
+  <circle cx="612" cy="656" r="46" fill="#ff7a59"/>
+
+  <!-- page number -->
+  <rect x="490" y="758" width="44" height="16" rx="8" fill="#0b5566" opacity="0.30"/>
 </svg>
