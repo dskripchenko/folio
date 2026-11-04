@@ -167,11 +167,25 @@ install for one; *Language server output* among the commands shows its log.
 `"lsp"` in `.folio/settings.json` gives a language a command of its own, or
 `false` to have none; `"formatter": "lsp"` formats on save with the server.
 
+**Pictures, video and sound** open in a tab of their own: PNG, JPEG, GIF,
+WebP, AVIF, BMP and icons fitted to the view (a small one at its own size),
+zoomed with `Cmd/Ctrl` and the wheel or a pinch about the pointer, `+`, `−`,
+`0` (fit) and `1` (actual size), a double click going between the two, dragged
+when larger than the view, transparency over a chequerboard; MP4, WebM, MOV and
+MKV in the video player, MP3, WAV, OGG, Opus, M4A, AAC and FLAC in the sound
+player with its waveform. The status line gives the size, the length and the
+bytes; the bar under the file opens it in the system's program, as a file
+Chromium cannot decode offers by itself. An SVG is drawn, and edited as text
+beside its picture, which follows what is written. They are listed in the
+trees of notes too, but never read as text: searching, a folder's PDF and the
+history's versions pass them over.
+
 A project is of **notes** or of **code** — guessed when it is added (a
 `package.json`, `composer.json`, `go.mod`, `Cargo.toml`… at its top, or a git
 repository with no notes beside its README makes it code) and changed in its
 menu. A project of code lists every file, its dot files too (`.github`,
-`.editorconfig`), and a file that is not text opens in the system's program;
+`.editorconfig`), and a file that is not text (but a picture, a video or a
+sound, shown in folio) opens in the system's program;
 a save there is never committed on its own — commits are made by hand. In a
 folder under git, what `.gitignore` leaves out (with `.git/info/exclude` and
 the user's global excludes file) is left out of the tree, going to a file and

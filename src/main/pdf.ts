@@ -146,7 +146,8 @@ export function folderDocuments(dir: string, depth = 0): string[] {
       continue
     }
     if (isDir) dirs.push(name)
-    else if (kindOf(name) !== 'other') files.push(name)
+    // Documents only: a picture or a video is not a page of the book (its notes show it where they use it).
+    else if (kindOf(name) !== 'other' && kindOf(name) !== 'media') files.push(name)
   }
   files.sort((a, b) => (FIRST.test(a) ? 0 : 1) - (FIRST.test(b) ? 0 : 1) || byName(a, b))
   dirs.sort(byName)

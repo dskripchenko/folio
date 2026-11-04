@@ -35,7 +35,8 @@ describe('document formats', () => {
     expect(kindOf('package.json')).toBe('code')
     expect(kindOf('main.rs')).toBe('code')
     expect(kindOf('app.log')).toBe('code')
-    expect(kindOf('photo.png')).toBe('other')
+    // Pictures, video and sound: shown in folio (media.spec.ts).
+    expect(kindOf('photo.png')).toBe('media')
     expect(opensInFolio('a.bpmn')).toBe(true)
     expect(opensInFolio('a.txt')).toBe(true)
     expect(opensInFolio('report.pdf')).toBe(false)

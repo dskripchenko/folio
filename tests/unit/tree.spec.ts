@@ -28,7 +28,7 @@ describe('tree: a folder as the sidebar lists it', () => {
   })
 
   it('knows the kinds', () => {
-    expect([kindOf('a.MD'), kindOf('b.drawio'), kindOf('c.puml'), kindOf('d.png')]).toEqual(['markdown', 'diagram', 'diagram', 'other'])
+    expect([kindOf('a.MD'), kindOf('b.drawio'), kindOf('c.puml'), kindOf('d.png'), kindOf('e.zip')]).toEqual(['markdown', 'diagram', 'diagram', 'media', 'other'])
   })
 })
 

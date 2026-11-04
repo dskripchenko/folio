@@ -9,7 +9,32 @@ import { languageOf } from '@dskripchenko/syntax'
  * text notation (`<dsk-diagram>`, edited as source beside a preview); or any
  * other text; a kanban board, a calendar, a whiteboard (`<dsk-board>`).
  */
-export type Format = 'markdown' | 'bpmn' | 'dmn' | 'drawio' | 'openapi' | 'asyncapi' | 'diagram' | 'kanban' | 'calendar' | 'board' | 'text'
+export type Format =
+  | 'markdown'
+  | 'bpmn'
+  | 'dmn'
+  | 'drawio'
+  | 'openapi'
+  | 'asyncapi'
+  | 'diagram'
+  | 'kanban'
+  | 'calendar'
+  | 'board'
+  | 'text'
+  | 'svg'
+  | 'image'
+  | 'video'
+  | 'audio'
+
+/** Pictures, video and sound the window shows itself (what Chromium decodes). An SVG is text: `svg`, drawn and edited. */
+export const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.jfif', '.gif', '.webp', '.avif', '.bmp', '.ico', '.apng']
+export const VIDEO_EXT = ['.mp4', '.m4v', '.webm', '.mov', '.ogv', '.mkv']
+export const AUDIO_EXT = ['.mp3', '.wav', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.flac', '.weba']
+
+/** Formats whose file is not text: never read as text, served to the window by the folio scheme. */
+export function isMedia(format: Format | 'data'): format is 'image' | 'video' | 'audio' {
+  return format === 'image' || format === 'video' || format === 'audio'
+}
 
 /** The text notations, by extension, with the syntax `<dsk-diagram>` reads them in. */
 export const DIAGRAM_SYNTAX: Readonly<Record<string, string>> = {
@@ -31,7 +56,20 @@ export const MARKDOWN_EXT = ['.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt
 const DATA_EXT = ['.yaml', '.yml', '.json']
 
 /** The extensions folio opens, for the Open dialog. */
-export const OPENABLE_EXT = [...MARKDOWN_EXT, '.bpmn', '.dmn', '.drawio', '.dio', '.board', ...Object.keys(DIAGRAM_SYNTAX), ...DATA_EXT]
+export const OPENABLE_EXT = [
+  ...MARKDOWN_EXT,
+  '.bpmn',
+  '.dmn',
+  '.drawio',
+  '.dio',
+  '.board',
+  ...Object.keys(DIAGRAM_SYNTAX),
+  ...DATA_EXT,
+  '.svg',
+  ...IMAGE_EXT,
+  ...VIDEO_EXT,
+  ...AUDIO_EXT,
+]
 
 /** Of a YAML or JSON document, from its first lines: an API description, or plain data. */
 export function sniffData(text: string): 'openapi' | 'asyncapi' | 'text' {
@@ -59,6 +97,10 @@ export function formatByName(name: string): Format | 'data' {
   if (ext === '.board') return 'board'
   if (ext in DIAGRAM_SYNTAX) return 'diagram'
   if (DATA_EXT.includes(ext)) return 'data'
+  if (ext === '.svg') return 'svg'
+  if (IMAGE_EXT.includes(ext)) return 'image'
+  if (VIDEO_EXT.includes(ext)) return 'video'
+  if (AUDIO_EXT.includes(ext)) return 'audio'
   return 'text'
 }
 

@@ -5,7 +5,7 @@
  * leaves.
  */
 import { rank } from './fuzzy'
-import { icon, type IconName } from './icons'
+import { icon, mediaIcon, type IconName } from './icons'
 
 export interface GoToFileText {
   placeholder: string
@@ -18,10 +18,10 @@ export interface IndexedFile {
   root: string
   label: string | null
   path: string
-  kind: 'markdown' | 'diagram' | 'code' | 'other'
+  kind: 'markdown' | 'diagram' | 'code' | 'media' | 'other'
 }
 
-const KIND_ICON: Record<IndexedFile['kind'], IconName> = { markdown: 'file', diagram: 'diagram', code: 'source', other: 'file' }
+const KIND_ICON: Record<IndexedFile['kind'], IconName> = { markdown: 'file', diagram: 'diagram', code: 'source', media: 'image', other: 'file' }
 
 /** How many rows the palette shows. */
 const ROWS = 50
@@ -143,7 +143,7 @@ export class GoToFile {
         const where = document.createElement('span')
         where.className = 'palette-where'
         where.append(...highlighted(full, 0, Math.max(0, nameStart - 1), marked))
-        li.append(icon(KIND_ICON[item.kind]), name, where)
+        li.append(icon(item.kind === 'media' ? mediaIcon(item.path) : KIND_ICON[item.kind]), name, where)
         li.addEventListener('mousedown', (e) => {
           e.preventDefault()
           this.choose(i)

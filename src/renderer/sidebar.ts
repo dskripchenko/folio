@@ -8,7 +8,7 @@
  * is opened or the click goes elsewhere.
  */
 import { folio, prefs, type Changes, type Entry, type ProjectView, type WorkspaceView } from './bridge'
-import { icon, iconButton, type IconName } from './icons'
+import { icon, iconButton, mediaIcon, type IconName } from './icons'
 import { closeMenu, popMenu, popMenuAt } from './menu'
 
 export interface SidebarText {
@@ -51,7 +51,7 @@ interface Options {
   newNote: () => void
 }
 
-const FILE_ICON: Record<string, IconName> = { markdown: 'file', diagram: 'diagram', code: 'source' }
+const FILE_ICON: Record<string, IconName> = { markdown: 'file', diagram: 'diagram', code: 'source', media: 'image' }
 
 export class Sidebar {
   private ws: WorkspaceView | null = null
@@ -513,7 +513,7 @@ export class Sidebar {
     const name = document.createElement('span')
     name.className = 'name'
     name.textContent = entry.name
-    row.append(twisty, icon(entry.type === 'dir' ? 'folder' : (FILE_ICON[entry.kind ?? 'other'] ?? 'file'), 15), name)
+    row.append(twisty, icon(entry.type === 'dir' ? 'folder' : entry.kind === 'media' ? mediaIcon(entry.name) : (FILE_ICON[entry.kind ?? 'other'] ?? 'file'), 15), name)
     li.append(row)
     // Dragged into a console: typed there as its path.
     row.draggable = true

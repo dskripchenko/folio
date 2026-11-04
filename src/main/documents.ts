@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from 'node:fs'
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path'
-import { formatByName, formatOf, MARKDOWN_EXT, opensInFolio, type Format } from './formats'
+import { formatByName, formatOf, isMedia, MARKDOWN_EXT, opensInFolio, type Format } from './formats'
 import { real } from './paths'
 import type { Roots } from './roots'
 import type { Workspace } from './workspace'
@@ -25,6 +25,8 @@ export interface OpenedDocument {
   project: string | null
   /** The root it reads from (its id): watched while it is open. */
   root: string
+  /** A picture, a video or a sound: its size in bytes and when it last changed (a new one draws it again). */
+  media?: { size: number; modified: number }
 }
 
 export class DocumentError extends Error {}
@@ -42,16 +44,20 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
   // The real path: one file is one tab, however it was reached (a link, the tree, /var or /private/var).
   const path = real(resolve(file)) ?? resolve(file)
   let size: number
+  let modified: number
   try {
     const st = statSync(path)
     if (!st.isFile()) throw new DocumentError(`Not a file: ${path}`)
     size = st.size
+    modified = st.mtimeMs
   } catch (e) {
     if (e instanceof DocumentError) throw e
     throw new DocumentError(`Cannot open ${path}`)
   }
   const byName = formatByName(path)
-  const limit = byName === 'text' || byName === 'data' ? MAX_TEXT_BYTES : MAX_BYTES
+  // A picture, a video or a sound is streamed to the window, never read here: any size.
+  const media = isMedia(byName)
+  const limit = media ? Infinity : byName === 'text' || byName === 'data' ? MAX_TEXT_BYTES : MAX_BYTES
   if (size > limit) throw new DocumentError(`${basename(path)} is larger than ${limit / 1024 / 1024} MB`)
 
   // The root a document may read from: its project, Shared, or its own folder.
@@ -61,7 +67,7 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
   const id = roots.register(rootDir)
   const relDir = relative(rootDir, dirname(path))
 
-  const text = readFileSync(path, 'utf8')
+  const text = media ? '' : readFileSync(path, 'utf8')
   return {
     path,
     name: basename(path),
@@ -72,6 +78,7 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
     owner: owner?.kind ?? 'file',
     project: owner?.kind === 'project' ? owner.project.name : null,
     root: id,
+    ...(media ? { media: { size, modified } } : {}),
   }
 }
 

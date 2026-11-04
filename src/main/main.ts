@@ -43,7 +43,7 @@ import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
 import { documentOfUrl, DocumentError, filesFromArgv, openDocument, type OpenedDocument } from './documents'
-import { DIAGRAM_SYNTAX, MARKDOWN_EXT, OPENABLE_EXT, opensInFolio } from './formats'
+import { DIAGRAM_SYNTAX, formatByName, isMedia, MARKDOWN_EXT, OPENABLE_EXT, opensInFolio } from './formats'
 import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
 import { Roots } from './roots'
@@ -592,7 +592,9 @@ ipcMain.handle('search:run', async (e, id: unknown, query: unknown, options: unk
   const files: SearchFile[] = []
   for (const s of sources()) {
     if (scope !== 'all' && scope !== s.root) continue
-    for (const f of await fileIndex.files(s.root, s.dir, visibility(s.dir))) if (pathPasses(q, f.path)) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
+    for (const f of await fileIndex.files(s.root, s.dir, visibility(s.dir)))
+      // A picture, a video, a sound has no text to search (an SVG has: it stays).
+      if (pathPasses(q, f.path) && !isMedia(formatByName(f.path))) files.push({ root: s.root, label: s.label, dir: s.dir, path: f.path })
   }
   return searchFiles(files, pattern, (batch) => e.sender.send('search:hits', id, batch), () => searchId !== id, {
     ...(q.tags.length > 0 ? { accept: (text: string) => tagsPass(q, tagsOf(text)) } : {}),
@@ -683,6 +685,12 @@ ipcMain.handle('tree:open', (_e, root: unknown, rel: unknown) => {
     return { external: true, path: file }
   }
   return open(file)
+})
+
+/** A file of the workspace (a picture folio shows, say) in the system's program for it. */
+ipcMain.handle('file:external', async (_e, path: unknown) => {
+  if (typeof path !== 'string' || !isAbsolute(path) || workspace.ownerOf(path) === null || !existsSync(path)) return false
+  return (await shell.openPath(path)) === ''
 })
 
 /** Whether a file holds bytes no text has (a NUL among its first 8 KB), as git tells binary files. */
@@ -1615,7 +1623,8 @@ ipcMain.handle('doc:editorconfig', (_e, path: unknown) => {
 })
 
 ipcMain.handle('doc:disk', (_e, path: unknown) => {
-  if (typeof path !== 'string') return null
+  // A picture or a video is not text: never read whole as one.
+  if (typeof path !== 'string' || isMedia(formatByName(path))) return null
   try {
     const text = readFileSync(path, 'utf8')
     return { text, hash: hashText(text) }

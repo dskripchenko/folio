@@ -6,7 +6,7 @@ import { resolveInside } from './paths'
 import type { Visibility } from './visibility'
 
 /** What folio does with a file: reads it, draws it (stage 5), shows it highlighted (code, data, logs), or only lists it. */
-export type Kind = 'markdown' | 'diagram' | 'code' | 'other'
+export type Kind = 'markdown' | 'diagram' | 'code' | 'media' | 'other'
 
 export interface Entry {
   name: string
@@ -31,6 +31,8 @@ export function kindOf(name: string): Kind {
   // Any other text with a known language — code, data, logs, configuration — is shown highlighted.
   if (format === 'text') return languageOf(name) ? 'code' : 'other'
   if (format === 'data' && lower.endsWith('.json')) return /openapi|swagger|asyncapi/.test(lower) ? 'diagram' : 'code'
+  // Pictures (an SVG too), video and sound: shown in folio.
+  if (format === 'svg' || format === 'image' || format === 'video' || format === 'audio') return 'media'
   return 'diagram'
 }
 

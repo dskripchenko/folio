@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+- Pictures, video and sound open in folio instead of the system's program:
+  a picture fitted, zoomed (`Cmd/Ctrl` and the wheel or a pinch, `+`, `−`,
+  `0`, `1`, a double click) and dragged, over a chequerboard; video and sound
+  in the players, seeking in the file; their size, length and bytes in the
+  status line; the system's program a click away. An SVG is drawn, and edited
+  beside its live picture. Media are listed in the trees of notes too.
+
 ## [1.2.1] - 2026-11-04
 
 ### Fixed
