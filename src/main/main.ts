@@ -39,6 +39,7 @@ import {
 import { Logins } from './logins'
 import { folderDocuments, pdfName, pdfOptions, printToPdfOptions, SLIDES_PDF } from './pdf'
 import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, systemTransport, type Transport } from './sync'
+import { buildDocx, type DocxModel } from './docx'
 import { amendLast, createTag, deleteBranch, deleteTag, lastMessage, renameBranch, revertCommit, stashApply, stashDrop, stashList, stashPush } from './gitOps'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
@@ -1500,6 +1501,26 @@ ipcMain.handle('git:tag-delete', (_e, path: unknown, name: unknown) =>
     return { ok: true }
   }),
 )
+
+/** A document exported (ADR-004 D6): one HTML page as given, or a Word file written from its blocks; where it goes is asked. */
+ipcMain.handle('export:save', async (_e, kind: unknown, name: unknown, payload: unknown) => {
+  if (!win || (kind !== 'html' && kind !== 'docx') || typeof name !== 'string') return { canceled: true }
+  const ext = kind === 'html' ? 'html' : 'docx'
+  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+    defaultPath: join(app.getPath('documents'), `${name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '-') || 'document'}.${ext}`),
+    filters: [{ name: kind === 'html' ? 'HTML' : 'Word', extensions: [ext] }],
+  })
+  if (canceled || !filePath) return { canceled: true }
+  try {
+    if (kind === 'html') {
+      if (typeof payload !== 'string') throw new Error('no page')
+      writeFileSync(filePath, payload)
+    } else writeFileSync(filePath, buildDocx(payload as DocxModel))
+    return { saved: filePath }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+})
 
 /** A yes or no from the person, in a native dialog: true for yes. */
 async function confirm(message: string, detail: string, yes: string): Promise<boolean> {

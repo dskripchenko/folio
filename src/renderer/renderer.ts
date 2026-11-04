@@ -35,6 +35,7 @@ import { SymbolPalette, type SymbolPaletteText } from './symbolPalette'
 import { parseProblems, ProblemsPanel, type ProblemsText, type ResolvedProblem } from './problems'
 import { bytes, duration, type MediaInfo, type MediaText } from './mediaView'
 import type { TableText } from './csvView'
+import { drawn, toDocx, toHtml } from './exportDoc'
 import {
   applyTextEdits,
   applyWorkspaceEdit,
@@ -108,6 +109,9 @@ const TEXT = {
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
     media: { zoomIn: 'Zoom in', zoomOut: 'Zoom out', fit: 'Fit to the view', actual: 'Actual size', external: 'Open in the system’s program', failed: 'folio cannot show {name} (a format or codec it does not read).' } as MediaText,
     wrapLines: 'Wrap long lines',
+    exportHtml: 'Export as HTML (one page)…',
+    exportDocx: 'Export as Word (DOCX)…',
+    exporting: 'Preparing the export…',
     table: { more: 'Show {n} more', rows: ['row', 'rows'], size: '{rows} rows × {cols} columns' } as TableText & { size: string },
     compareWithCommand: 'Compare the file with…',
     comparedWith: 'Compared with {name}',
@@ -179,6 +183,9 @@ const TEXT = {
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
     media: { zoomIn: 'Увеличить', zoomOut: 'Уменьшить', fit: 'Вписать в окно', actual: 'Исходный размер', external: 'Открыть в системной программе', failed: 'folio не может показать {name} (формат или кодек, которого он не читает).' } as MediaText,
     wrapLines: 'Переносить длинные строки',
+    exportHtml: 'Экспорт в HTML (одна страница)…',
+    exportDocx: 'Экспорт в Word (DOCX)…',
+    exporting: 'Готовлю экспорт…',
     table: { more: 'Показать ещё {n}', rows: ['строку', 'строки', 'строк'], size: 'Строк: {rows} × столбцов: {cols}' } as TableText & { size: string },
     compareWithCommand: 'Сравнить файл с…',
     comparedWith: 'Сравнение с {name}',
@@ -2409,6 +2416,8 @@ function commands(): Command[] {
     { id: 'save-as', group: file, title: c.saveAs, keys: `${mod}⇧S`, icon: 'save', when: has, run: () => active && void save(active, true) },
     { id: 'print', group: file, title: t.print, keys: `${mod}P`, icon: 'print', when: hasText, run: () => void printActive() },
     { id: 'export-pdf', group: file, title: t.exportPdf, keys: `${mod}⇧P`, icon: 'pdf', when: hasText, run: () => exportActive() },
+    { id: 'export-html', group: file, title: t.exportHtml, icon: 'file', when: hasText, run: () => void exportAs('html') },
+    { id: 'export-docx', group: file, title: t.exportDocx, icon: 'file', when: hasText, run: () => void exportAs('docx') },
     { id: 'present', group: view, title: c.present, keys: 'F5', icon: 'present', when: isNote, run: () => present() },
     { id: 'export-slides', group: file, title: c.slidesPdf, icon: 'pdf', when: isNote, run: () => void exportSlides() },
     { id: 'close-tab', group: file, title: c.closeTab, keys: `${mod}W`, icon: 'close', when: has, run: () => active && void close(active) },
@@ -2784,6 +2793,24 @@ folio.onPrint(() => void printActive())
 function exportPdf(target: PdfTarget): void {
   openPdfDialog(t.pdf, target, notify)
 }
+/** The document in view as one HTML page or a Word file: drawn out of sight as when read, then saved where asked. */
+async function exportAs(kind: 'html' | 'docx'): Promise<void> {
+  const tab = active
+  if (!tab || tab.doc?.media) return
+  const name = titleOf(tab)
+  notify(t.exporting)
+  const page = await drawn(viewOf(formatOf(tab), tab.text, { ...viewOptions(tab), main: false }), theme)
+  let payload: unknown
+  try {
+    payload = kind === 'html' ? await toHtml(page.root, name.replace(/\.[^.]+$/, ''), lang) : await toDocx(page.root, name.replace(/\.[^.]+$/, ''))
+  } finally {
+    page.done()
+  }
+  const result = await folio.exportFile(kind, name, payload)
+  if ('canceled' in result) noticeEl.hidden = true
+  else notify('saved' in result ? t.pdf.saved.replace('{file}', result.saved) : t.pdf.failed.replace('{error}', result.error))
+}
+
 function exportActive(): void {
   if (!active || active.doc?.media) return
   exportPdf({ kind: 'doc', path: active.path, text: active.text, name: titleOf(active) })

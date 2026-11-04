@@ -251,6 +251,8 @@ export interface FolioBridge {
   /** Language servers (ADR-003): a file opened in its server, its changes, its saves; requests at positions. */
   /** A file of the workspace in the system's program for it. */
   openExternal(path: string): Promise<boolean>
+  /** A document exported: where it was saved, or why not. */
+  exportFile(kind: 'html' | 'docx', name: string, payload: unknown): Promise<{ saved: string } | { canceled: true } | { error: string }>
   lspOpen(path: string, text: string): Promise<LspOpenResult>
   lspChange(path: string, edits: unknown[]): void
   lspSave(path: string): void
