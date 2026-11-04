@@ -15,6 +15,7 @@ pnpm lint
 pnpm typecheck
 pnpm test           # 单元测试（vitest）
 pnpm test:e2e       # 启动构建好的应用并进行检查（Playwright）
+pnpm readme:shots   # 重新截取 README 的截图到 docs/images（需要 ImageMagick）
 ```
 
 从源码运行时，folio 把数据保存在工作目录的 `.folio-data/` 中；
@@ -49,6 +50,7 @@ FOLIO_APP=… FOLIO_ARCHIVE=… pnpm exec playwright test -c playwright.package.
 | `scripts/build.mjs` | esbuild：把 main、preload 和页面构建到 `dist/` |
 | `tests/unit/` | 单元测试 |
 | `tests/e2e/` | 构建好的应用，启动并驱动 |
+| `tests/readme/` | README 的截图，由 `pnpm readme:shots` 截取 |
 | `docs/internal/` | 决策与计划（俄文） |
 
 ## CI

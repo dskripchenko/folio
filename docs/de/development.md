@@ -15,6 +15,7 @@ pnpm lint
 pnpm typecheck
 pnpm test           # Unit-Tests (vitest)
 pnpm test:e2e       # die gebaute App starten und prüfen (Playwright)
+pnpm readme:shots   # die Screenshots des README neu aufnehmen, nach docs/images (braucht ImageMagick)
 ```
 
 Aus den Quellen gestartet, legt folio seine Daten in `.folio-data/` im
@@ -61,6 +62,7 @@ die Archive mit Prüfsummen und Herkunftsnachweis.
 | `scripts/build.mjs` | esbuild: Main, Preload und Seite nach `dist/` |
 | `tests/unit/` | Unit-Tests |
 | `tests/e2e/` | die gebaute App, gestartet und gesteuert |
+| `tests/readme/` | die Screenshots des README, aufgenommen von `pnpm readme:shots` |
 | `docs/internal/` | Entscheidungen und Pläne (auf Russisch) |
 
 ## CI
