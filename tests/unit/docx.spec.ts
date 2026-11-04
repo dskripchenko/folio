@@ -58,8 +58,8 @@ describe('a Word document', () => {
     const list = execFileSync('unzip', ['-Z1', file], { encoding: 'utf8' }).split('\n')
     expect(list).toEqual(expect.arrayContaining(['[Content_Types].xml', 'word/document.xml', 'word/styles.xml', 'word/numbering.xml', 'word/media/image1.png']))
     for (const part of ['word/document.xml', 'word/styles.xml', 'word/numbering.xml', 'word/_rels/document.xml.rels', '[Content_Types].xml']) {
-      // unzip reads [ ] as a pattern: escaped.
-      const xml = execFileSync('unzip', ['-p', file, part.replace(/[[\]]/g, '\\$&')])
+      // unzip reads [ ] as a pattern (and escapes differ by system): matched by a pattern of its own.
+      const xml = execFileSync('unzip', ['-p', file, part.replace(/^\[Content_Types\]/, '*Content_Types*')])
       // Parsed by xmllint when it is there.
       try {
         execFileSync('xmllint', ['--noout', '-'], { input: xml })

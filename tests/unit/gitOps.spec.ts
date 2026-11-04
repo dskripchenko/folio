@@ -19,6 +19,8 @@ async function commit(file: string, text: string, message: string): Promise<stri
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'folio-gitops-'))
   await git.init({ fs, dir, defaultBranch: 'main' })
+  // Line breaks as written, whatever the machine's git does (Git for Windows checks out CRLF).
+  await git.setConfig({ fs, dir, path: 'core.autocrlf', value: 'false' })
   await commit('a.txt', 'one\n', 'first')
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
