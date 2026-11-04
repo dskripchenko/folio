@@ -1648,6 +1648,8 @@ registerReview({
     workspace.addProject(path)
     return workspaceView()
   },
+  claudeText: () => ({ connectQuestion: L().claudeConnectQuestion, connectDetail: L().claudeConnectDetail, connect: L().claudeConnect }),
+  confirmLong: confirm,
   forgetProject: (path) => {
     for (const p of workspace.projects()) if (resolvePath(p.path) === resolvePath(path)) workspace.removeProject(p.id)
     return workspaceView()

@@ -880,3 +880,6 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .rv-send-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rv-send-row select { flex: 1; min-width: 160px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
 .rv-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* Who edited (Claude Code's hook, R6). */
+.rv-agent { padding: 0 6px; border-radius: 8px; background: color-mix(in srgb, #d97757 16%, transparent); color: #c4613f; font-size: 11px; white-space: nowrap; }
+.worktree-agent { margin: -2px 0 6px; color: #c4613f; font-size: 11px; }

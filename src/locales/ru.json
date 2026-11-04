@@ -92,7 +92,10 @@
     "removeWorktreeQuestion": "Удалить worktree «{name}»?",
     "removeWorktreeDetail": "Его папка будет удалена, ветка — тоже.",
     "removeWorktreeDirty": "В нём {n} изменённых и не закоммиченных файлов — они пропадут. Ветка тоже будет удалена.",
-    "removeWorktree": "Удалить"
+    "removeWorktree": "Удалить",
+    "claudeConnectQuestion": "Пусть Claude Code сообщает folio, что он правит?",
+    "claudeConnectDetail": "В {file} (локальные настройки, не в коммите) добавится хук. После каждой правки Claude Code допишет файл, сессию и время в данные folio:\n\n{command}\n\nОстальные настройки не меняются. Убрать — той же командой.",
+    "claudeConnect": "Подключить"
   },
   "window": {
     "open": "Открыть…",
@@ -541,7 +544,12 @@
       "slidesPdf": "Экспорт слайдов в PDF",
       "reviewChanges": "Ревью изменений",
       "reviewSince": "Ревью изменений с последнего просмотра",
-      "worktrees": "Worktree"
+      "worktrees": "Worktree",
+      "claudeConnect": "Подключить Claude Code к folio (кто что правил)",
+      "claudeDisconnect": "Отключить Claude Code от folio",
+      "claudeConnected": "Claude Code будет сообщать folio, что он правит.",
+      "claudeDisconnected": "Claude Code отключён от folio.",
+      "claudeUnreadable": "Локальные настройки — не JSON, который folio может прочитать; ничего не изменено."
     },
     "goToFile": {
       "placeholder": "Перейти к файлу по имени",
@@ -728,7 +736,9 @@
       "copied": "Скопировано.",
       "intro": "Замечания по ревью — {title}:",
       "commentOn": "строка {line}",
-      "pasteUnsafe": "Программа в этой консоли не принимает строки одной вставкой — каждая выполнилась бы как команда. Скопируйте текст."
+      "pasteUnsafe": "Программа в этой консоли не принимает строки одной вставкой — каждая выполнилась бы как команда. Скопируйте текст.",
+      "agent": "Claude · {session}",
+      "agentTitle": "{tool}: Claude Code, сессия {session}, в {cwd}"
     },
     "worktrees": {
       "title": "Worktree",
@@ -753,7 +763,8 @@
       "noRepo": "Не в git-репозитории.",
       "noGit": "Для worktree нужен git, установленный в системе.",
       "taken": "Изменения в основной копии, без коммита.",
-      "merged": "Влито."
+      "merged": "Влито.",
+      "agent": "Claude · {session} · {when}"
     }
   },
   "print": {

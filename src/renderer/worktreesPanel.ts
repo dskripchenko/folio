@@ -6,7 +6,7 @@
  * merged, taken into the main copy without a commit, or removed.
  */
 import type enLocale from '../locales/en.json'
-import type { ChangeSpec, Worktree } from '../common/review'
+import type { AgentEdit, ChangeSpec, Worktree } from '../common/review'
 import { plural } from '../common/plural'
 import type { GitRefusal } from './bridge'
 import { iconButton } from './icons'
@@ -23,6 +23,8 @@ export interface WorktreesDeps {
   merge: (main: string, branch: string) => Promise<GitRefusal | null>
   take: (main: string, path: string, base: string) => Promise<GitRefusal | null>
   remove: (main: string, w: Worktree) => Promise<GitRefusal | null>
+  /** The edits an agent reported (R6): the last one in each worktree is shown. */
+  edits: (main: string) => Promise<AgentEdit[]>
   /** git's refusals in words. */
   errors: () => Record<string, string>
   lang: () => string
@@ -137,7 +139,17 @@ export class WorktreesPanel {
     if (key === this.drawn) return
     this.drawn = key
     void this.fillBases(r.main, r.base)
-    this.list.replaceChildren(...r.list.map((w) => this.item(r.main, r.base, w)))
+    const edits = await this.deps.edits(r.main)
+    if (seq !== this.seq) return
+    // Each edit to the worktree it is in (the deepest folder that holds it).
+    const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '') + '/'
+    const byDepth = [...r.list].sort((x, y) => y.path.length - x.path.length)
+    const last = new Map<string, AgentEdit>()
+    for (const e of edits) {
+      const w = byDepth.find((x) => norm(e.path).startsWith(norm(x.path)))
+      if (w && (last.get(w.path)?.time ?? 0) <= e.time) last.set(w.path, e)
+    }
+    this.list.replaceChildren(...r.list.map((w) => this.item(r.main, r.base, w, last.get(w.path) ?? null)))
     if (r.list.length <= 1) {
       const hint = document.createElement('li')
       hint.className = 'worktrees-hint'
@@ -165,7 +177,7 @@ export class WorktreesPanel {
     return rtf.format(Math.round(s / 86400), 'day')
   }
 
-  private item(main: string, base: string, w: Worktree): HTMLElement {
+  private item(main: string, base: string, w: Worktree, edit: AgentEdit | null): HTMLElement {
     const t = this.text
     const li = document.createElement('li')
     li.className = 'worktree'
@@ -190,6 +202,14 @@ export class WorktreesPanel {
     parts.push(w.changed ? plural(w.changed, t.changed, this.deps.lang()) : t.clean)
     if (w.lastActivity) parts.push(this.ago(w.lastActivity))
     meta.textContent = parts.join(' · ')
+    const agent = document.createElement('div')
+    agent.className = 'worktree-agent'
+    agent.dataset.testid = 'worktree-agent'
+    agent.hidden = !edit
+    if (edit) {
+      agent.textContent = t.agent.replace('{session}', edit.session.slice(0, 8)).replace('{when}', this.ago(edit.time))
+      agent.title = `${edit.tool} · ${edit.path}`
+    }
     const acts = document.createElement('div')
     acts.className = 'worktree-actions'
     const btn = (label: string, testid: string, fn: () => void) => {
@@ -218,7 +238,7 @@ export class WorktreesPanel {
       })
       acts.append(more)
     }
-    li.append(top, meta, acts)
+    li.append(top, meta, agent, acts)
     return li
   }
 }

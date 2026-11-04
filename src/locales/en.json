@@ -92,7 +92,10 @@
     "removeWorktreeQuestion": "Remove the worktree “{name}”?",
     "removeWorktreeDetail": "Its folder is deleted; its branch is deleted too.",
     "removeWorktreeDirty": "It has {n} files changed and not committed: they are lost. Its branch is deleted too.",
-    "removeWorktree": "Remove"
+    "removeWorktree": "Remove",
+    "claudeConnectQuestion": "Let Claude Code tell folio what it edits?",
+    "claudeConnectDetail": "A hook is added to {file} (local settings, not committed). After each edit Claude Code appends the file, its session and the time to folio's data:\n\n{command}\n\nNothing else of the settings changes. The same command takes it out.",
+    "claudeConnect": "Connect"
   },
   "window": {
     "open": "Open…",
@@ -536,7 +539,12 @@
       "slidesPdf": "Export the slides as PDF",
       "reviewChanges": "Review the changes",
       "reviewSince": "Review what changed since the last look",
-      "worktrees": "Worktrees"
+      "worktrees": "Worktrees",
+      "claudeConnect": "Connect Claude Code to folio (who edited what)",
+      "claudeDisconnect": "Disconnect Claude Code from folio",
+      "claudeConnected": "Claude Code will tell folio what it edits.",
+      "claudeDisconnected": "Claude Code is disconnected from folio.",
+      "claudeUnreadable": "The local settings are not JSON folio can read; nothing was changed."
     },
     "goToFile": {
       "placeholder": "Go to a file by its name",
@@ -718,7 +726,9 @@
       "copied": "Copied.",
       "intro": "Review comments — {title}:",
       "commentOn": "line {line}",
-      "pasteUnsafe": "The program in that console does not take lines as one paste: each would run as a command. Copy the text instead."
+      "pasteUnsafe": "The program in that console does not take lines as one paste: each would run as a command. Copy the text instead.",
+      "agent": "Claude · {session}",
+      "agentTitle": "{tool} by Claude Code, session {session}, in {cwd}"
     },
     "worktrees": {
       "title": "Worktrees",
@@ -742,7 +752,8 @@
       "noRepo": "Not in a git repository.",
       "noGit": "Worktrees need git installed on the system.",
       "taken": "The changes are in the main copy, not committed.",
-      "merged": "Merged."
+      "merged": "Merged.",
+      "agent": "Claude · {session} · {when}"
     }
   },
   "print": {

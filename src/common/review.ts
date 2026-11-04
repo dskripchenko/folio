@@ -110,3 +110,17 @@ export function editable(spec: ChangeSpec): boolean {
 export function rootOf(spec: ChangeSpec): string {
   return spec.kind === 'worktree' ? spec.path : spec.repo
 }
+
+/** An edit an agent reported (R6, Claude Code's hook). */
+export interface AgentEdit {
+  /** Absolute. */
+  path: string
+  session: string
+  tool: string
+  /** The folder the agent worked in (a worktree's, for a subagent there). */
+  cwd: string
+  /** Milliseconds. */
+  time: number
+  /** From the repository asked about, when the file is in it. */
+  rel?: string
+}

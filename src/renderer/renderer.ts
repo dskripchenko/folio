@@ -2088,6 +2088,18 @@ async function reviewWorking(): Promise<void> {
   if (repo) openReview({ kind: 'working', repo })
 }
 
+/** Claude Code's hook in the repository in view (R6): added after asking, or taken out. */
+async function claudeConnect(on: boolean): Promise<void> {
+  const repo = await repoInView()
+  if (!repo) return
+  const r = await folio.reviewClaudeConnect(repo, on)
+  if ('error' in r) notify(r.error === 'invalid' ? t.commands.claudeUnreadable : describeRefusal(t.historyPanel.errors, r))
+  else if (r.ok) {
+    notify(on ? t.commands.claudeConnected : t.commands.claudeDisconnected)
+    reviewsSoon()
+  }
+}
+
 let reviewTimer: ReturnType<typeof setTimeout> | null = null
 /** Open reviews read again a moment after files or the repository change (an agent writes in bursts). */
 function reviewsSoon(): void {
@@ -2721,6 +2733,8 @@ function commands(): Command[] {
     { id: 'tasks', group: view, title: t.tasks.title, icon: 'tasks', run: () => tasksPanel?.setVisible(!tasksPanel.visible) },
     { id: 'blame', group: view, title: t.blame, icon: 'history', when: () => !!codeEditorOf(active), run: () => void toggleBlame() },
     { id: 'changes', group: view, title: t.changes.title, keys: 'Ctrl+⇧G', icon: 'commit', run: () => changesPanel?.setVisible(!changesPanel.visible) },
+    { id: 'claude-connect', group: view, title: c.claudeConnect, icon: 'links', run: () => void claudeConnect(true) },
+    { id: 'claude-disconnect', group: view, title: c.claudeDisconnect, icon: 'links', run: () => void claudeConnect(false) },
     { id: 'worktrees', group: view, title: c.worktrees, icon: 'branch', run: () => worktreesPanel?.setVisible(!worktreesPanel.visible) },
     { id: 'review-changes', group: view, title: c.reviewChanges, icon: 'commit', run: () => void reviewWorking() },
     {
@@ -2842,6 +2856,10 @@ worktreesPanel = new WorktreesPanel(
     console: (path) => void consolePanel.open(path),
     merge: async (main, branch) => failed(await folio.reviewWorktreeMerge(main, branch)),
     take: async (main, path, base) => failed(await folio.reviewWorktreeTake(main, path, base)),
+    edits: async (main) => {
+      const r = await folio.reviewAgentEdits(main)
+      return 'ok' in r ? r.edits : []
+    },
     remove: async (main, w) => {
       const r = await folio.reviewWorktreeRemove(main, w.path, w.branch, w.changed)
       if ('workspace' in r && r.workspace) sidebar.show(r.workspace)

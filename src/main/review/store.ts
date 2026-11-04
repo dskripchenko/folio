@@ -48,6 +48,11 @@ export class ReviewStore {
     return r
   }
 
+  /** Where Claude Code's hook writes the repository's edits (R6). */
+  eventsFile(root: string): string {
+    return join(this.dir, 'events', `${createHash('sha1').update(root).digest('hex').slice(0, 16)}.jsonl`)
+  }
+
   private checkpointFile(root: string): string {
     return this.file(root).replace(/\.json$/, '.checkpoint.json')
   }

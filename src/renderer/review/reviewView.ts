@@ -2,7 +2,7 @@ import { escapeHtml, highlightLines, languageOf } from '@dskripchenko/syntax'
 import type enLocale from '../../locales/en.json'
 import { hunkState, type Hunk } from '../../common/hunks'
 import { plural } from '../../common/plural'
-import { editable, rootOf, type ChangedFile, type Changeset, type ChangeSpec, type FileTexts, type ReviewComment } from '../../common/review'
+import { editable, rootOf, type AgentEdit, type ChangedFile, type Changeset, type ChangeSpec, type FileTexts, type ReviewComment } from '../../common/review'
 import { folio, prefs, type GitRefusal } from '../bridge'
 import { syntaxTheme } from '../code'
 import { anchorOf, compose, contextOf, excerptOf } from './comments'
@@ -87,6 +87,8 @@ export class ReviewView {
   private readonly files = new Map<string, FileView>()
   private viewed: Record<string, string> = {}
   private comments: ReviewComment[] = []
+  /** The last edit an agent reported of each file (R6), by its path. */
+  private agentEdits = new Map<string, AgentEdit>()
   private sendButton: HTMLButtonElement | null = null
   private layout: Layout = prefs.get<Layout>('reviewLayout', 'unified')
   private readonly head: HTMLElement
@@ -287,6 +289,8 @@ export class ReviewView {
         this.comments = v.comments
       }
     }
+    const edits = await folio().reviewAgentEdits(r.set.root)
+    this.agentEdits = new Map('ok' in edits ? edits.edits.filter((e) => e.rel).map((e) => [e.rel!, e]) : [])
     this.syncHead()
     this.deps.titled()
     this.say(r.set.files.length === 0 ? this.t.empty : '')
@@ -409,10 +413,20 @@ export class ReviewView {
     box.addEventListener('change', () => this.markViewed(fv, box.checked))
     viewed.append(box, ` ${t.viewed}`)
     actions.append(viewed)
+    // Who edited it, when an agent said so (Claude Code's hook).
+    const edit = this.agentEdits.get(f.path)
+    const agent = document.createElement('span')
+    agent.className = 'rv-agent'
+    agent.dataset.testid = 'review-agent'
+    if (edit) {
+      agent.textContent = t.agent.replace('{session}', edit.session.slice(0, 8))
+      agent.title = t.agentTitle.replace('{tool}', edit.tool).replace('{session}', edit.session).replace('{cwd}', edit.cwd)
+    }
+    agent.hidden = !edit
     const when = document.createElement('span')
     when.className = 'rv-when'
     when.textContent = this.spec.kind === 'since' || this.spec.kind === 'working' ? this.ago(f.mtime) : ''
-    fv.head.replaceChildren(fold, status, name, stats, when, actions)
+    fv.head.replaceChildren(fold, status, name, stats, agent, when, actions)
     fv.section.toggleAttribute('data-viewed', fv.viewed)
     fv.section.toggleAttribute('data-folded', fv.folded)
     // Its line in the list of files.

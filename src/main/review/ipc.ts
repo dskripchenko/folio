@@ -1,10 +1,11 @@
 import { ipcMain } from 'electron'
-import { existsSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { Hunk } from '../../common/hunks'
 import { commentOf, type ChangedFile, type ChangeSpec } from '../../common/review'
 import { GitError } from '../git'
 import { ReviewGit } from './git'
+import { compactEvents, hasHook, hookCommand, readEvents, readSettings, settingsFile, withHook, withoutHook, writeSettings } from './hooks'
 import { ReviewStore } from './store'
 
 /**
@@ -27,7 +28,23 @@ export interface ReviewDeps {
   addProject: (path: string) => unknown
   /** A removed worktree's project (if it was one) let go; the workspace as the sidebar draws it. */
   forgetProject: (path: string) => unknown
+  claudeText: () => { connectQuestion: string; connectDetail: string; connect: string }
+  /** Asked with the change shown in full (the hook's settings). */
+  confirmLong: (message: string, detail: string, yes: string) => Promise<boolean>
   text: () => { discardFileQuestion: string; discardFileDetail: string; discard: string; removeWorktreeQuestion: string; removeWorktreeDetail: string; removeWorktreeDirty: string; remove: string }
+}
+
+/** A path as the disk has it (its folder's, for a file gone). */
+function real(path: string): string {
+  try {
+    return realpathSync.native(path)
+  } catch {
+    try {
+      return join(realpathSync.native(dirname(path)), basename(path))
+    } catch {
+      return path
+    }
+  }
 }
 
 const REV = /^(?!-)[\w./~^@{}+-]{1,200}$/
@@ -203,6 +220,47 @@ export function registerReview(deps: ReviewDeps): void {
     if (typeof key !== 'string' || key.length > 2000 || (hash !== null && typeof hash !== 'string')) throw new GitError('invalid')
     store.setViewed(await repo(path), key, hash as string | null)
     return { ok: true }
+  })
+
+  // Claude Code's edits (R6): a hook in the repository's local settings.
+  /** The main copy of a repository (a worktree's: the one git lists first). */
+  const mainOf = async (root: string): Promise<string> => (await (await need()).worktrees(root, null)).find((w) => w.main)?.path ?? root
+
+  handle('review:claude-state', async (path) => {
+    const root = await mainOf(await repo(path))
+    const settings = readSettings(root)
+    return { ok: true, repo: root, connected: settings !== null && hasHook(settings), readable: settings !== null }
+  })
+  handle('review:claude-connect', async (path, on) => {
+    const root = await mainOf(await repo(path))
+    const settings = readSettings(root)
+    if (settings === null) throw new GitError('invalid', [settingsFile(root)])
+    const t = deps.claudeText()
+    const command = hookCommand(store.eventsFile(root))
+    if (on === true) {
+      const detail = t.connectDetail.replace('{file}', settingsFile(root)).replace('{command}', command)
+      if (!(await deps.confirmLong(t.connectQuestion, detail, t.connect))) return { ok: false }
+      mkdirSync(dirname(store.eventsFile(root)), { recursive: true })
+      writeSettings(root, withHook(settings, command))
+    } else writeSettings(root, withoutHook(settings))
+    return { ok: true }
+  })
+  handle('review:agent-edits', async (path) => {
+    const asked = await repo(path)
+    const root = await mainOf(asked)
+    const file = store.eventsFile(root)
+    const edits = readEvents(file)
+    compactEvents(file, edits)
+    // Paths as the disk has them (a temporary folder is /private/var on macOS): the agent's and git's agree.
+    const base = real(asked)
+    return {
+      ok: true,
+      edits: edits.slice(-3000).map((e) => {
+        const p = real(e.path)
+        const rel = relative(base, p)
+        return { ...e, path: p, ...(rel && !rel.startsWith('..') && !isAbsolute(rel) ? { rel: rel.split(sep).join('/') } : {}) }
+      }),
+    }
   })
 
   handle('review:worktrees', async (path, base) => {

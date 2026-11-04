@@ -1,5 +1,5 @@
 import type { Hunk } from '../common/hunks'
-import type { ChangedFile, Changeset, ChangeSpec, FileTexts, ReviewAction, ReviewComment, Worktree } from '../common/review'
+import type { AgentEdit, ChangedFile, Changeset, ChangeSpec, FileTexts, ReviewAction, ReviewComment, Worktree } from '../common/review'
 import type { GroupData, TabColor } from '../common/tabGroups'
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
@@ -398,6 +398,9 @@ export interface FolioBridge {
   reviewCheckpoint(root: string): Promise<{ ok: true } | GitRefusal>
   reviewCheckpointFile(root: string, path: string): Promise<{ ok: true } | GitRefusal>
   reviewSinceCount(root: string): Promise<{ ok: true; count: number | null } | GitRefusal>
+  reviewClaudeState(path: string): Promise<{ ok: true; repo: string; connected: boolean; readable: boolean } | GitRefusal>
+  reviewClaudeConnect(path: string, on: boolean): Promise<{ ok: boolean } | GitRefusal>
+  reviewAgentEdits(path: string): Promise<{ ok: true; edits: AgentEdit[] } | GitRefusal>
   reviewWorktrees(path: string, base: string | null): Promise<{ ok: true; base: string; main: string; list: Worktree[] } | GitRefusal>
   reviewWorktreeProject(main: string, path: string): Promise<{ ok: true; workspace: WorkspaceView } | GitRefusal>
   reviewWorktreeRemove(main: string, path: string, branch: string | null, changed: number): Promise<{ ok: boolean; workspace?: WorkspaceView } | GitRefusal>
