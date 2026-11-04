@@ -7,6 +7,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-11-04
+
+### Fixed
+- Task lists (`- [ ]` / `- [x]`) are edited visually as lists with boxes to
+  tick — a click ticks a box, `[ ] ` or `[x] ` typed at the start of an item
+  makes a task, Enter after a task starts an unticked one — instead of showing
+  as a block of Markdown (embed 1.20.0: markdown-editor 0.9.0, wysiwyg 0.13.0).
+
+### Changed
+- The welcome document tells of tabs (colours, groups, closing many).
+- The README shows the interface: screenshots in English.
+- Docs: what `folio-data/` holds and the two files folio writes into your
+  folders when asked; what needs the system's git; reviewing an agent's work in
+  the README; the source layout, the icon and the quiet end-to-end mode in the
+  development guide.
+
 ## [1.7.0] - 2026-11-04
 
 ### Added
@@ -426,7 +442,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.7.1...HEAD
+[1.7.1]: https://github.com/dskripchenko/folio/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/dskripchenko/folio/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/dskripchenko/folio/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/dskripchenko/folio/compare/v1.5.0...v1.5.1

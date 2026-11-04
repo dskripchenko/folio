@@ -19,8 +19,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       '@dskripchenko/embed':
-        specifier: 1.19.0
-        version: 1.19.0
+        specifier: 1.20.0
+        version: 1.20.0
       '@dskripchenko/syntax':
         specifier: ^0.6.0
         version: 0.6.0
@@ -80,8 +80,8 @@ packages:
     resolution: {integrity: sha512-5IF96MS+QKkEZNecMwRBw0IFmFqLh9tJ5q084R0rLAidmjlxXXahZr5QvUwkIcO2Omo4k/O8vcY06m8vndj93A==}
     engines: {node: '>=20'}
 
-  '@dskripchenko/embed@1.19.0':
-    resolution: {integrity: sha512-7OM7yfEgtVasq21AtMnjSUOwGAVq6yA0MqHGtA3yhm8sRDilqqmEHZ2p+S4r6X654lx+T7oT0v4vtssGtbtAuA==}
+  '@dskripchenko/embed@1.20.0':
+    resolution: {integrity: sha512-83nA8j50tmZkVRd3orIK3N/Xa5+8QOKoep1lxthvNFCRIC45Y/z+AwKTKMxvHV+ViwHRfJNiFTc+3AB5dGB85g==}
     engines: {node: '>=20'}
 
   '@dskripchenko/syntax@0.5.0':
@@ -2112,7 +2112,7 @@ snapshots:
 
   '@dskripchenko/diagrams@1.4.0': {}
 
-  '@dskripchenko/embed@1.19.0': {}
+  '@dskripchenko/embed@1.20.0': {}
 
   '@dskripchenko/syntax@0.5.0': {}
 

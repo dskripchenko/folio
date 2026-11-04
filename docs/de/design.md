@@ -422,7 +422,11 @@ Commit dessen, was da ist.
   Repositorys, dann aus `~/.gitconfig`, sonst der Systembenutzer.
 
 git steckt in folio (isomorphic-git, reines JavaScript), das funktioniert also
-auch ohne installiertes git.
+auch ohne installiertes git. Einiges braucht ein im System installiertes git
+und sagt es, wenn es fehlt: das Review von Änderungen und Worktrees (unten),
+Änderungen beiseitelegen und einen Commit rückgängig machen, sowie ein als
+Projekt geöffneter Worktree — isomorphic-git kann ihn nicht lesen, dort laufen
+Änderungen, Verlauf und Randmarken über das System-git.
 
 ### Änderungen
 
@@ -669,9 +673,10 @@ Widget in seiner Druckform; dann druckt Chromium sie als PDF.
 Editor und zurück. Der Editor hat drei Modi: visuell (Bearbeiten wie in einer
 Textverarbeitung mit Werkzeugleiste, `/`-Menü und allen lebenden Blöcken), das
 Markdown selbst und beides nebeneinander. Die Datei bleibt Markdown: was der
-visuelle Modus nicht halten kann (Überschriften unter h3, Aufgabenlisten,
-Hinweisboxen, HTML), bleibt wie geschrieben, und Bilder behalten ihre relativen
-Pfade.
+visuelle Modus nicht halten kann (Überschriften unter h3, Hinweisboxen, HTML),
+bleibt wie geschrieben, und Bilder behalten ihre relativen Pfade.
+Aufgabenlisten sind Listen mit Kästchen: ein Klick hakt eines ab, `[ ] ` oder
+`[x] ` am Anfang eines Eintrags macht ihn zur Aufgabe.
 
 | Tasten | |
 |---|---|
@@ -777,6 +782,11 @@ Seite oder im ganzen Fenster. `FOLIO_SHELL_INTEGRATION=0` startet Shells, wie
 sie sind. Gezeichnet von `@dskripchenko/terminal`, die
 Shell läuft in `node-pty`.
 
+Review-Kommentare gehen als ein Einfügen in eine Konsole (siehe *Die Arbeit
+eines Agenten prüfen*): folio fügt nur in ein Programm ein, das ein Einfügen als
+Ganzes nimmt — zsh, bash 5.1+, PowerShell, die CLI eines Agenten — und drückt
+nie Enter.
+
 ## Wo die Daten liegen
 
 Electron legt seine Daten standardmäßig im Benutzerprofil ab. folio verlegt sie
@@ -794,6 +804,21 @@ dem Programm:
 Den Ordner des Programms zu löschen entfernt daher alles, was es je geschrieben
 hat. Die Kehrseite: Der Ordner muss beschreibbar sein — entpacken Sie folio
 nicht dorthin, wo nur ein Administrator schreiben darf.
+
+Darin: Arbeitsbereich und Einstellungen (`workspace.json`), eigene Tasten
+(`keybindings.json`), Netzwerkfreigaben (`consent.json`), verschlüsselte
+Anmeldungen für die Synchronisierung (`logins.json`), Gemeinsam (`library/`),
+offene Tabs und ungespeicherte Änderungen (`session/`), die Marken des Reviews —
+gesehene Dateien, Kommentare, Punkte des letzten Blicks und die von Claude Code
+gemeldeten Bearbeitungen (`review/`) —, eigene Sprachen (`locales/`), Updates
+(`update/`), Protokolle und die Daten von Chromium selbst (`chromium/`).
+
+In Ihre Ordner werden zwei Dateien geschrieben, und nur auf Wunsch: die
+Einstellungen eines Projekts aus dem Einstellungsfenster in dessen
+`.folio/settings.json`, und **Claude Code mit folio verbinden** fügt einen Hook
+in `.claude/settings.local.json` des Repositorys ein (eine lokale Datei, nicht im
+Commit) — **Claude Code trennen** entfernt ihn. Das Löschen von folio lässt
+beide stehen.
 
 ## Aktualisierungen
 

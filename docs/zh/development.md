@@ -23,6 +23,8 @@ pnpm test:e2e       # 启动构建好的应用并进行检查（Playwright）
 在没有显示器的 Linux 上，请在虚拟显示器下运行端到端测试：
 `xvfb-run --auto-servernum pnpm test:e2e`。
 
+端到端测试以安静模式运行 folio（`FOLIO_E2E=1`，由 Playwright 配置设置）：没有 Dock 图标，窗口不抢焦点，之后也不会弹出“重新打开窗口”的对话框；在工作机器上同时运行两个，在 CI 中按机器的能力运行。只有测试要求时（`FOLIO_WELCOME=1`），首次启动才会打开欢迎文档。审阅相关测试（更改集、worktree、钩子）会调用系统 git，因此需要安装 git。
+
 ## 便携构建
 
 ```sh
@@ -40,6 +42,10 @@ FOLIO_APP=… FOLIO_ARCHIVE=… pnpm exec playwright test -c playwright.package.
 | `src/main/` | 主进程：窗口、磁盘、网络规则 |
 | `src/preload/` | 窗口可以调用的桥 |
 | `src/renderer/` | 窗口页面 |
+| `src/common/` | 两者共用：逐行差异、更改段、标签分组、更改集、语言 |
+| `src/locales/` | 词典：`en.json` 为基础，`ru.json` 为第二语言（ADR-005） |
+| `src/welcome/` | 只读的欢迎文档，每种语言一份 |
+| `build/icons/` | 图标：`folio.svg`（48 px 及以上）、`folio-small.svg`（16–32 px）；`node scripts/icons.mjs` 由它们生成 PNG、`.icns` 和 `.ico` |
 | `scripts/build.mjs` | esbuild：把 main、preload 和页面构建到 `dist/` |
 | `tests/unit/` | 单元测试 |
 | `tests/e2e/` | 构建好的应用，启动并驱动 |

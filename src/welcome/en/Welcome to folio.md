@@ -136,6 +136,12 @@ In a project of code folio runs its **tasks** (`⌘⇧B`) and lists their
 (go to definition with `F12`, rename with `F2`, fixes with `⌘.`), and shows the
 **changes** against git (`Ctrl+Shift+G`): stage, commit, stash, branches, sync.
 
+## Tabs
+
+The right click on a tab gives it a colour, puts it in a group (a click on the
+group's name folds it) and closes the others, those to its right, the saved
+ones or all of them (`⌘⇧W`); `⌘⇧T` brings back the last one closed.
+
 ## Reviewing an agent's work
 
 Working beside an AI agent in a terminal? **Review the changes** (`Ctrl+Shift+G`,
