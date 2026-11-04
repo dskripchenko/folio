@@ -42,12 +42,15 @@ export class HoverPreview {
   private loading: HTMLAnchorElement | null = null
   private note: Peeked | null = null
   private seq = 0
+  /** The pointer's last place (to tell a way from the link into the panel). */
+  private pointer = { x: -1, y: -1 }
 
   constructor(private readonly deps: HoverPreviewDeps) {
     this.el = document.createElement('div')
     this.el.className = 'hover-preview'
     this.el.dataset.testid = 'hover-preview'
     this.el.hidden = true
+    document.addEventListener('mousemove', (e) => (this.pointer = { x: e.clientX, y: e.clientY }), { passive: true })
     this.el.addEventListener('mouseenter', () => this.stay())
     this.el.addEventListener('mouseleave', () => this.leaveSoon())
     this.el.addEventListener('click', (e) => {
@@ -162,8 +165,32 @@ export class HoverPreview {
       // A leave the browser reports while the pointer is still over the preview or its link (content
       // drawn again under a resting pointer): not a leave.
       if (this.el.matches(':hover') || this.shownFor?.matches(':hover')) return
+      // On the way from the link into the panel (however slowly): not yet.
+      if (this.onTheWay()) return this.leaveSoon()
       this.hide()
     }, LEAVE)
+  }
+
+  /**
+   * The pointer between the link and the panel: in the band joining the link's
+   * edge to the panel's near edge (their convex hull), the way a pointer takes
+   * from one into the other.
+   */
+  private onTheWay(): boolean {
+    if (!this.shownFor?.isConnected || this.el.hidden) return false
+    const l = this.shownFor.getBoundingClientRect()
+    const p = this.el.getBoundingClientRect()
+    const below = p.top >= l.bottom - 1
+    // The link's edge facing the panel, and the panel's edge facing the link.
+    const ly = below ? l.bottom : l.top
+    const py = below ? p.top : p.bottom
+    const quad: [number, number][] = [
+      [l.left, ly],
+      [l.right, ly],
+      [p.right, py],
+      [p.left, py],
+    ]
+    return insideConvex(quad, this.pointer.x, this.pointer.y)
   }
 
   private cancel(): void {
@@ -181,4 +208,19 @@ export class HoverPreview {
 function linkOf(a: HTMLAnchorElement): { wiki?: string; url?: string } | null {
   if (a.dataset.wikilink !== undefined) return a.dataset.wikilink.startsWith('#') ? null : { wiki: a.dataset.wikilink }
   return a.href.startsWith('folio://app/r/') ? { url: a.href } : null
+}
+
+/** A point in a convex polygon (or on its edge), its corners in order either way round. */
+export function insideConvex(corners: readonly [number, number][], x: number, y: number): boolean {
+  let sign = 0
+  for (let i = 0; i < corners.length; i++) {
+    const [ax, ay] = corners[i]!
+    const [bx, by] = corners[(i + 1) % corners.length]!
+    const cross = (bx - ax) * (y - ay) - (by - ay) * (x - ax)
+    if (cross === 0) continue
+    if (sign === 0) sign = Math.sign(cross)
+    else if (Math.sign(cross) !== sign) return false
+  }
+  // A polygon with no area holds nothing.
+  return sign !== 0
 }
