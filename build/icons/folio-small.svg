@@ -1,13 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- folio at 16 and 32 pixels: the open book alone, and its ribbon. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bg" x1="0.15" y1="0" x2="0.85" y2="1">
       <stop offset="0" stop-color="#17a08a"/>
       <stop offset="1" stop-color="#0b5566"/>
     </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
   </defs>
-  <rect x="40" y="40" width="944" height="944" rx="200" fill="url(#bg)"/>
-  <path d="M512 300 C420 236 270 232 150 276 V780 C270 740 420 744 512 806 Z" fill="#fffaf0"/>
-  <path d="M512 300 C604 236 754 232 874 276 V780 C754 740 604 744 512 806 Z" fill="#efe4cc"/>
-  <path d="M560 230 H660 V560 L610 510 L560 560 Z" fill="#ff7a59"/>
+
+  <rect x="100" y="116" width="824" height="824" rx="185" fill="#022a33" opacity="0.30" filter="url(#shadow)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+
+  <!-- leaf, larger, big coral fold -->
+  <path d="M300,170 H572 L772,370 V814 Q772,854 732,854 H300 Q260,854 260,814 V210 Q260,170 300,170 Z" fill="#fffaf0"/>
+  <path d="M572,170 L772,370 H612 Q572,370 572,330 Z" fill="#ff7a59"/>
+
+  <!-- one bold line + one node -->
+  <rect x="340" y="300" width="170" height="64" rx="32" fill="#0b5566" opacity="0.32"/>
+  <rect x="340" y="500" width="240" height="240" rx="70" fill="#0b5566"/>
 </svg>

@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+- A new icon: a single page with a folded coral corner whose last line of
+  text turns into a small diagram — Markdown becoming a drawing; a simpler
+  page for 16–32 px.
+
 ## [1.5.0] - 2026-11-04
 
 ### Added
