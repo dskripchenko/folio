@@ -67,8 +67,9 @@ export function imageView(o: MediaOptions): HTMLElement {
   let fitted = true
 
   const fitScale = (): number => {
-    const w = stage.clientWidth - 32
-    const h = stage.clientHeight - 32
+    // The view's whole box, scroll bars or not: fitting does not depend on whether they show now.
+    const w = stage.offsetWidth - 32
+    const h = stage.offsetHeight - 32
     if (!natural.w || !natural.h || w <= 0 || h <= 0) return 1
     // A small picture stays at its own size; a big one fits.
     return Math.min(1, w / natural.w, h / natural.h)
