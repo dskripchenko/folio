@@ -493,8 +493,18 @@ lesen und prüfen vor allem, was er geändert hat, und bearbeiten ein wenig.
 - **Claude Code mit folio verbinden** (Befehle) fügt einen Hook in
   `.claude/settings.local.json` des Repositorys ein (vor dem Schreiben
   gezeigt): nach jeder Bearbeitung nennt Claude Code folio Datei, Sitzung und
-  Zeit, und Review und Worktrees zeigen, wer was geändert hat. **Trennen**
-  entfernt den Hook und sonst nichts.
+  Zeit, und Review und Worktrees zeigen, wer was geändert hat. Außerdem trägt
+  es folios MCP-Server für das Projekt in Claude Code ein, mit Claude Codes
+  eigenem `claude mcp add --scope local` (dessen Einstellungen, nicht das
+  Repository; auch dieser Befehl wird gezeigt, und läuft er nicht, sagt folio,
+  was auszuführen ist). Der Agent hat dann vier Werkzeuge: `show_changes`
+  öffnet das Review mit seiner Nachricht und wartet auf Ihre Antwort —
+  **Annehmen** oder **Änderungen anfordern** mit Ihren Kommentaren zu Zeilen,
+  jeder mit Datei, Zeile und Umgebung; `get_review_comments` liest die noch
+  nicht übergebenen Kommentare; `open_file` öffnet eine Datei an einer Zeile;
+  `list_worktrees` listet die Worktrees. Solange folio geschlossen ist, wird
+  der Agent gebeten, es zu starten. **Trennen** entfernt Hook und Server und
+  sonst nichts.
 
 Das Review braucht ein auf dem System installiertes git.
 
@@ -817,8 +827,10 @@ In Ihre Ordner werden zwei Dateien geschrieben, und nur auf Wunsch: die
 Einstellungen eines Projekts aus dem Einstellungsfenster in dessen
 `.folio/settings.json`, und **Claude Code mit folio verbinden** fügt einen Hook
 in `.claude/settings.local.json` des Repositorys ein (eine lokale Datei, nicht im
-Commit) — **Claude Code trennen** entfernt ihn. Das Löschen von folio lässt
-beide stehen.
+Commit) und folios MCP-Server in Claude Codes lokale Einstellungen für das
+Projekt — **Claude Code trennen** entfernt beides. Das Löschen von folio lässt
+sie stehen. folios MCP-Server hört nur auf 127.0.0.1 und antwortet nur mit
+einem Token, das in `folio-data/review` liegt.
 
 ## Aktualisierungen
 

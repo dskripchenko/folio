@@ -105,7 +105,9 @@ its changes open as a pull request's files, with viewed marks and runs staged
 or thrown away; **since the last look** shows only what it did after you
 looked; its **worktrees** — a subagent's each — are listed, reviewed against
 the base, taken or removed; comments on lines go to its console as one paste;
-and, connected, Claude Code tells folio which session edited what.
+and, connected, Claude Code tells folio which session edited what — and, through
+folio's MCP server, shows you its changes and waits for your answer: approved,
+or your comments on lines.
 
 A folder that is a git repository keeps its history in folio too — versions of
 a document, what changed between them, going back to one — with commits made as
@@ -177,6 +179,7 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 14 | Languages of the interface and the welcome document — **1.5** |
 | 15 | Tabs closed many at once, coloured, grouped — **1.6** |
 | 16 | Reviewing an AI agent's work: review tabs, since the last look, worktrees, comments to its console, Claude Code's hook — **1.7** |
+| 17 | An agent asks for a review over MCP and waits for the answer — **next** |
 
 ## Development
 

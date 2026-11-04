@@ -94,7 +94,7 @@
     "removeWorktreeDirty": "В нём {n} изменённых и не закоммиченных файлов — они пропадут. Ветка тоже будет удалена.",
     "removeWorktree": "Удалить",
     "claudeConnectQuestion": "Пусть Claude Code сообщает folio, что он правит?",
-    "claudeConnectDetail": "В {file} (локальные настройки, не в коммите) добавится хук. После каждой правки Claude Code допишет файл, сессию и время в данные folio:\n\n{command}\n\nОстальные настройки не меняются. Убрать — той же командой.",
+    "claudeConnectDetail": "В {file} (локальные настройки, не в коммите) добавится хук. После каждой правки Claude Code допишет файл, сессию и время в данные folio:\n\n{command}\n\nВ Claude Code для этого проекта добавится MCP-сервер folio (его локальные настройки, не в репозитории): агент сможет показать вам изменения и дождаться ответа, прочитать замечания, открыть файл на строке. folio выполнит:\n\n{mcp}\n\nОстальное не меняется. Убрать оба — той же командой.",
     "claudeConnect": "Подключить"
   },
   "window": {
@@ -548,6 +548,7 @@
       "claudeConnect": "Подключить Claude Code к folio (кто что правил)",
       "claudeDisconnect": "Отключить Claude Code от folio",
       "claudeConnected": "Claude Code будет сообщать folio, что он правит.",
+      "claudeMcpFailed": "Claude Code не добавил MCP-сервер folio ({output}). Выполните в репозитории:\n{command}",
       "claudeDisconnected": "Claude Code отключён от folio.",
       "claudeUnreadable": "Локальные настройки — не JSON, который folio может прочитать; ничего не изменено."
     },
@@ -738,7 +739,11 @@
       "commentOn": "строка {line}",
       "pasteUnsafe": "Программа в этой консоли не принимает строки одной вставкой — каждая выполнилась бы как команда. Скопируйте текст.",
       "agent": "Claude · {session}",
-      "agentTitle": "{tool}: Claude Code, сессия {session}, в {cwd}"
+      "agentTitle": "{tool}: Claude Code, сессия {session}, в {cwd}",
+      "agentWaits": "Агент ждёт вашего ответа",
+      "agentApprove": "Принять",
+      "agentRequest": "Вернуть с замечаниями · {n}",
+      "agentNoComments": "Чтобы вернуть, оставьте замечания к строкам."
     },
     "worktrees": {
       "title": "Worktree",

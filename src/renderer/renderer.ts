@@ -2095,7 +2095,8 @@ async function claudeConnect(on: boolean): Promise<void> {
   const r = await folio.reviewClaudeConnect(repo, on)
   if ('error' in r) notify(r.error === 'invalid' ? t.commands.claudeUnreadable : describeRefusal(t.historyPanel.errors, r))
   else if (r.ok) {
-    notify(on ? t.commands.claudeConnected : t.commands.claudeDisconnected)
+    const mcp = 'mcp' in r ? r.mcp : undefined
+    notify(mcp && !mcp.ok ? t.commands.claudeMcpFailed.replace('{output}', mcp.output.split('\n').slice(-2).join(' ') || '—').replace('{command}', mcp.command) : on ? t.commands.claudeConnected : t.commands.claudeDisconnected)
     reviewsSoon()
   }
 }
@@ -2340,6 +2341,29 @@ folio.onBlocked((value) => {
   if (tab === active) showBanners()
 })
 folio.onOpened((value) => void add(value as OpenResult))
+// An agent's requests over MCP (R7): a set shown with its question, a file opened at a line.
+folio.onMcpAsk((value) => {
+  const { id, spec, message } = value as { id: number; spec: ChangeSpec; message: string }
+  const tab = openReview(spec)
+  tab.review!.agentAsks(id, message, (answer) => void folio.mcpAnswer(id, answer))
+})
+folio.onMcpCancel((value) => {
+  for (const tab of tabs) tab.review?.agentCancelled(value as number)
+})
+folio.onMcpOpen((value) => {
+  const { opened, line } = value as { opened: OpenResult; line: number | null }
+  void add(opened).then(() => {
+    const tab = active
+    if (!tab || !line) return
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const editor = codeEditorOf(tab)
+        if (editor) editor.goToLine(line)
+        else tab.pane.querySelector<HTMLElement & { folioGoTo?: (n: number) => void }>('.code-view')?.folioGoTo?.(line)
+      }),
+    )
+  })
+})
 folio.onCloseTab(() => {
   if (active) void close(active)
 })

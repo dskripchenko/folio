@@ -94,7 +94,7 @@
     "removeWorktreeDirty": "It has {n} files changed and not committed: they are lost. Its branch is deleted too.",
     "removeWorktree": "Remove",
     "claudeConnectQuestion": "Let Claude Code tell folio what it edits?",
-    "claudeConnectDetail": "A hook is added to {file} (local settings, not committed). After each edit Claude Code appends the file, its session and the time to folio's data:\n\n{command}\n\nNothing else of the settings changes. The same command takes it out.",
+    "claudeConnectDetail": "A hook is added to {file} (local settings, not committed). After each edit Claude Code appends the file, its session and the time to folio's data:\n\n{command}\n\nfolio's MCP server is added to Claude Code for this project (its local settings, not in the repository): the agent can show you its changes and wait for your answer, read your comments, open a file at a line. folio runs:\n\n{mcp}\n\nNothing else changes. The same command takes both out.",
     "claudeConnect": "Connect"
   },
   "window": {
@@ -543,6 +543,7 @@
       "claudeConnect": "Connect Claude Code to folio (who edited what)",
       "claudeDisconnect": "Disconnect Claude Code from folio",
       "claudeConnected": "Claude Code will tell folio what it edits.",
+      "claudeMcpFailed": "Claude Code did not add folio's MCP server ({output}). Run in the repository:\n{command}",
       "claudeDisconnected": "Claude Code is disconnected from folio.",
       "claudeUnreadable": "The local settings are not JSON folio can read; nothing was changed."
     },
@@ -728,7 +729,11 @@
       "commentOn": "line {line}",
       "pasteUnsafe": "The program in that console does not take lines as one paste: each would run as a command. Copy the text instead.",
       "agent": "Claude · {session}",
-      "agentTitle": "{tool} by Claude Code, session {session}, in {cwd}"
+      "agentTitle": "{tool} by Claude Code, session {session}, in {cwd}",
+      "agentWaits": "The agent waits for your answer",
+      "agentApprove": "Approve",
+      "agentRequest": "Request changes · {n}",
+      "agentNoComments": "Comment on lines to request changes."
     },
     "worktrees": {
       "title": "Worktrees",

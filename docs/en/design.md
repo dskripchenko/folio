@@ -451,8 +451,16 @@ and review what it changed, and edit a little.
 - **Connect Claude Code to folio** (the commands) adds a hook to the
   repository's `.claude/settings.local.json` (shown before it is written):
   after each edit Claude Code tells folio the file, its session and the time,
-  and the review and the worktrees say who changed what. **Disconnect** takes
-  the hook out and nothing else.
+  and the review and the worktrees say who changed what. It also adds folio's
+  MCP server to Claude Code for the project, with Claude Code's own
+  `claude mcp add --scope local` (its settings, not the repository; the command
+  is shown too, and when it cannot run, folio says what to run). The agent then
+  has four tools: `show_changes` opens the review with its message and waits
+  for your answer — **Approve**, or **Request changes** with your comments on
+  lines, each with its file, line and rows; `get_review_comments` reads the
+  comments not given yet; `open_file` opens a file at a line; `list_worktrees`
+  lists the worktrees. While folio is closed the agent is told to start it.
+  **Disconnect** takes the hook and the server out and nothing else.
 
 The review needs git installed on the system.
 
@@ -742,8 +750,10 @@ last look and the edits Claude Code reported (`review/`) — languages of your o
 Two things are written into your folders, and only when asked: a project's
 settings from the settings window go to its `.folio/settings.json`, and
 **Connect Claude Code to folio** adds a hook to the repository's
-`.claude/settings.local.json` (a local file, not committed) — **Disconnect
-Claude Code** takes it out. Deleting folio leaves both.
+`.claude/settings.local.json` (a local file, not committed) and folio's MCP
+server to Claude Code's local settings for the project — **Disconnect Claude
+Code** takes both out. Deleting folio leaves them. folio's MCP server listens
+on 127.0.0.1 only, and answers only with a token kept in `folio-data/review`.
 
 ## Updates
 
