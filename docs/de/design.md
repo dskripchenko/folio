@@ -673,9 +673,10 @@ Widget in seiner Druckform; dann druckt Chromium sie als PDF.
 Editor und zurück. Der Editor hat drei Modi: visuell (Bearbeiten wie in einer
 Textverarbeitung mit Werkzeugleiste, `/`-Menü und allen lebenden Blöcken), das
 Markdown selbst und beides nebeneinander. Die Datei bleibt Markdown: was der
-visuelle Modus nicht halten kann (Überschriften unter h3, Aufgabenlisten,
-Hinweisboxen, HTML), bleibt wie geschrieben, und Bilder behalten ihre relativen
-Pfade.
+visuelle Modus nicht halten kann (Überschriften unter h3, Hinweisboxen, HTML),
+bleibt wie geschrieben, und Bilder behalten ihre relativen Pfade.
+Aufgabenlisten sind Listen mit Kästchen: ein Klick hakt eines ab, `[ ] ` oder
+`[x] ` am Anfang eines Eintrags macht ihn zur Aufgabe.
 
 | Tasten | |
 |---|---|

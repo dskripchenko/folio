@@ -53,9 +53,10 @@ references you can try — drawn from the Markdown, offline.
 
 ![An OpenAPI reference with Try it](docs/images/api.png)
 
-**Editing** visually, with the diagram still drawn as you write.
+**Editing** visually, with the diagram still drawn as you write and tasks ticked
+in place.
 
-![A note edited visually: a sequence diagram, a table and a quote](docs/images/edit.png)
+![A note edited visually: a sequence diagram, a table, a task list and a quote](docs/images/edit.png)
 
 **A light IDE**: its own code editor with changes in the gutter and the language
 server's checks, git, and a console.

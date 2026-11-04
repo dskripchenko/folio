@@ -614,8 +614,9 @@ then Chromium prints them to PDF.
 The editor has three modes: visual (a word-processor editing with the toolbar,
 the `/` menu and every block live), Markdown itself, and the two side by side.
 The file stays Markdown: what the visual mode cannot hold — headings below h3,
-task lists, callouts, HTML — is kept as written, and pictures keep their
-relative paths.
+callouts, HTML — is kept as written, and pictures keep their relative paths.
+Task lists are lists with boxes: a click ticks one, `[ ] ` or `[x] ` typed at
+the start of an item makes a task.
 
 | Keys | |
 |---|---|
