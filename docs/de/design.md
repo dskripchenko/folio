@@ -493,6 +493,59 @@ Commits benannt, der ausgecheckte markiert. Ein gewählter Commit öffnet die
 Datei, wie sie damals war. Gezeichnet wird der Graph von
 `@dskripchenko/diagrams` (`renderCommitGraph`).
 
+## Tabs, Tabellen, Vergleichen, Export, Einstellungen
+
+**Tabs.** `Cmd/Ctrl+Shift+T` holt den zuletzt geschlossenen Tab zurück — an
+seinen Platz in der Reihe, in seiner Ansicht, dorthin gescrollt, wo er war. Ein
+Tab wird an eine andere Stelle der Reihe gezogen, auf die rechte Hälfte der
+Ansicht, um ihn neben der Hauptansicht zu öffnen, und zurück auf die linke.
+
+**Eingebettete Dateien.** `![[foto.png]]`, `![[clip.mp4]]`, `![[lied.mp3]]`
+und `![[bericht.pdf]]` zeigen die Datei in der Notiz, gefunden über ihren Namen
+irgendwo im Projekt (wie ein Link); `![[foto.png|300]]` oder `|300x200` geben
+die Größe. Ein Klick auf ein Bild öffnet es in seinem Tab, der Zeiger auf einem
+Link zeigt es.
+
+**Lange Zeilen** brechen in Prosa (einfacher Text, Markdown, Logs) an der
+Breite der Ansicht um, im Code nicht; `Alt+Z` (oder *Lange Zeilen umbrechen*
+unter den Befehlen) ändert das für den Editor in der Ansicht und merkt es sich
+für diese Art Text.
+
+**PDF** öffnet sich in seinem Tab in Chromiums eigenem Betrachter: Seiten,
+Zoom, Suche, Gliederung, Drucken.
+
+**CSV und TSV** werden als Tabelle gelesen: das Trennzeichen erraten, die
+Kopfzeile bleibt sichtbar, ein Klick auf eine Spalte sortiert danach (Zahlen
+nach Wert), tausend Zeilen auf einmal; die Quelle wird im Code-Editor
+bearbeitet.
+
+**Zwei Dateien vergleichen**: *Zum Vergleichen auswählen* an einer im Baum,
+dann *Vergleichen mit* an der anderen — oder *Datei vergleichen mit…* unter den
+Befehlen für die Datei in der Ansicht. Die Änderungen, nebeneinander oder die
+andere Datei gezeichnet; *Ihren Text übernehmen* legt ihn in den Editor.
+
+**Export.** *Als HTML exportieren* schreibt eine Seite mit Bildern und
+Diagrammen darin und folios Aussehen; *Als Word (DOCX) exportieren* schreibt
+Überschriften, Hervorhebungen, Links, Listen, Zitate, Code, Tabellen und
+Bilder, Diagramme als Bilder.
+
+**Git über das Committen hinaus.** In Änderungen: das Kästchen unter der
+Nachricht ändert den letzten Commit (seine Nachricht als Anfang); die
+Speichern-Schaltfläche legt jede Änderung beiseite, neue Dateien auch (ein
+Stash, benannt nach der Nachricht) — die Liste unter den Änderungen holt sie
+zurück oder löscht sie. In der Historie: das Menü eines Commits macht ihn mit
+einem neuen Commit rückgängig (revert) oder versieht ihn mit einem Tag
+(`v1.2.0 Die Nachricht` ergibt einen annotierten Tag); ein Tag geht mit der
+nächsten Synchronisierung hinaus. Branches werden im Branch-Menü umbenannt und
+gelöscht. Stash und revert brauchen ein installiertes git.
+
+**Einstellungen** (`Cmd/Ctrl+,` oder das Einstellungsmenü): jeder Befehl von
+folio und vom Code-Editor mit seinen Tasten — *Taste festlegen* nimmt die
+gedrückten Tasten (in `keybindings.json` mit `Mod` gespeichert, damit die Datei
+auf jedem System funktioniert), ein Konflikt wird gezeigt; und die
+`.folio/settings.json` des Projekts als Formular, jeder Schlüssel, den folio
+nicht kennt, bleibt erhalten.
+
 ## Ungespeichertes und schnelle Notizen
 
 Wie in Sublime Text: ein unbenannter Tab ist eine schnelle Notiz, und eine nicht
