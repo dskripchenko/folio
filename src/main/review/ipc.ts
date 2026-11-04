@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Hunk } from '../../common/hunks'
-import type { ChangedFile, ChangeSpec } from '../../common/review'
+import { commentOf, type ChangedFile, type ChangeSpec } from '../../common/review'
 import { GitError } from '../git'
 import { ReviewGit } from './git'
 import { ReviewStore } from './store'
@@ -176,7 +176,29 @@ export function registerReview(deps: ReviewDeps): void {
     }
   })
 
-  handle('review:viewed', async (path) => ({ ok: true, viewed: store.of(await repo(path)).viewed }))
+  handle('review:viewed', async (path) => {
+    const r = store.of(await repo(path))
+    return { ok: true, viewed: r.viewed, comments: r.comments }
+  })
+  handle('review:comment-save', async (path, comment) => {
+    const c = commentOf(comment)
+    if (!c) throw new GitError('invalid')
+    relPath(c.path)
+    store.saveComment(await repo(path), c)
+    return { ok: true }
+  })
+  const ids = (v: unknown): string[] => {
+    if (!Array.isArray(v) || !v.every((x) => typeof x === 'string')) throw new GitError('invalid')
+    return v as string[]
+  }
+  handle('review:comment-delete', async (path, list) => {
+    store.deleteComments(await repo(path), ids(list))
+    return { ok: true }
+  })
+  handle('review:comment-sent', async (path, list) => {
+    store.markSent(await repo(path), ids(list))
+    return { ok: true }
+  })
   handle('review:set-viewed', async (path, key, hash) => {
     if (typeof key !== 'string' || key.length > 2000 || (hash !== null && typeof hash !== 'string')) throw new GitError('invalid')
     store.setViewed(await repo(path), key, hash as string | null)

@@ -698,7 +698,27 @@
         "typechange": "T"
       },
       "sinceButton": "Since last look",
-      "allSeen": "All seen"
+      "allSeen": "All seen",
+      "comment": "Comment on this line",
+      "commentPlaceholder": "What should change here? (Cmd/Ctrl+Enter saves)",
+      "save": "Save",
+      "cancel": "Cancel",
+      "commentEdit": "Edit",
+      "delete": "Delete",
+      "sent": "sent",
+      "stale": "Out of date: its lines are not there any more.",
+      "send": "Send to the agent · {n}",
+      "sendTitle": "The comments for the agent",
+      "sendHint": "Pasted into the console, not sent: read it there and press Enter yourself.",
+      "console": "Console",
+      "noConsoles": "No console is open.",
+      "openConsole": "Open a console here",
+      "paste": "Paste into the console",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "intro": "Review comments — {title}:",
+      "commentOn": "line {line}",
+      "pasteUnsafe": "The program in that console does not take lines as one paste: each would run as a command. Copy the text instead."
     },
     "worktrees": {
       "title": "Worktrees",

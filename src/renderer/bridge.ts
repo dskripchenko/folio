@@ -1,5 +1,5 @@
 import type { Hunk } from '../common/hunks'
-import type { ChangedFile, Changeset, ChangeSpec, FileTexts, ReviewAction, Worktree } from '../common/review'
+import type { ChangedFile, Changeset, ChangeSpec, FileTexts, ReviewAction, ReviewComment, Worktree } from '../common/review'
 import type { GroupData, TabColor } from '../common/tabGroups'
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
@@ -390,7 +390,10 @@ export interface FolioBridge {
   reviewChangeset(spec: ChangeSpec): Promise<{ ok: true; set: Changeset } | GitRefusal>
   reviewTexts(spec: ChangeSpec, file: ChangedFile): Promise<{ ok: true; texts: FileTexts } | GitRefusal>
   reviewAct(spec: ChangeSpec, action: ReviewAction, path: string, hunk: (Hunk & { lines?: { before: string[]; after: string[] } }) | null): Promise<{ ok: boolean } | GitRefusal>
-  reviewViewed(root: string): Promise<{ ok: true; viewed: Record<string, string> } | GitRefusal>
+  reviewViewed(root: string): Promise<{ ok: true; viewed: Record<string, string>; comments: ReviewComment[] } | GitRefusal>
+  reviewCommentSave(root: string, comment: ReviewComment): Promise<{ ok: true } | GitRefusal>
+  reviewCommentDelete(root: string, ids: string[]): Promise<{ ok: true } | GitRefusal>
+  reviewCommentSent(root: string, ids: string[]): Promise<{ ok: true } | GitRefusal>
   reviewSetViewed(root: string, key: string, hash: string | null): Promise<{ ok: true } | GitRefusal>
   reviewCheckpoint(root: string): Promise<{ ok: true } | GitRefusal>
   reviewCheckpointFile(root: string, path: string): Promise<{ ok: true } | GitRefusal>

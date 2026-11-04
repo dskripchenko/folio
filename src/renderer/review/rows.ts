@@ -70,11 +70,13 @@ export function fileDiff(before: string | null, after: string | null): FileDiff 
  * The rows shown: each run with `context` lines around it; the rest folded
  * into gaps, but for those opened (by the row index they start at).
  */
-export function blocksOf(diff: FileDiff, context = 3, opened: ReadonlySet<number> = new Set()): Block[] {
+export function blocksOf(diff: FileDiff, context = 3, opened: ReadonlySet<number> = new Set(), keep: ReadonlySet<number> = new Set()): Block[] {
   const n = diff.rows.length
   const shown = new Uint8Array(n)
   diff.rows.forEach((r, k) => {
-    if (r.kind !== 'same') for (let x = Math.max(0, k - context); x <= Math.min(n - 1, k + context); x++) shown[x] = 1
+    // A changed row with its context; a row kept (a comment on it) with a line either side.
+    const reach = r.kind !== 'same' ? context : keep.has(k) ? 1 : -1
+    for (let x = Math.max(0, k - reach); x <= Math.min(n - 1, k + reach); x++) shown[x] = 1
   })
   // Gaps opened by a click; a gap of a line or two is not worth folding.
   const gaps: [number, number][] = []

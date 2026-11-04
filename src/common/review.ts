@@ -70,6 +70,37 @@ export interface Worktree {
 
 export type ReviewAction = 'stage' | 'unstage' | 'discard'
 
+/**
+ * A comment on a line (ADR-006, R5): found again by the lines it was made on
+ * (the line and a couple before it), so a line moved keeps its comment; one
+ * whose lines are gone is shown as out of date.
+ */
+export interface ReviewComment {
+  id: string
+  path: string
+  /** The side: the text before (a removed line) or after. */
+  side: 'a' | 'b'
+  /** 1-based, where it was made. */
+  line: number
+  /** The line and up to two before it, as they read then. */
+  excerpt: string[]
+  /** The rows around it as the review showed them (`+`, `-`, ` ` first): what the agent is sent. */
+  context: string[]
+  text: string
+  time: number
+  sent?: boolean
+}
+
+/** A comment as stored, or null when it is not one. */
+export function commentOf(v: unknown): ReviewComment | null {
+  if (!v || typeof v !== 'object') return null
+  const c = v as Record<string, unknown>
+  const strings = (x: unknown): x is string[] => Array.isArray(x) && x.length <= 40 && x.every((s) => typeof s === 'string' && s.length < 2000)
+  if (typeof c.id !== 'string' || !/^[\w-]{1,64}$/.test(c.id) || typeof c.path !== 'string' || c.path === '' || (c.side !== 'a' && c.side !== 'b')) return null
+  if (typeof c.line !== 'number' || !Number.isInteger(c.line) || c.line < 1 || !strings(c.excerpt) || !strings(c.context) || typeof c.text !== 'string' || c.text.length > 20000) return null
+  return { id: c.id, path: c.path, side: c.side, line: c.line, excerpt: c.excerpt, context: c.context, text: c.text, time: typeof c.time === 'number' ? c.time : Date.now(), ...(c.sent === true ? { sent: true } : {}) }
+}
+
 /** Whether the review may change files of a set: only where the "after" side is the disk. */
 export function editable(spec: ChangeSpec): boolean {
   return spec.kind === 'working' || spec.kind === 'worktree' || spec.kind === 'since'

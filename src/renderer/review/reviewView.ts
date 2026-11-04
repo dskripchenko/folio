@@ -2,9 +2,10 @@ import { escapeHtml, highlightLines, languageOf } from '@dskripchenko/syntax'
 import type enLocale from '../../locales/en.json'
 import { hunkState, type Hunk } from '../../common/hunks'
 import { plural } from '../../common/plural'
-import { editable, type ChangedFile, type Changeset, type ChangeSpec, type FileTexts } from '../../common/review'
+import { editable, rootOf, type ChangedFile, type Changeset, type ChangeSpec, type FileTexts, type ReviewComment } from '../../common/review'
 import { folio, prefs, type GitRefusal } from '../bridge'
 import { syntaxTheme } from '../code'
+import { anchorOf, compose, contextOf, excerptOf } from './comments'
 import { blocksOf, fileDiff, markRanges, type FileDiff, type Row } from './rows'
 
 /**
@@ -29,6 +30,10 @@ export interface ReviewDeps {
   titled: () => void
   /** Another set in a tab of its own (the working copy → since the last look). */
   openSet: (spec: ChangeSpec) => void
+  /** The consoles to send comments to, text pasted into one, a console opened in a folder (R5). */
+  consoles: () => { id: number; label: string; cwd: string; running: string | null }[]
+  paste: (id: number, text: string) => 'ok' | 'gone' | 'unsafe'
+  openConsole: (cwd: string) => void
 }
 
 interface FileView {
@@ -81,6 +86,8 @@ export class ReviewView {
   private set: Changeset | null = null
   private readonly files = new Map<string, FileView>()
   private viewed: Record<string, string> = {}
+  private comments: ReviewComment[] = []
+  private sendButton: HTMLButtonElement | null = null
   private layout: Layout = prefs.get<Layout>('reviewLayout', 'unified')
   private readonly head: HTMLElement
   private readonly titleEl: HTMLElement
@@ -178,6 +185,10 @@ export class ReviewView {
           }),
         ),
       )
+    // Comments to the agent: in its console, as a paste.
+    this.sendButton = button('', 'review-send', () => this.openSend(), 'rv-button rv-send')
+    this.sendButton.hidden = true
+    tools.prepend(this.sendButton)
     this.head.append(tools)
     this.applyText()
   }
@@ -213,7 +224,20 @@ export class ReviewView {
     }
   }
 
+  private unsent(): ReviewComment[] {
+    const paths = new Set((this.set?.files ?? []).map((f) => f.path))
+    return this.comments.filter((c) => !c.sent && paths.has(c.path))
+  }
+
+  private syncSend(): void {
+    if (!this.sendButton) return
+    const n = this.unsent().length
+    this.sendButton.hidden = n === 0
+    this.sendButton.textContent = this.t.send.replace('{n}', String(n))
+  }
+
   private syncHead(): void {
+    this.syncSend()
     this.titleEl.textContent = this.title()
     this.titleEl.title = this.set?.subject ?? ''
     const files = this.set?.files ?? []
@@ -258,7 +282,10 @@ export class ReviewView {
     this.set = r.set
     if (first) {
       const v = await folio().reviewViewed(r.set.root)
-      if ('ok' in v) this.viewed = v.viewed
+      if ('ok' in v) {
+        this.viewed = v.viewed
+        this.comments = v.comments
+      }
     }
     this.syncHead()
     this.deps.titled()
@@ -543,7 +570,59 @@ export class ReviewView {
     table.append(tbody)
     const cols = this.layout === 'split' ? 4 : 3
     const working = this.spec.kind === 'working'
-    for (const block of blocksOf(diff, 3, fv.opened)) {
+    // Comments: at the lines where they are now; those whose lines are gone, above the file's changes.
+    const rowIndex = new Map(diff.rows.map((r, k) => [r, k]))
+    const at = new Map<string, ReviewComment[]>()
+    const keep = new Set<number>()
+    const stale: ReviewComment[] = []
+    for (const c of this.comments) {
+      if (c.path !== fv.file.path) continue
+      const i = anchorOf(c, c.side === 'b' ? diff.after : diff.before)
+      const k = i < 0 ? -1 : diff.rows.findIndex((r) => (c.side === 'b' ? r.b === i : r.a === i && r.kind !== 'add'))
+      if (k < 0) {
+        stale.push(c)
+        continue
+      }
+      keep.add(k)
+      const key = `${c.side}:${i}`
+      at.set(key, [...(at.get(key) ?? []), c])
+    }
+    if (stale.length) {
+      const box = document.createElement('div')
+      box.className = 'rv-stale'
+      for (const c of stale) box.append(this.commentBox(fv, c, true))
+      fv.body.append(box)
+    }
+    /** Rows after one: its comments (both sides of a pair). */
+    const commentRows = (afterTr: HTMLTableRowElement, keys: string[]) => {
+      let anchor = afterTr
+      for (const key of keys) {
+        for (const c of at.get(key) ?? []) {
+          const tr = document.createElement('tr')
+          tr.className = 'rv-comment-row'
+          const td = tr.insertCell()
+          td.colSpan = cols
+          td.append(this.commentBox(fv, c, false))
+          anchor.after(tr)
+          anchor = tr
+        }
+      }
+    }
+    /** A "comment" button on a line's number. */
+    const plus = (cell: HTMLElement, tr: HTMLTableRowElement, r: Row, side: 'a' | 'b') => {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'rv-plus'
+      b.textContent = '+'
+      b.title = this.t.comment
+      b.dataset.testid = 'review-comment-add'
+      b.addEventListener('click', (e) => {
+        e.stopPropagation()
+        this.openEditor(fv, tr, cols, side, side === 'b' ? r.b! : r.a!, rowIndex.get(r) ?? 0, null)
+      })
+      cell.prepend(b)
+    }
+    for (const block of blocksOf(diff, 3, fv.opened, keep)) {
       if (block.kind === 'gap') {
         const tr = tbody.insertRow()
         tr.className = 'rv-gap'
@@ -600,6 +679,9 @@ export class ReviewView {
           const code = tr.insertCell()
           code.className = 'rv-code'
           code.innerHTML = `<span class="rv-sign">${r.kind === 'add' ? '+' : r.kind === 'del' ? '−' : ' '}</span>${lineHtml(r, r.kind === 'del' ? 'a' : 'b')}`
+          const side = r.kind === 'del' ? 'a' : 'b'
+          plus(side === 'a' ? na : nb, tr, r, side)
+          commentRows(tr, side === 'a' ? [`a:${r.a}`] : [`b:${r.b}`])
         }
       } else {
         // Two columns: a run's removed lines beside its added ones.
@@ -607,7 +689,9 @@ export class ReviewView {
         for (let k = 0; k < rows.length; ) {
           const r = rows[k]!
           if (r.kind === 'same') {
-            this.splitRow(tbody, r, r, lineHtml)
+            const tr = this.splitRow(tbody, r, r, lineHtml)
+            plus(tr.cells[2]!, tr, r, 'b')
+            commentRows(tr, [`b:${r.b}`])
             k++
             continue
           }
@@ -618,7 +702,14 @@ export class ReviewView {
             if (x.kind === 'del') dels.push(x)
             else adds.push(x)
           }
-          for (let i = 0; i < Math.max(dels.length, adds.length); i++) this.splitRow(tbody, dels[i] ?? null, adds[i] ?? null, lineHtml)
+          for (let i = 0; i < Math.max(dels.length, adds.length); i++) {
+            const left = dels[i] ?? null
+            const right = adds[i] ?? null
+            const tr = this.splitRow(tbody, left, right, lineHtml)
+            if (left) plus(tr.cells[0]!, tr, left, 'a')
+            if (right) plus(tr.cells[2]!, tr, right, 'b')
+            commentRows(tr, [...(left ? [`a:${left.a}`] : []), ...(right ? [`b:${right.b}`] : [])])
+          }
         }
       }
     }
@@ -634,7 +725,7 @@ export class ReviewView {
     fv.body.append(table)
   }
 
-  private splitRow(tbody: HTMLTableSectionElement, left: Row | null, right: Row | null, lineHtml: (r: Row, side: 'a' | 'b') => string): void {
+  private splitRow(tbody: HTMLTableSectionElement, left: Row | null, right: Row | null, lineHtml: (r: Row, side: 'a' | 'b') => string): HTMLTableRowElement {
     const tr = tbody.insertRow()
     tr.className = `rv-row rv-pair${left?.kind === 'same' ? ' rv-same' : ''}`
     if (right?.b !== null && right?.b !== undefined) tr.dataset.after = String(right.b + 1)
@@ -651,6 +742,181 @@ export class ReviewView {
     }
     cell(left, 'a')
     cell(right, 'b')
+    return tr
+  }
+
+  // Comments (R5) ---------------------------------------------------------------
+
+  private commentBox(fv: FileView, c: ReviewComment, stale: boolean): HTMLElement {
+    const t = this.t
+    const box = document.createElement('div')
+    box.className = 'rv-comment'
+    box.dataset.testid = 'review-comment'
+    box.toggleAttribute('data-sent', !!c.sent)
+    box.toggleAttribute('data-stale', stale)
+    const text = document.createElement('div')
+    text.className = 'rv-comment-text'
+    text.textContent = c.text
+    const meta = document.createElement('div')
+    meta.className = 'rv-comment-meta'
+    const where = document.createElement('span')
+    where.textContent = [t.commentOn.replace('{line}', String(c.line)), stale ? t.stale : '', c.sent ? t.sent : ''].filter(Boolean).join(' · ')
+    meta.append(where)
+    if (!stale) {
+      meta.append(
+        button(t.commentEdit, 'review-comment-edit', () => {
+          const tr = box.closest('tr')
+          const diff = fv.diff
+          if (!tr || !diff) return
+          const i = anchorOf(c, c.side === 'b' ? diff.after : diff.before)
+          const k = diff.rows.findIndex((r) => (c.side === 'b' ? r.b === i : r.a === i))
+          this.openEditor(fv, tr as HTMLTableRowElement, (tr as HTMLTableRowElement).cells[0]?.colSpan ?? 3, c.side, i, k, c)
+        }),
+      )
+    }
+    meta.append(button(t.delete, 'review-comment-delete', () => void this.deleteComments([c.id]).then(() => this.renderBody(fv))))
+    box.append(text, meta)
+    return box
+  }
+
+  /** The field for a comment, under its line (a comment edited: under the comment). */
+  private openEditor(fv: FileView, afterTr: HTMLTableRowElement, cols: number, side: 'a' | 'b', index: number, rowIndex: number, existing: ReviewComment | null): void {
+    const t = this.t
+    fv.body.querySelector('tr.rv-comment-edit')?.remove()
+    const tr = document.createElement('tr')
+    tr.className = 'rv-comment-edit'
+    const td = tr.insertCell()
+    td.colSpan = cols
+    const area = document.createElement('textarea')
+    area.className = 'rv-comment-input'
+    area.dataset.testid = 'review-comment-input'
+    area.rows = 3
+    area.placeholder = t.commentPlaceholder
+    area.value = existing?.text ?? ''
+    const save = async () => {
+      const text = area.value.trim()
+      const diff = fv.diff
+      if (!text || !diff || !this.set) return
+      const lines = side === 'b' ? diff.after : diff.before
+      const c: ReviewComment = {
+        id: existing?.id ?? crypto.randomUUID(),
+        path: fv.file.path,
+        side,
+        line: index + 1,
+        excerpt: excerptOf(lines, index),
+        context: contextOf(diff, rowIndex),
+        text,
+        time: existing?.time ?? Date.now(),
+      }
+      const r = await folio().reviewCommentSave(this.set.root, c)
+      if (!('ok' in r)) return this.say(this.failure(r))
+      this.comments = [...this.comments.filter((x) => x.id !== c.id), c]
+      this.syncSend()
+      this.renderBody(fv)
+    }
+    area.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        void save()
+      } else if (e.key === 'Escape') tr.remove()
+    })
+    const acts = document.createElement('div')
+    acts.className = 'rv-comment-actions'
+    acts.append(button(t.save, 'review-comment-save', () => void save()), button(t.cancel, 'review-comment-cancel', () => tr.remove()))
+    td.append(area, acts)
+    afterTr.after(tr)
+    area.focus()
+  }
+
+  private async deleteComments(ids: string[]): Promise<void> {
+    if (!this.set) return
+    await folio().reviewCommentDelete(this.set.root, ids)
+    this.comments = this.comments.filter((c) => !ids.includes(c.id))
+    this.syncSend()
+  }
+
+  /** The comments not sent, as one text, to paste into the agent's console — read there, sent with Enter by the reader. */
+  private openSend(): void {
+    const t = this.t
+    // Each where it is now: its line and the rows around it as they read today.
+    const comments = this.unsent().map((c) => {
+      const diff = this.files.get(c.path)?.diff
+      if (!diff) return c
+      const i = anchorOf(c, c.side === 'b' ? diff.after : diff.before)
+      const k = i < 0 ? -1 : diff.rows.findIndex((r) => (c.side === 'b' ? r.b === i : r.a === i && r.kind !== 'add'))
+      return k < 0 ? c : { ...c, line: i + 1, context: contextOf(diff, k) }
+    })
+    if (!comments.length || !this.set) return
+    const root = this.set.root
+    this.el.querySelector('.rv-send-dialog')?.remove()
+    const dialog = document.createElement('div')
+    dialog.className = 'rv-send-dialog'
+    dialog.dataset.testid = 'review-send-dialog'
+    const box = document.createElement('div')
+    box.className = 'rv-send-box'
+    const title = document.createElement('h3')
+    title.textContent = t.sendTitle
+    const area = document.createElement('textarea')
+    area.className = 'rv-send-text'
+    area.dataset.testid = 'review-send-text'
+    area.value = compose(t.intro.replace('{title}', this.title()), [...comments].sort((x, y) => (x.path === y.path ? x.line - y.line : x.path < y.path ? -1 : 1)))
+    area.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Escape') dialog.remove()
+    })
+    const row = document.createElement('div')
+    row.className = 'rv-send-row'
+    const select = document.createElement('select')
+    select.dataset.testid = 'review-send-console'
+    const hint = document.createElement('p')
+    hint.className = 'rv-send-hint'
+    const fill = () => {
+      const targets = this.deps.consoles()
+      // An agent's console first: in this repository, running an agent.
+      const agent = /\b(claude|codex|aider|gemini|opencode|cursor-agent|amp|goose|qwen)\b/i
+      const inRepo = (cwd: string) => cwd.replace(/\\/g, '/').toLowerCase().startsWith(root.replace(/\\/g, '/').toLowerCase())
+      const score = (x: (typeof targets)[number]) => (x.running && agent.test(x.running) ? 4 : 0) + (inRepo(x.cwd) ? 2 : 0) + (x.running ? 1 : 0)
+      const sorted = [...targets].sort((x, y) => score(y) - score(x))
+      select.replaceChildren(...sorted.map((x) => new Option(x.running ? `${x.label} — ${x.running}` : x.label, String(x.id))))
+      select.hidden = sorted.length === 0
+      pasteBtn.disabled = sorted.length === 0
+      hint.textContent = sorted.length ? t.sendHint : t.noConsoles
+      openBtn.hidden = sorted.length > 0
+    }
+    const close = () => dialog.remove()
+    const pasteBtn = button(t.paste, 'review-send-paste', () => {
+      const done = this.deps.paste(Number(select.value), area.value)
+      if (done !== 'ok') {
+        hint.textContent = done === 'unsafe' ? t.pasteUnsafe : t.noConsoles
+        fill()
+        if (done === 'unsafe') hint.textContent = t.pasteUnsafe
+        return
+      }
+      void folio()
+        .reviewCommentSent(root, comments.map((c) => c.id))
+        .then(() => {
+          for (const c of this.comments) if (comments.some((x) => x.id === c.id)) c.sent = true
+          this.syncSend()
+          for (const fv of this.files.values()) if (fv.loaded && comments.some((c) => c.path === fv.file.path)) this.renderBody(fv)
+        })
+      close()
+    })
+    pasteBtn.classList.add('rv-primary')
+    const openBtn = button(t.openConsole, 'review-send-open-console', () => {
+      this.deps.openConsole(rootOf(this.spec))
+      setTimeout(fill, 600)
+    })
+    const copyBtn = button(t.copy, 'review-send-copy', () => void navigator.clipboard.writeText(area.value).then(() => (hint.textContent = t.copied)))
+    const cancel = button(t.cancel, 'review-send-cancel', close)
+    row.append(select, openBtn, pasteBtn, copyBtn, cancel)
+    box.append(title, area, hint, row)
+    dialog.append(box)
+    dialog.addEventListener('mousedown', (e) => e.target === dialog && close())
+    dialog.addEventListener('keydown', (e) => e.key === 'Escape' && close())
+    this.el.append(dialog)
+    fill()
+    area.focus()
   }
 
   destroy(): void {

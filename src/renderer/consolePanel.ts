@@ -234,6 +234,41 @@ export class ConsolePanel {
   }
 
   /** A new console in a folder (null: Shared), in a tab of its own. */
+  /**
+   * The consoles open (a split one: each of its panes), for sending text to one
+   * (ADR-006, R5): its folder and what runs in it now.
+   */
+  targets(): { id: number; label: string; cwd: string; running: string | null }[] {
+    const out: { id: number; label: string; cwd: string; running: string | null }[] = []
+    for (const g of this.groups) {
+      for (const p of g.panes) {
+        if (p.id === null || p.ended) continue
+        const last = p.term.lastCommand
+        const running = last && last.output !== undefined && last.end === undefined ? (last.text ?? null) : null
+        out.push({ id: p.id, label: g.label.textContent ?? '', cwd: p.cwd, running })
+      }
+    }
+    return out
+  }
+
+  /**
+   * Text into a console as a paste — not sent: Enter is the reader's to press.
+   * Lines go only to a program that takes a paste as one (bracketed paste):
+   * elsewhere each line would run as a command. The console comes into view.
+   */
+  pasteTo(id: number, text: string): 'ok' | 'gone' | 'unsafe' {
+    const found = this.paneOf(id)
+    if (!found || found.pane.ended) return 'gone'
+    if (text.includes('\n') && !found.pane.term.bracketedPaste) return 'unsafe'
+    this.setVisible(true)
+    this.activate(found.group)
+    found.group.active = found.pane
+    this.markActivePane(found.group)
+    found.pane.term.paste(text)
+    found.pane.view.focus()
+    return 'ok'
+  }
+
   async open(cwd: string | null): Promise<void> {
     await this.openGroup(cwd)
   }

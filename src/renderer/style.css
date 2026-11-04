@@ -854,3 +854,29 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 @media print { .worktrees-panel { display: none !important; } }
 .rv-title { min-width: 6em; flex: 0 1 auto; }
 @container (max-width: 1000px) { .rv-only span { display: none; } .rv-summary { overflow: hidden; text-overflow: ellipsis; } }
+
+/* Comments on lines (R5), and the comments sent to an agent. */
+.rv-n { position: relative; }
+.rv-plus { position: absolute; left: 2px; top: 1px; display: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 4px; background: var(--accent); color: #fff; font: 600 13px/18px system-ui, sans-serif; cursor: pointer; }
+.rv-row:hover .rv-plus, .rv-plus:focus-visible { display: block; }
+.rv-comment-row td, .rv-comment-edit td { padding: 6px 12px 8px 48px !important; background: var(--tab); }
+.rv-comment { max-width: 760px; padding: 8px 10px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--bg); font: 13px/1.5 system-ui, -apple-system, sans-serif; }
+.rv-comment[data-sent] { border-left-color: #2da44e; opacity: 0.75; }
+.rv-comment[data-stale] { border-left-color: #bf8700; }
+.rv-comment + .rv-comment { margin-top: 6px; }
+.rv-comment-text { white-space: pre-wrap; }
+.rv-comment-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted); font-size: 11px; }
+.rv-comment-meta span { margin-right: auto; }
+.rv-comment-meta .rv-button { padding: 1px 7px; font-size: 11px; }
+.rv-stale { padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--tab); }
+.rv-comment-input { display: block; box-sizing: border-box; width: 100%; max-width: 760px; padding: 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--bg); color: var(--fg); font: 13px/1.5 system-ui, -apple-system, sans-serif; resize: vertical; }
+.rv-comment-actions { display: flex; gap: 6px; margin-top: 6px; }
+.rv-send { border-color: var(--accent); color: var(--accent); }
+.rv-send-dialog { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.32); }
+.rv-send-box { display: flex; flex-direction: column; gap: 10px; width: min(760px, 92vw); max-height: 86vh; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3); }
+.rv-send-box h3 { margin: 0; font-size: 15px; }
+.rv-send-text { flex: 1; min-height: 260px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--tab); color: var(--fg); font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
+.rv-send-hint { margin: 0; color: var(--muted); font-size: 12px; }
+.rv-send-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rv-send-row select { flex: 1; min-width: 160px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+.rv-primary { background: var(--accent); border-color: var(--accent); color: #fff; }

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
+import { commentOf, type ReviewComment } from '../../common/review'
 import { readJson, writeJson } from '../jsonFile'
 
 /**
@@ -10,6 +11,8 @@ import { readJson, writeJson } from '../jsonFile'
 export interface RepoReview {
   /** `<set>|<path>` → the hash of the texts that were viewed. */
   viewed: Record<string, string>
+  /** Comments on lines, to send to an agent (R5). */
+  comments: ReviewComment[]
 }
 
 /**
@@ -36,7 +39,10 @@ export class ReviewStore {
     let r = this.cache.get(root)
     if (!r) {
       const loaded = readJson<Partial<RepoReview>>(this.file(root), {})
-      r = { viewed: loaded.viewed && typeof loaded.viewed === 'object' ? loaded.viewed : {} }
+      r = {
+        viewed: loaded.viewed && typeof loaded.viewed === 'object' ? loaded.viewed : {},
+        comments: Array.isArray(loaded.comments) ? loaded.comments.map(commentOf).filter((c) => c !== null) : [],
+      }
       this.cache.set(root, r)
     }
     return r
@@ -54,6 +60,28 @@ export class ReviewStore {
 
   setCheckpoint(root: string, c: Checkpoint): void {
     writeJson(this.checkpointFile(root), c)
+  }
+
+  /** A comment made or changed (by its id); null text: removed. */
+  saveComment(root: string, c: ReviewComment): void {
+    const r = this.of(root)
+    const i = r.comments.findIndex((x) => x.id === c.id)
+    if (i >= 0) r.comments[i] = c
+    else r.comments.push(c)
+    r.comments.splice(0, Math.max(0, r.comments.length - 2000))
+    writeJson(this.file(root), r)
+  }
+
+  deleteComments(root: string, ids: readonly string[]): void {
+    const r = this.of(root)
+    r.comments = r.comments.filter((c) => !ids.includes(c.id))
+    writeJson(this.file(root), r)
+  }
+
+  markSent(root: string, ids: readonly string[]): void {
+    const r = this.of(root)
+    for (const c of r.comments) if (ids.includes(c.id)) c.sent = true
+    writeJson(this.file(root), r)
   }
 
   setViewed(root: string, key: string, hash: string | null): void {

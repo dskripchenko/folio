@@ -2036,6 +2036,9 @@ function openReview(spec: ChangeSpec, focus = true, look: Partial<Pick<Tab, 'col
     open: (path, line, edit) => void openToEdit(path, line, edit),
     titled: () => tab && syncLabel(tab),
     openSet: (s) => void openReview(s),
+    consoles: () => consolePanel.targets(),
+    paste: (id, text) => consolePanel.pasteTo(id, text),
+    openConsole: (cwd) => void consolePanel.open(cwd),
   })
   tab = makeTab({ path: null, text: '', saved: '', review, ...look })
   void review.refresh()
