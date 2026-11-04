@@ -25,7 +25,7 @@ import { Sidebar, type SidebarText } from './sidebar'
 import { linkSuggester, revealHeading, watchWikiLinks } from './wikilinks'
 import { LinksPanel, type LinksText } from './linksPanel'
 import { TagsPanel, type TagsText } from './tagsPanel'
-import { HoverPreview } from './hoverPreview'
+import { HoverPreview, type Peeked } from './hoverPreview'
 import { watchEmbeds } from './embeds'
 import { TasksPanel, type TasksText } from './tasksPanel'
 import { ChangesPanel, type ChangesText } from './changesPanel'
@@ -54,7 +54,7 @@ import { headingsOf, OutlinePanel, type Heading, type OutlineText } from './outl
 import { CommandPalette, type Command, type PaletteText } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
-type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'find' | 'goToLine' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
+type CommandsText = PaletteText & Record<'present' | 'slidesPdf' | 'newCanvas' | 'newKanban' | 'newCalendar' | 'bookmark' | 'unbookmark' | 'file' | 'edit' | 'view' | 'newNote' | 'goToFile' | 'addProject' | 'clone' | 'save' | 'saveAs' | 'closeTab' | 'reopenTab' | 'find' | 'goToLine' | 'findInFiles' | 'sidebar' | 'notes' | 'daily' | 'dailyPrev' | 'dailyNext' | 'noDaily' | 'insertTemplate' | 'newFromTemplate' | 'chooseTemplate' | 'noTemplates' | 'dailyFolder' | 'templatesFolder', string>
 import type { GitRefusal, UpdateState, Version, WorkspaceView } from './bridge'
 
 const TEXT = {
@@ -117,7 +117,7 @@ const TEXT = {
     spellcheck: 'Check spelling',
     update: { check: 'Check for updates', checking: 'Looking for a new version…', latest: 'folio {v} is the latest version.', downloading: 'Downloading folio {v}…', ready: 'folio {v} is downloaded: it takes over when folio closes.', restart: 'Restart to update to {v}', auto: 'Look for updates daily', failed: 'No update: {error}', source: 'folio run from its source is updated with git, not here.' },
     spellcheckFetch: 'Check spelling (fetches dictionaries)',
-    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', find: 'Find in the document', goToLine: 'Go to line…', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
+    commands: { placeholder: 'Type a command', none: 'No such command', file: 'File', edit: 'Edit', view: 'View', newNote: 'New note', goToFile: 'Go to file…', addProject: 'Add a project…', clone: 'Clone a repository…', save: 'Save', saveAs: 'Save as…', closeTab: 'Close the tab', reopenTab: 'Reopen the closed tab', find: 'Find in the document', goToLine: 'Go to line…', findInFiles: 'Find in files', sidebar: 'Show or hide the sidebar', notes: 'Notes', daily: "Today's note", dailyPrev: 'The daily note before', dailyNext: 'The daily note after', noDaily: 'No daily note that way.', insertTemplate: 'Insert a template…', newFromTemplate: 'New note from a template…', chooseTemplate: 'Choose a template', noTemplates: 'No templates yet: put notes in the templates folder ({folder}).', dailyFolder: 'Daily notes folder…', templatesFolder: 'Templates folder…', bookmark: 'Add to bookmarks', unbookmark: 'Remove from bookmarks', newKanban: 'New kanban board', newCalendar: 'New calendar', newCanvas: 'New whiteboard', present: 'Show as slides', slidesPdf: 'Export the slides as PDF' } as CommandsText,
     goToFile: { placeholder: 'Go to a file by its name', shared: 'Shared', none: 'No such file', loading: 'Listing the files…' } as GoToFileText,
     find: { placeholder: 'Find', caseSensitive: 'Match case', wholeWord: 'Whole word', regex: 'Regular expression', previous: 'Previous (⇧Enter)', next: 'Next (Enter)', close: 'Close (Esc)', none: 'No matches', invalid: 'Invalid expression', count: '{n} of {total}' } as FindText,
     clone: { title: 'Clone a repository', url: 'Repository address', clone: 'Clone…', cancel: 'Cancel', cloning: 'Cloning…' } as CloneText,
@@ -182,7 +182,7 @@ const TEXT = {
     spellcheck: 'Проверять орфографию',
     update: { check: 'Проверить обновления', checking: 'Ищем новую версию…', latest: 'folio {v} — последняя версия.', downloading: 'Скачиваем folio {v}…', ready: 'folio {v} скачан: он заменит эту версию, когда folio закроется.', restart: 'Перезапустить и обновить до {v}', auto: 'Проверять обновления раз в день', failed: 'Обновление не удалось: {error}', source: 'folio, запущенный из исходников, обновляется через git, а не здесь.' },
     spellcheckFetch: 'Проверять орфографию (скачает словари)',
-    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', find: 'Найти в документе', goToLine: 'Перейти к строке…', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
+    commands: { placeholder: 'Введите команду', none: 'Нет такой команды', file: 'Файл', edit: 'Правка', view: 'Вид', newNote: 'Новая заметка', goToFile: 'Перейти к файлу…', addProject: 'Добавить проект…', clone: 'Клонировать репозиторий…', save: 'Сохранить', saveAs: 'Сохранить как…', closeTab: 'Закрыть вкладку', reopenTab: 'Вернуть закрытую вкладку', find: 'Найти в документе', goToLine: 'Перейти к строке…', findInFiles: 'Найти в файлах', sidebar: 'Показать или скрыть боковую панель', notes: 'Заметки', daily: 'Заметка дня', dailyPrev: 'Предыдущая заметка дня', dailyNext: 'Следующая заметка дня', noDaily: 'В эту сторону заметок дня нет.', insertTemplate: 'Вставить шаблон…', newFromTemplate: 'Новая заметка из шаблона…', chooseTemplate: 'Выберите шаблон', noTemplates: 'Шаблонов пока нет: положите заметки в папку шаблонов ({folder}).', dailyFolder: 'Папка заметок дня…', templatesFolder: 'Папка шаблонов…', bookmark: 'В закладки', unbookmark: 'Убрать из закладок', newKanban: 'Новая канбан-доска', newCalendar: 'Новый календарь', newCanvas: 'Новый холст', present: 'Показать слайдами', slidesPdf: 'Экспорт слайдов в PDF' } as CommandsText,
     goToFile: { placeholder: 'Перейти к файлу по имени', shared: 'Общие', none: 'Такого файла нет', loading: 'Список файлов…' } as GoToFileText,
     find: { placeholder: 'Найти', caseSensitive: 'С учётом регистра', wholeWord: 'Слово целиком', regex: 'Регулярное выражение', previous: 'Предыдущее (⇧Enter)', next: 'Следующее (Enter)', close: 'Закрыть (Esc)', none: 'Не найдено', invalid: 'Неверное выражение', count: '{n} из {total}' } as FindText,
     clone: { title: 'Клонировать репозиторий', url: 'Адрес репозитория', clone: 'Клонировать…', cancel: 'Отмена', cloning: 'Клонирование…' } as CloneText,
@@ -1564,6 +1564,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   watchEmbeds(pane, () => (formatOf(tab) === 'markdown' ? tab.path : null), {
     peek: (from, link) => folio.peek(from, link),
     draw: (note, text) => viewOf('markdown', text, { base: note.base, name: note.name }),
+    media: embeddedMedia,
   })
   button.addEventListener('click', (event) => {
     if ((event.target as HTMLElement).classList.contains('close')) void close(tab)
@@ -1571,6 +1572,20 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   })
   button.addEventListener('auxclick', (event) => {
     if (event.button === 1) void close(tab)
+  })
+  // Dragged: to another place in the row, or onto the view's right half to open beside.
+  button.draggable = true
+  button.addEventListener('dragstart', (event) => {
+    draggedTab = tab
+    event.dataTransfer!.effectAllowed = 'move'
+    event.dataTransfer!.setData(TAB_MIME, String(tab.id))
+    document.body.classList.add('dragging-tab')
+  })
+  button.addEventListener('dragend', () => {
+    draggedTab = null
+    document.body.classList.remove('dragging-tab')
+    tabsEl.querySelectorAll('.drop-before, .drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-after'))
+    besideDrop.hidden = true
   })
   // Its menu: beside the main view, or back; closed.
   button.addEventListener('contextmenu', (event) => {
@@ -1611,15 +1626,149 @@ async function add(result: OpenResult, focus = true): Promise<void> {
   else report()
 }
 
+/**
+ * A picture, a video or a sound embedded in a note (`![[photo.png|300]]`): at
+ * the size asked or its own (never wider than the page); a picture opens in its
+ * tab on a click.
+ */
+function embeddedMedia(file: Peeked, size: { width?: number; height?: number }): HTMLElement {
+  const src = `${file.base}${encodeURIComponent(file.name)}`
+  const fit = (el: HTMLElement) => {
+    if (size.width) el.style.width = `${size.width}px`
+    if (size.height) el.style.height = `${size.height}px`
+  }
+  if (file.media === 'video' || file.media === 'audio') {
+    const player = document.createElement(file.media === 'video' ? 'dsk-video' : 'dsk-audio')
+    player.setAttribute('src', src)
+    player.setAttribute(file.media === 'video' ? 'label' : 'track-title', file.name)
+    player.setAttribute('preload', 'metadata')
+    player.className = 'embed-media'
+    fit(player)
+    return player
+  }
+  const img = document.createElement('img')
+  img.className = 'embed-media embed-image'
+  img.src = src
+  img.alt = file.name
+  img.loading = 'lazy'
+  img.title = file.name
+  fit(img)
+  img.addEventListener('click', () => void folio.open(file.path).then((r) => add(r)))
+  return img
+}
+
+/** The last closed tab again, at its place, in its view, scrolled where it was (one gone from disk is skipped). */
+async function reopenClosed(): Promise<void> {
+  while (closedTabs.length) {
+    const last = closedTabs.shift()!
+    if (tabs.some((x) => x.path === last.path)) continue
+    const result = await folio.open(last.path)
+    if (!isOpened(result)) continue
+    await add(result, false)
+    const tab = tabs.find((x) => x.path === result.path)
+    if (!tab) return
+    moveTab(tab, last.index)
+    tab.mode = last.mode
+    if (last.view !== tab.view && (last.view === 'read' || canEdit(formatOf(tab)))) {
+      tab.view = last.view
+      render(tab)
+    }
+    tab.scroll = last.scroll
+    activate(tab)
+    return
+  }
+}
+
+/** A tab to another place in the row (and its session order). */
+function moveTab(tab: Tab, index: number): void {
+  const from = tabs.indexOf(tab)
+  if (from < 0) return
+  tabs.splice(from, 1)
+  tabs.splice(Math.max(0, Math.min(index, tabs.length)), 0, tab)
+  const after = tabs[tabs.indexOf(tab) + 1]
+  if (after) tabsEl.insertBefore(tab.button, after.button)
+  else tabsEl.append(tab.button)
+  report()
+}
+
+// A tab dragged: to another place in the row, or onto the view's right half to open beside it.
+const TAB_MIME = 'application/x-folio-tab'
+let draggedTab: Tab | null = null
+const besideDrop = document.createElement('div')
+besideDrop.className = 'beside-drop'
+besideDrop.dataset.testid = 'beside-drop'
+besideDrop.hidden = true
+document.querySelector<HTMLElement>('.content')!.append(besideDrop)
+
+/** Where in the row a point falls: the tab it is before (null: the end). */
+function tabAt(x: number): Tab | null {
+  for (const tab of tabs) {
+    const r = tab.button.getBoundingClientRect()
+    if (x < r.left + r.width / 2) return tab
+  }
+  return null
+}
+
+tabsEl.addEventListener('dragover', (event) => {
+  if (!draggedTab) return
+  event.preventDefault()
+  event.dataTransfer!.dropEffect = 'move'
+  tabsEl.querySelectorAll('.drop-before, .drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-after'))
+  const before = tabAt(event.clientX)
+  if (before) before.button.classList.add('drop-before')
+  else tabs.at(-1)?.button.classList.add('drop-after')
+})
+tabsEl.addEventListener('drop', (event) => {
+  const tab = draggedTab
+  if (!tab) return
+  event.preventDefault()
+  const before = tabAt(event.clientX)
+  const without = tabs.filter((x) => x !== tab)
+  moveTab(tab, before && before !== tab ? without.indexOf(before) : before === tab ? tabs.indexOf(tab) : without.length)
+})
+const contentEl = document.querySelector<HTMLElement>('.content')!
+contentEl.addEventListener('dragover', (event) => {
+  if (!draggedTab) return
+  const box = contentEl.getBoundingClientRect()
+  const right = event.clientX > box.left + box.width / 2
+  // The right half: beside (when there is another tab for the main view); the left: back to the main view.
+  const can = right ? draggedTab !== beside && tabs.length > 1 : draggedTab === beside
+  besideDrop.hidden = !can
+  besideDrop.classList.toggle('beside-drop--left', !right)
+  if (!can) return
+  event.preventDefault()
+  event.dataTransfer!.dropEffect = 'move'
+})
+contentEl.addEventListener('dragleave', (event) => {
+  if (!contentEl.contains(event.relatedTarget as Node | null)) besideDrop.hidden = true
+})
+contentEl.addEventListener('drop', (event) => {
+  const tab = draggedTab
+  besideDrop.hidden = true
+  if (!tab) return
+  event.preventDefault()
+  const box = contentEl.getBoundingClientRect()
+  if (event.clientX > box.left + box.width / 2) openBeside(tab)
+  else if (tab === beside) closeBeside()
+})
+
 function newNote(): void {
   const tab = makeTab({ path: null, text: '', saved: null, view: 'edit' })
   activate(tab)
   requestAnimationFrame(() => (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { focus(): void }) | null)?.focus())
 }
 
+/** Closed tabs of files, last first: reopened with Cmd/Ctrl+Shift+T where they were. */
+const closedTabs: { path: string; index: number; view: Tab['view']; mode: EditorMode; scroll: number }[] = []
+
 function remove(tab: Tab): void {
   const i = tabs.indexOf(tab)
   if (i < 0) return
+  if (tab.path) {
+    const scroll = tab === mainTab ? viewEl.scrollTop : tab === beside ? besideEl.scrollTop : tab.scroll
+    closedTabs.unshift({ path: tab.path, index: i, view: tab.view, mode: tab.mode, scroll })
+    closedTabs.splice(30)
+  }
   if (tab.timer) clearTimeout(tab.timer)
   tabs.splice(i, 1)
   if (tab === beside) backToMain(tab)
@@ -1947,7 +2096,8 @@ besideEl.addEventListener('click', onLinkClick)
 // A note's preview while the pointer rests on a link to it.
 const preview = new HoverPreview({
   peek: (from, link) => folio.peek(from, link),
-  draw: (note) => viewOf('markdown', note.text, { base: note.base, name: note.name }),
+  // A link to a picture or a video: the file itself in the preview.
+  draw: (note) => (note.media ? embeddedMedia(note, {}) : viewOf('markdown', note.text, { base: note.base, name: note.name })),
   reveal: (container, heading, scroller) => revealHeading(container, heading, scroller),
   open: (note) =>
     void folio.open(note.path).then(async (result) => {
@@ -2141,6 +2291,7 @@ function commands(): Command[] {
     { id: 'present', group: view, title: c.present, keys: 'F5', icon: 'present', when: isNote, run: () => present() },
     { id: 'export-slides', group: file, title: c.slidesPdf, icon: 'pdf', when: isNote, run: () => void exportSlides() },
     { id: 'close-tab', group: file, title: c.closeTab, keys: `${mod}W`, icon: 'close', when: has, run: () => active && void close(active) },
+    { id: 'reopen-tab', group: file, title: c.reopenTab, keys: `${mod}⇧T`, icon: 'undo', when: () => closedTabs.length > 0, run: () => void reopenClosed() },
     { id: 'daily', group: c.notes, title: c.daily, keys: `${mod}⇧D`, icon: 'calendar', run: () => void openDaily(0) },
     { id: 'daily-prev', group: c.notes, title: c.dailyPrev, icon: 'calendar', when: isDaily, run: () => void openDaily(-1) },
     { id: 'daily-next', group: c.notes, title: c.dailyNext, icon: 'calendar', when: isDaily, run: () => void openDaily(1) },
@@ -2438,7 +2589,8 @@ window.addEventListener(
       },
       b: () => sidebar.toggleCollapsed(),
       f: () => (event.shiftKey ? void searchPanel.open() : openFind()),
-      t: () => void goToFile.open(),
+      // Cmd/Ctrl+T: go to a file; with Shift, as in browsers: the tab just closed.
+      t: () => (event.shiftKey ? void reopenClosed() : void goToFile.open()),
       k: () => palette.open(),
       d: () => {
         if (event.shiftKey) void openDaily(0)
@@ -2449,7 +2601,7 @@ window.addEventListener(
       ...(folio.platform === 'darwin' ? { g: () => findBar.step(event.shiftKey ? -1 : 1) } : {}),
     }
     const fn = act[key]
-    if (!fn || (key !== 's' && key !== 'h' && key !== 'p' && key !== 'g' && key !== 'f' && key !== 'd' && event.shiftKey) || ((key === 'h' || key === 'd') && !event.shiftKey)) return
+    if (!fn || (key !== 's' && key !== 'h' && key !== 'p' && key !== 'g' && key !== 'f' && key !== 'd' && key !== 't' && event.shiftKey) || ((key === 'h' || key === 'd') && !event.shiftKey)) return
     event.preventDefault()
     event.stopPropagation()
     fn()

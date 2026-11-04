@@ -819,7 +819,18 @@ ipcMain.handle('doc:peek', async (_e, from: unknown, link: unknown) => {
     file = documentOfUrl(l.url, roots)
     heading = decodeURIComponent(/#(.+)$/.exec(l.url)?.[1] ?? '') || null
   }
-  if (file === null || !isNote(file) || !existsSync(file)) return null
+  if (file === null || !existsSync(file)) return null
+  // A picture, a video, a sound (an SVG too): its URL to draw, never its bytes.
+  const kind = formatByName(file)
+  if (isMedia(kind) || kind === 'svg') {
+    try {
+      const doc = openDocument(file, workspace, roots)
+      return { path: doc.path, name: doc.name, text: '', base: doc.base, heading: null, media: kind }
+    } catch {
+      return null
+    }
+  }
+  if (!isNote(file)) return null
   try {
     if (statSync(file).size > 2 * 1024 * 1024) return null
     const doc = openDocument(file, workspace, roots)

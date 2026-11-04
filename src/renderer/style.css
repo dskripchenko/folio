@@ -652,3 +652,15 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .media-failed { margin: auto; padding: 32px; text-align: center; color: var(--muted); }
 .media-failed button { margin-top: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; cursor: pointer; }
 .source-editor .preview .media-view { height: 100%; }
+
+/* A tab dragged: where it goes in the row, and the half of the view that opens it beside (or back). */
+.tab.drop-before { box-shadow: inset 2px 0 0 var(--accent); }
+.tab.drop-after { box-shadow: inset -2px 0 0 var(--accent); }
+body.dragging-tab .tab { cursor: grabbing; }
+.beside-drop { position: absolute; top: 0; bottom: 0; right: 0; width: 50%; z-index: 30; pointer-events: none; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 2px dashed var(--accent); border-radius: 8px; box-sizing: border-box; }
+.beside-drop--left { left: 0; right: auto; }
+/* A picture, a video or a sound embedded in a note: never wider than the page; a picture opens in its tab. */
+.uid-markdown__embed.is-media { border: 0; padding: 0; background: none; }
+.embed-media { display: block; max-width: 100%; height: auto; margin: 8px 0; }
+.embed-image { cursor: zoom-in; border-radius: 4px; }
+img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-height: 40px; outline: 1px dashed var(--line); }

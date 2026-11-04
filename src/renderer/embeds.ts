@@ -40,6 +40,14 @@ export interface EmbedDeps {
   peek(from: string, link: { wiki: string }): Promise<Peeked | null>
   /** The note drawn as when read. */
   draw(note: Peeked, text: string): HTMLElement
+  /** A picture, a video or a sound, at a size (`![[a.png|300]]`, `|300x200`) or its own. */
+  media(file: Peeked, size: { width?: number; height?: number }): HTMLElement
+}
+
+/** `300` or `300x200` (the kit's `data-size`, Obsidian's way of sizing an embed). */
+export function embedSize(raw: string | undefined): { width?: number; height?: number } {
+  const m = raw ? /^(\d+)(?:x(\d+))?$/.exec(raw) : null
+  return m ? { width: Number(m[1]), ...(m[2] ? { height: Number(m[2]) } : {}) } : {}
 }
 
 /** Fill a pane's embeds as they appear; `pathOf` is the note the pane shows. */
@@ -48,6 +56,19 @@ export function watchEmbeds(pane: HTMLElement, pathOf: () => string | null, deps
   const fill = async (): Promise<void> => {
     const from = pathOf()
     if (!from) return
+    // ![[picture.png]]: the kit guessed its address beside the note; found by name as a link is (anywhere in the root).
+    for (const img of [...pane.querySelectorAll<HTMLImageElement>('img.uid-markdown__embed-image[data-embed]:not([data-state])')]) {
+      if (img.closest('[contenteditable="true"]')) continue
+      img.dataset.state = 'loading'
+      const container = img.closest<HTMLElement>('.uid-markdown__embed[data-path]')
+      const file = await deps.peek(container?.dataset.path ?? from, { wiki: img.dataset.embed! })
+      if (!file?.media) {
+        img.dataset.state = 'missing'
+        continue
+      }
+      img.dataset.state = 'filled'
+      img.replaceWith(deps.media(file, embedSize(img.dataset.size)))
+    }
     for (const el of [...pane.querySelectorAll<HTMLElement>('.uid-markdown__embed[data-embed]:not([data-state])')]) {
       if (el.closest('[contenteditable="true"]')) continue
       el.dataset.state = 'loading'
@@ -55,6 +76,14 @@ export function watchEmbeds(pane: HTMLElement, pathOf: () => string | null, deps
       const chain = [from, ...[...ancestors(el)].map((a) => a.dataset.path!).filter(Boolean)]
       const container = el.parentElement?.closest<HTMLElement>('.uid-markdown__embed[data-path]')
       const note = await deps.peek(container?.dataset.path ?? from, { wiki: el.dataset.embed! })
+      // A picture, a video, a sound: drawn as itself.
+      if (note?.media) {
+        el.dataset.state = 'filled'
+        el.dataset.path = note.path
+        el.classList.add('is-filled', 'is-media')
+        el.replaceChildren(deps.media(note, embedSize(el.dataset.size)))
+        continue
+      }
       if (!note || chain.includes(note.path) || chain.length > DEPTH) {
         el.dataset.state = note ? 'loop' : 'missing'
         continue

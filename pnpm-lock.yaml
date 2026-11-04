@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@dskripchenko/embed': link:../embed
+
 importers:
 
   .:
@@ -19,8 +22,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       '@dskripchenko/embed':
-        specifier: 1.18.0
-        version: 1.18.0
+        specifier: link:../embed
+        version: link:../embed
       '@dskripchenko/syntax':
         specifier: ^0.6.0
         version: 0.6.0
@@ -78,10 +81,6 @@ packages:
 
   '@dskripchenko/diagrams@1.4.0':
     resolution: {integrity: sha512-5IF96MS+QKkEZNecMwRBw0IFmFqLh9tJ5q084R0rLAidmjlxXXahZr5QvUwkIcO2Omo4k/O8vcY06m8vndj93A==}
-    engines: {node: '>=20'}
-
-  '@dskripchenko/embed@1.18.0':
-    resolution: {integrity: sha512-5VTmJ6XC0tqrpi8i+UCD9D6raaUypDENfXzA9O1I9NBGXd3KCC83I+On3NcuVFnASv+QPb5cgU/Gwy6/dhoL1w==}
     engines: {node: '>=20'}
 
   '@dskripchenko/syntax@0.5.0':
@@ -2111,8 +2110,6 @@ snapshots:
       '@dskripchenko/syntax': 0.5.0
 
   '@dskripchenko/diagrams@1.4.0': {}
-
-  '@dskripchenko/embed@1.18.0': {}
 
   '@dskripchenko/syntax@0.5.0': {}
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { formatByName, isMedia, opensInFolio } from '../../src/main/formats'
 import { kindOf } from '../../src/main/tree'
+import { embedSize } from '../../src/renderer/embeds'
 import { bytes, duration } from '../../src/renderer/mediaView'
 
 describe('pictures, video and sound', () => {
@@ -29,5 +30,12 @@ describe('pictures, video and sound', () => {
     expect(duration(2)).toBe('0:02')
     expect(duration(125.4)).toBe('2:05')
     expect(duration(3725)).toBe('1:02:05')
+  })
+
+  it('an embed’s size as Obsidian writes it', () => {
+    expect(embedSize('300')).toEqual({ width: 300 })
+    expect(embedSize('300x200')).toEqual({ width: 300, height: 200 })
+    expect(embedSize(undefined)).toEqual({})
+    expect(embedSize('big')).toEqual({})
   })
 })
