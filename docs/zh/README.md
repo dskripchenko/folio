@@ -3,7 +3,7 @@
 一款桌面应用，用于阅读、编辑和打印带有实时图表、API 参考和编辑器的 Markdown——
 支持 macOS、Windows 和 Linux，无需安装。
 
-> 状态：**1.3** —— 从[最新版本](https://github.com/dskripchenko/folio/releases/latest)下载适合你系统的压缩包。
+> 状态：**1.4** —— 从[最新版本](https://github.com/dskripchenko/folio/releases/latest)下载适合你系统的压缩包。
 
 - [工作原理](design.md) —— 窗口、文档能做什么、数据存放在哪里
 - [开发](development.md) —— 构建、运行和测试
