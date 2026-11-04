@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
@@ -22,14 +22,38 @@ export interface ProjectSettings {
 }
 
 export function readProjectSettings(dir: string): ProjectSettings {
-  let raw: unknown
+  return sanitize(readRaw(dir))
+}
+
+function readRaw(dir: string): Record<string, unknown> {
   try {
-    raw = JSON.parse(readFileSync(join(dir, '.folio', 'settings.json'), 'utf8'))
+    const raw = JSON.parse(readFileSync(join(dir, '.folio', 'settings.json'), 'utf8')) as unknown
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
   } catch {
     return {}
   }
-  if (!raw || typeof raw !== 'object') return {}
-  const r = raw as Record<string, unknown>
+}
+
+/**
+ * The settings written from the settings window: the keys folio knows replaced
+ * (an empty one removed), every other key of the file kept as it was, two
+ * spaces indented as people write it.
+ */
+export function writeProjectSettings(dir: string, next: ProjectSettings): ProjectSettings {
+  const raw = readRaw(dir)
+  const clean = sanitize(next as Record<string, unknown>)
+  for (const key of ['kind', 'indentUnit', 'tabSize', 'tasks', 'formatOnSave', 'formatter', 'lsp'] as const) {
+    const v = clean[key]
+    const empty = v === undefined || (Array.isArray(v) && v.length === 0) || (typeof v === 'object' && v !== null && !Array.isArray(v) && Object.keys(v).length === 0)
+    if (empty) delete raw[key]
+    else raw[key] = v
+  }
+  mkdirSync(join(dir, '.folio'), { recursive: true })
+  writeFileSync(join(dir, '.folio', 'settings.json'), `${JSON.stringify(raw, null, 2)}\n`)
+  return clean
+}
+
+function sanitize(r: Record<string, unknown>): ProjectSettings {
   const out: ProjectSettings = {}
   if (r.kind === 'notes' || r.kind === 'code') out.kind = r.kind
   if (typeof r.indentUnit === 'string' && /^(\t| {1,8})$/.test(r.indentUnit)) out.indentUnit = r.indentUnit

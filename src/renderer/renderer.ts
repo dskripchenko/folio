@@ -7,7 +7,8 @@
  */
 import { folio as bridge, prefs, type BufferData, type Changes, type EditorMode, type Format, type OpenResult, type Opened, type SaveResult } from './bridge'
 import { diffLines } from './diff'
-import { commands as editorCommands, editorConfigFor, indentOptions, keyName, normalizeKey, type CodeEditor, type CompletionSource, type KeyBinding } from '@dskripchenko/code-editor'
+import { commands as editorCommands, defaultKeymap, editorConfigFor, indentOptions, keyName, normalizeKey, type CodeEditor, type CompletionSource, type KeyBinding } from '@dskripchenko/code-editor'
+import { prettyKey, SettingsDialog, type KeyedCommand, type SettingsText } from './settingsDialog'
 import { canEdit, editorOf, READ_ONLY_BYTES, viewOf, type SourceEditorElement, type ViewOptions } from './formats'
 import type { CodeState } from './code'
 import { domTarget, editorTarget, fieldTarget, selectInField, type FindTarget, type WithFindTarget } from './find'
@@ -109,6 +110,7 @@ const TEXT = {
     symbols: { file: 'Go to a symbol in the file', project: 'Go to a symbol in the projects', none: 'No such symbol', loading: 'Reading the symbols…', shared: 'Shared' } as SymbolPaletteText,
     media: { zoomIn: 'Zoom in', zoomOut: 'Zoom out', fit: 'Fit to the view', actual: 'Actual size', external: 'Open in the system’s program', failed: 'folio cannot show {name} (a format or codec it does not read).' } as MediaText,
     wrapLines: 'Wrap long lines',
+    settingsWindow: { menu: 'Keys and project settings…', title: 'Settings', keys: 'Keys', project: 'Project', search: 'Find a command or a key', set: 'Set a key', press: 'Press the keys…', remove: 'Remove', resetAll: 'Remove all my keys', clash: 'also on: {commands}', editor: 'Code editor', noProject: 'Open a file of a project to set the project’s own settings.', kind: 'Kind', kindAuto: 'As guessed', kindNotes: 'Notes', kindCode: 'Code', indent: 'Indentation', indentAuto: 'As .editorconfig or the file says', spaces: 'spaces', tab: 'Tab', tabSize: 'Tab width', formatOnSave: 'Format on save', formatter: 'Formatter', formatterNone: 'Found by the file', formatterOwn: 'A command of its own…', tasks: 'Tasks of its own', taskName: 'Name', taskCommand: 'Command', add: 'Add', servers: 'Language servers', language: 'Language (php, python…)', serverCommand: 'Command, or off', serverOff: 'A language server: its command and arguments, or "off" for none.', save: 'Save', saved: 'Saved to .folio/settings.json.', close: 'Close' } as SettingsText & { menu: string },
     exportHtml: 'Export as HTML (one page)…',
     exportDocx: 'Export as Word (DOCX)…',
     exporting: 'Preparing the export…',
@@ -183,6 +185,7 @@ const TEXT = {
     symbols: { file: 'Перейти к символу файла', project: 'Перейти к символу проектов', none: 'Нет такого символа', loading: 'Читаю символы…', shared: 'Общее' } as SymbolPaletteText,
     media: { zoomIn: 'Увеличить', zoomOut: 'Уменьшить', fit: 'Вписать в окно', actual: 'Исходный размер', external: 'Открыть в системной программе', failed: 'folio не может показать {name} (формат или кодек, которого он не читает).' } as MediaText,
     wrapLines: 'Переносить длинные строки',
+    settingsWindow: { menu: 'Клавиши и настройки проекта…', title: 'Настройки', keys: 'Клавиши', project: 'Проект', search: 'Найти команду или клавишу', set: 'Назначить', press: 'Нажмите клавиши…', remove: 'Убрать', resetAll: 'Убрать все мои клавиши', clash: 'также у: {commands}', editor: 'Редактор кода', noProject: 'Откройте файл проекта, чтобы задать его собственные настройки.', kind: 'Вид', kindAuto: 'Как определено', kindNotes: 'Заметки', kindCode: 'Код', indent: 'Отступ', indentAuto: 'Как в .editorconfig или файле', spaces: 'пробела', tab: 'Табуляция', tabSize: 'Ширина табуляции', formatOnSave: 'Форматировать при сохранении', formatter: 'Форматтер', formatterNone: 'По файлу', formatterOwn: 'Своя команда…', tasks: 'Свои задачи', taskName: 'Название', taskCommand: 'Команда', add: 'Добавить', servers: 'Языковые серверы', language: 'Язык (php, python…)', serverCommand: 'Команда или off', serverOff: 'Языковой сервер: команда с аргументами или "off" — без сервера.', save: 'Сохранить', saved: 'Сохранено в .folio/settings.json.', close: 'Закрыть' } as SettingsText & { menu: string },
     exportHtml: 'Экспорт в HTML (одна страница)…',
     exportDocx: 'Экспорт в Word (DOCX)…',
     exporting: 'Готовлю экспорт…',
@@ -844,6 +847,7 @@ function openSettings(anchor: HTMLElement): void {
     { label: `${t.update.check} (${update.current})`, disabled: update.state.status === 'checking' || update.state.status === 'downloading', testid: 'update-check', action: () => checkUpdate() },
     { label: t.update.auto, checked: update.auto, testid: 'update-auto', action: () => void folio.setAutoUpdate(!update.auto).then((on) => (update.auto = on)) },
     { separator: true, label: '', action: () => undefined },
+    { label: t.settingsWindow.menu, icon: 'settings', testid: 'open-settings', action: () => void settingsDialog.open() },
     { label: t.commands.dailyFolder, icon: 'calendar', testid: 'daily-folder', action: () => void folio.chooseFolder('daily') },
     { label: t.commands.templatesFolder, icon: 'note', testid: 'templates-folder', action: () => void folio.chooseFolder('templates') },
   ], 'end')
@@ -1052,7 +1056,10 @@ let folioKeys = new Map<string, string>()
 /** The editor's keys of one's own: in the editor they are its, over folio's own shortcuts. */
 let editorKeys = new Set<string>()
 
-void folio.keybindings().then((list) => {
+void folio.keybindings().then((list) => applyKeybindings(list))
+
+/** Keys of one's own put to work: the editor's (for editors opened from now on) and folio's (at once). */
+function applyKeybindings(list: { key: string; command: string }[]): void {
   const mac = folio.platform === 'darwin'
   const table = editorCommands as unknown as Record<string, unknown>
   editorKeymap = list.flatMap((b): KeyBinding[] => {
@@ -1063,7 +1070,43 @@ void folio.keybindings().then((list) => {
   })
   folioKeys = new Map(list.filter((b) => b.command.startsWith('folio.')).map((b) => [normalizeKey(b.key, mac), b.command.slice(6)]))
   editorKeys = new Set(editorKeymap.map((b) => normalizeKey(mac ? (b.mac ?? b.key) : (b.other ?? b.key), mac)))
+}
+
+/** Every command a key can be given: folio's (as the palette has them) and the code editor's (with its own keys). */
+function keyedCommands(): KeyedCommand[] {
+  const mac = folio.platform === 'darwin'
+  const table = editorCommands as unknown as Record<string, unknown>
+  const nameOf = new Map<unknown, string>(Object.entries(table).map(([name, fn]) => [fn, name]))
+  const editorDefaults = new Map<string, string[]>()
+  for (const b of defaultKeymap) {
+    const name = typeof b.run === 'string' ? b.run : nameOf.get(b.run)
+    if (!name) continue
+    const key = mac ? (b.mac ?? b.key) : (b.other ?? b.key)
+    editorDefaults.set(name, [...(editorDefaults.get(name) ?? []), prettyKey(key, mac)])
+  }
+  const editorNames = new Set([...EDITOR_ACTIONS, ...Object.entries(table).filter(([n, fn]) => typeof fn === 'function' && (fn as () => void).length >= 1 && n !== 'insertText' && n !== 'typeText').map(([n]) => n)])
+  // copyLineDown → Copy line down.
+  const human = (name: string) => name.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).replace(/ ([A-Z])/g, (_, c: string) => ` ${c.toLowerCase()}`)
+  return [
+    ...commands().map((c) => ({ command: `folio.${c.id}`, title: c.title, group: c.group, defaults: c.keys ? [c.keys] : [] })),
+    ...[...editorNames].sort().map((n) => ({ command: n, title: human(n), group: t.settingsWindow.editor, defaults: editorDefaults.get(n) ?? [] })),
+  ]
+}
+
+const settingsDialog = new SettingsDialog({
+  text: () => t.settingsWindow,
+  mac: folio.platform === 'darwin',
+  commands: () => keyedCommands(),
+  bindings: () => folio.keybindings(),
+  saveBindings: async (list) => {
+    await folio.setKeybindings(list)
+    applyKeybindings(list)
+  },
+  keyName: (e) => keyName(e),
+  project: () => (active?.path ? folio.projectSettingsOf(active.path) : Promise.resolve(null)),
+  saveProject: async (path, settings) => (await folio.setProjectSettings(path, settings)) !== null,
 })
+document.body.append(settingsDialog.el)
 
 /** A key of one's own for a folio command: run it; true when it was one. */
 function folioKey(event: KeyboardEvent): boolean {
@@ -1763,14 +1806,16 @@ async function reopenClosed(): Promise<void> {
     tab.scroll = last.scroll
     activate(tab)
     // Its document is drawn a moment later (widgets, a slow machine): scrolled once it is tall enough.
+    // (A timer, not frames: a window in the background gets few frames.)
     const scroller = scrollerOf(tab)
-    let frames = 60
+    let tries = 40
     const settle = () => {
       if (active !== tab) return
       scroller.scrollTop = last.scroll
-      if (Math.abs(scroller.scrollTop - last.scroll) > 1 && --frames > 0) requestAnimationFrame(settle)
+      tab.scroll = last.scroll
+      if (Math.abs(scroller.scrollTop - last.scroll) > 1 && --tries > 0) setTimeout(settle, 50)
     }
-    requestAnimationFrame(settle)
+    setTimeout(settle, 0)
     return
   }
 }
@@ -2434,6 +2479,7 @@ function commands(): Command[] {
     { id: 'template-new', group: c.notes, title: c.newFromTemplate, icon: 'note', run: () => void chooseTemplate((path) => void noteFromTemplate(path)) },
     { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: hasText, run: () => openFind() },
     { id: 'compare-with', group: file, title: t.compareWithCommand, icon: 'split', when: () => !!active?.path && !active.doc?.media, run: () => compareWithChosen() },
+    { id: 'settings', group: view, title: t.settingsWindow.title, keys: `${mod},`, icon: 'settings', run: () => void settingsDialog.open() },
     { id: 'toggle-wrap', group: view, title: t.wrapLines, keys: '⌥Z', icon: 'source', when: () => !!codeEditorOf(active), run: () => toggleWrap() },
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },
@@ -2744,6 +2790,8 @@ window.addEventListener(
       // Cmd/Ctrl+T: go to a file; with Shift, as in browsers: the tab just closed.
       t: () => (event.shiftKey ? void reopenClosed() : void goToFile.open()),
       k: () => palette.open(),
+      // Cmd/Ctrl+, as in every app: the settings.
+      ',': () => void settingsDialog.open(),
       d: () => {
         if (event.shiftKey) void openDaily(0)
       },

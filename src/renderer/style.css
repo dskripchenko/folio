@@ -688,3 +688,36 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .doc[data-format="pdf"] { max-width: none; height: 100%; margin: 0; padding: 0; }
 .pdf-frame { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--bg); }
 .embed-pdf { border: 1px solid var(--line); border-radius: 6px; }
+
+/* The settings window: keys of one's own, the project's own settings. */
+.settings-dialog { display: flex; flex-direction: column; width: min(860px, calc(100vw - 48px)); height: min(640px, calc(100vh - 80px)); margin: 40px auto 0; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25); overflow: hidden; font-size: 13px; }
+.settings-dialog > header { display: flex; align-items: center; gap: 16px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--tab); }
+.settings-tabs { display: flex; gap: 4px; flex: 1; }
+.settings-tabs button, .settings-close, .settings-tools button, .settings-set, .settings-add, .settings-list-row button, .settings-keyset kbd button { border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; padding: 4px 10px; cursor: pointer; }
+.settings-tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.settings-close { border: 0; background: none; font-size: 18px; padding: 0 6px; }
+.settings-keys, .settings-project { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; }
+.settings-tools { display: flex; gap: 8px; margin-bottom: 10px; position: sticky; top: -12px; background: var(--bg); padding: 4px 0; z-index: 1; }
+.settings-tools input { flex: 1; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+.settings-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 10px; align-items: center; padding: 5px 4px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.settings-name { display: flex; flex-direction: column; }
+.settings-group { color: var(--muted); font-size: 11px; }
+.settings-keyset { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.settings-keyset kbd { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--tab); }
+.settings-keyset kbd.own { border-color: var(--accent); }
+.settings-keyset kbd button { padding: 0 4px; border: 0; background: none; line-height: 1; }
+.settings-clash { color: var(--warn-line, #9e6a03); font-size: 11px; }
+.settings-set.capturing { border-color: var(--accent); color: var(--accent); }
+.settings-project h3 { margin: 0 0 2px; }
+.settings-hint { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+.settings-field { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 10px; align-items: center; margin: 8px 0; }
+.settings-field select, .settings-field input[type="number"], .settings-field input[type="text"], .settings-list-row input, input[name="formatterCommand"] { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+.settings-field[hidden] { display: none; }
+.settings-field input[type="checkbox"] { justify-self: start; }
+.settings-actions .action { padding: 6px 16px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+.settings-list { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; padding: 8px 10px; }
+.settings-list legend { padding: 0 4px; color: var(--muted); }
+.settings-list-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 6px; margin: 4px 0; }
+.settings-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.settings-said { color: var(--muted); }
+.settings-backdrop { padding-top: 0; }

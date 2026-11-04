@@ -1,6 +1,17 @@
 import type { ChangesView } from './changesPanel'
 import type { LspOpenResult } from './lsp'
 
+/** A project's own settings (`.folio/settings.json`), as the settings window edits them. */
+export interface ProjectSettingsData {
+  kind?: 'notes' | 'code'
+  indentUnit?: string
+  tabSize?: number
+  tasks?: { name: string; command: string }[]
+  formatOnSave?: boolean
+  formatter?: string
+  lsp?: Record<string, string[] | false>
+}
+
 /** What the preload offers the window (see src/preload/preload.ts). */
 /** How a document is drawn and edited (stage 5). */
 export type Format =
@@ -251,6 +262,9 @@ export interface FolioBridge {
   /** Language servers (ADR-003): a file opened in its server, its changes, its saves; requests at positions. */
   /** A file of the workspace in the system's program for it. */
   openExternal(path: string): Promise<boolean>
+  projectSettingsOf(path: string): Promise<{ name: string; path: string; settings: ProjectSettingsData } | null>
+  setProjectSettings(projectPath: string, settings: ProjectSettingsData): Promise<ProjectSettingsData | null>
+  setKeybindings(list: { key: string; command: string }[]): Promise<boolean>
   /** A document exported: where it was saved, or why not. */
   exportFile(kind: 'html' | 'docx', name: string, payload: unknown): Promise<{ saved: string } | { canceled: true } | { error: string }>
   lspOpen(path: string, text: string): Promise<LspOpenResult>

@@ -10,7 +10,7 @@ import { tasksOf as projectTasksOf } from './projectTasks'
 import { formatText } from './format'
 import { applyEdits, LspManager, type PositionEdit } from './lsp/manager'
 import { languageOf } from '@dskripchenko/syntax'
-import { readProjectSettings, type ProjectSettings } from './projectSettings'
+import { readProjectSettings, writeProjectSettings, type ProjectSettings } from './projectSettings'
 import { SymbolIndex, type SourceFile } from './symbolIndex'
 import {
   abortMerge,
@@ -531,6 +531,27 @@ ipcMain.handle('fs:lines', (_e, items: unknown) => {
 ipcMain.handle('project:settings', (_e, path: unknown) => {
   const owner = typeof path === 'string' ? workspace.ownerOf(path) : null
   return owner?.kind === 'project' ? settingsOf(owner.project.path) : {}
+})
+/** The project of a file and its settings, for the settings window (null outside a project). */
+ipcMain.handle('project:settings-of', (_e, path: unknown) => {
+  const owner = typeof path === 'string' ? workspace.ownerOf(path) : null
+  if (owner?.kind !== 'project') return null
+  return { name: owner.project.name, path: owner.project.path, settings: readProjectSettings(owner.project.path) }
+})
+/** The settings window's settings of a project written to its `.folio/settings.json`. */
+ipcMain.handle('project:settings-set', (_e, projectPath: unknown, settings: unknown) => {
+  const project = workspace.projects().find((p) => typeof projectPath === 'string' && resolve(p.path) === resolve(projectPath))
+  if (!project || !settings || typeof settings !== 'object') return null
+  const written = writeProjectSettings(project.path, settings as ProjectSettings)
+  settingsCache.delete(project.path)
+  return written
+})
+/** Keys of one's own written from the settings window. */
+ipcMain.handle('keybindings:set', (_e, list: unknown) => {
+  if (!Array.isArray(list)) return false
+  const clean = list.filter((b): b is { key: string; command: string } => !!b && typeof b.key === 'string' && typeof b.command === 'string' && b.key !== '' && b.command !== '')
+  writeFileSync(join(data, 'keybindings.json'), `${JSON.stringify(clean, null, 2)}\n`)
+  return true
 })
 /** Keys of one's own (`folio-data/keybindings.json`): `[{ "key": "Mod-Shift-d", "command": "copyLineDown" }]`. */
 ipcMain.handle('keybindings:get', () => {

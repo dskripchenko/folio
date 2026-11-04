@@ -30,7 +30,14 @@ test('tabs: a closed one back at its place; dragged to another place, beside and
     // B closed, scrolled down first; Cmd/Ctrl+Shift+T brings it back in the middle, scrolled where it was.
     await win.getByRole('tab', { name: /B\.md/ }).click()
     const view = win.locator('.view').first()
-    await view.evaluate((el) => (el.scrollTop = 400))
+    // Scrolled once its own scroll (restored as it is shown) has settled: the 400 stays.
+    await expect
+      .poll(async () => {
+        await view.evaluate((el) => (el.scrollTop = 400))
+        await win.waitForTimeout(100)
+        return view.evaluate((el) => el.scrollTop)
+      })
+      .toBeGreaterThan(300)
     await win.keyboard.press(`${mod}+w`)
     await expect.poll(order).toEqual(['A', 'C'])
     await win.keyboard.press(`${mod}+Shift+t`)
