@@ -491,6 +491,7 @@
       "checking": "Looking for a new version…",
       "latest": "folio {v} is the latest version.",
       "downloading": "Downloading folio {v}…",
+      "mb": "MB",
       "ready": "folio {v} is downloaded: it takes over when folio closes.",
       "restart": "Restart to update to {v}",
       "auto": "Look for updates daily",
