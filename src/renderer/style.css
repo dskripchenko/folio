@@ -676,3 +676,12 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .csv-table .csv-n { color: var(--muted); text-align: right; font-weight: normal; cursor: default; }
 .csv-table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 .csv-more { margin: 12px 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; cursor: pointer; }
+
+/* Branches in the menu: switched to by name, renamed and deleted beside it. Changes put aside, below the changes. */
+.branch-menu .branch-row { display: flex; align-items: center; gap: 2px; }
+.branch-menu .branch-row > button:first-child { flex: 1; text-align: left; }
+.branch-menu .branch-row .icon-button { opacity: 0.6; }
+.branch-menu .branch-row .icon-button:hover { opacity: 1; }
+.history-ask { margin: 8px 12px; }
+.changes-amend { display: flex; align-items: center; gap: 6px; margin: 4px 12px; font-size: 12px; color: var(--muted); }
+.changes-actions--shown { visibility: visible !important; opacity: 1 !important; }

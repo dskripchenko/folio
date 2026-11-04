@@ -105,7 +105,7 @@ export interface GitInfo {
 
 /** A git action's refusal: a code the window has words for, and files, a host or git's words. */
 export interface GitRefusal {
-  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled'
+  error: 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists' | 'canceled' | 'no-git' | 'nothing' | 'failed' | 'conflict' | 'current'
   detail: string[]
 }
 
@@ -199,7 +199,17 @@ export interface FolioBridge {
   gitUnstage(root: string, paths: string[]): Promise<boolean>
   /** Asks first; true when the changes were thrown away. */
   gitDiscard(root: string, path: string): Promise<boolean>
-  gitCommitStaged(root: string, message: string): Promise<string | null>
+  gitCommitStaged(root: string, message: string, amend?: boolean): Promise<string | null>
+  gitLastMessage(root: string): Promise<string | null>
+  gitStashList(path: string): Promise<{ ok: true; available: boolean; list: { index: number; message: string; time: number }[] } | GitRefusal>
+  gitStashPush(path: string, message: string): Promise<{ ok: true } | GitRefusal>
+  gitStashApply(path: string, index: number, pop: boolean): Promise<{ ok: true } | GitRefusal>
+  gitStashDrop(path: string, index: number): Promise<{ ok: boolean } | GitRefusal>
+  gitRevert(path: string, oid: string, summary: string): Promise<{ ok: boolean } | GitRefusal>
+  gitBranchRename(path: string, from: string, to: string): Promise<{ ok: true } | GitRefusal>
+  gitBranchDelete(path: string, name: string): Promise<{ ok: boolean } | GitRefusal>
+  gitTagCreate(path: string, name: string, oid: string, message: string): Promise<{ ok: true } | GitRefusal>
+  gitTagDelete(path: string, name: string): Promise<{ ok: boolean } | GitRefusal>
   gitBranchCreate(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitBranchSwitch(path: string, name: string): Promise<{ ok: true } | GitRefusal>
   gitRemote(path: string, url: string): Promise<{ ok: true } | GitRefusal>

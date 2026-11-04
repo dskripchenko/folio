@@ -395,7 +395,22 @@ export async function statusUnder(root: string, dir: string): Promise<Map<string
 
 // Branches, merges (stage 4b) ----------------------------------------------------------
 
-export type GitErrorCode = 'dirty' | 'merging' | 'no-remote' | 'detached' | 'auth' | 'network' | 'invalid' | 'markers' | 'exists'
+export type GitErrorCode =
+  | 'dirty'
+  | 'merging'
+  | 'no-remote'
+  | 'detached'
+  | 'auth'
+  | 'network'
+  | 'invalid'
+  | 'markers'
+  | 'exists'
+  // Stash and revert need the system's git; nothing to put aside; git's own failure; a revert that clashes; the branch checked out.
+  | 'no-git'
+  | 'nothing'
+  | 'failed'
+  | 'conflict'
+  | 'current'
 
 /** A refusal with a reason the window can say: `detail` holds files, a host or git's own words. */
 export class GitError extends Error {

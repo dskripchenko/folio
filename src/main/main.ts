@@ -39,6 +39,7 @@ import {
 import { Logins } from './logins'
 import { folderDocuments, pdfName, pdfOptions, printToPdfOptions, SLIDES_PDF } from './pdf'
 import { builtinTransport, cloneInto, cloneTarget, findSystemGit, syncRepo, systemTransport, type Transport } from './sync'
+import { amendLast, createTag, deleteBranch, deleteTag, lastMessage, renameBranch, revertCommit, stashApply, stashDrop, stashList, stashPush } from './gitOps'
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
@@ -1357,10 +1358,12 @@ ipcMain.handle('git:discard', async (_e, root: unknown, path: unknown) => {
   await discardFile(dir, files[0]!)
   return true
 })
-ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown) => {
+ipcMain.handle('git:commit-staged', async (_e, root: unknown, message: unknown, amend: unknown) => {
   const dir = await changesRoot(root)
   if (!dir || typeof message !== 'string' || message.trim() === '' || mergeHead(dir)) return null
-  const oid = await commitStaged(dir, message.trim(), authorOf(dir, fallbackAuthor()))
+  const author = authorOf(dir, fallbackAuthor())
+  // Amended: the last commit made again with what is staged (or only its message).
+  const oid = amend === true ? await amendLast(dir, message.trim(), author) : await commitStaged(dir, message.trim(), author)
   if (oid) send('git:committed', { path: dir })
   return oid
 })
@@ -1413,6 +1416,95 @@ ipcMain.handle('git:login', (_e, path: unknown, username: unknown, password: unk
     return { ok: true, saved: logins.set(remote.url, { username, password }, remember === true) }
   }),
 )
+/** The last commit's message (to amend it). */
+ipcMain.handle('git:last-message', async (_e, root: unknown) => {
+  const dir = await changesRoot(root)
+  return dir ? lastMessage(dir) : null
+})
+// Changes put aside and taken back (the system's git).
+// Read only: no gitAction (it tells the window git changed, and the panel would ask again, round and round).
+ipcMain.handle('git:stash-list', async (_e, path: unknown) => {
+  const root = typeof path === 'string' ? await repoOf(path) : null
+  if (!root) return { error: 'invalid', detail: [] }
+  const bin = await (systemGit ??= findSystemGit())
+  try {
+    return { ok: true, available: bin !== null, list: await stashList(bin, root) }
+  } catch (e) {
+    return { error: 'failed', detail: [e instanceof Error ? e.message : String(e)] }
+  }
+})
+ipcMain.handle('git:stash-push', (_e, path: unknown, message: unknown) =>
+  gitAction(path, async (root) => {
+    await autoCommit.flush()
+    await stashPush(await (systemGit ??= findSystemGit()), root, typeof message === 'string' ? message : '', authorOf(root, fallbackAuthor()))
+    send('fs:changed', [{ root: roots.register(root), dirs: [], files: [], all: true }])
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:stash-apply', (_e, path: unknown, index: unknown, pop: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof index !== 'number') throw new GitError('invalid')
+    await stashApply(await (systemGit ??= findSystemGit()), root, index, pop === true)
+    send('fs:changed', [{ root: roots.register(root), dirs: [], files: [], all: true }])
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:stash-drop', (_e, path: unknown, index: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof index !== 'number' || !(await confirm(L().stashDropQuestion, L().stashDropDetail, L().drop))) return { ok: false }
+    await stashDrop(await (systemGit ??= findSystemGit()), root, index)
+    return { ok: true }
+  }),
+)
+/** A commit undone by a new one (asked first). */
+ipcMain.handle('git:revert', (_e, path: unknown, oid: unknown, summary: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof oid !== 'string') throw new GitError('invalid')
+    if (!(await confirm(L().revertQuestion.replace('{commit}', typeof summary === 'string' ? summary : oid.slice(0, 7)), L().revertDetail, L().revert))) return { ok: false }
+    await autoCommit.flush()
+    await revertCommit(await (systemGit ??= findSystemGit()), root, oid, authorOf(root, fallbackAuthor()))
+    send('fs:changed', [{ root: roots.register(root), dirs: [], files: [], all: true }])
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:branch-rename', (_e, path: unknown, from: unknown, to: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof from !== 'string' || typeof to !== 'string' || to.trim() === '') throw new GitError('invalid')
+    await renameBranch(root, from, to.trim())
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:branch-delete', (_e, path: unknown, name: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string') throw new GitError('invalid')
+    if (!(await confirm(L().branchDeleteQuestion.replace('{branch}', name), L().branchDeleteDetail, L().delete))) return { ok: false }
+    await deleteBranch(root, name)
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:tag-create', (_e, path: unknown, name: unknown, oid: unknown, message: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string' || typeof oid !== 'string' || name.trim() === '') throw new GitError('invalid')
+    await createTag(root, name.trim(), oid, typeof message === 'string' ? message : '', authorOf(root, fallbackAuthor()))
+    return { ok: true }
+  }),
+)
+ipcMain.handle('git:tag-delete', (_e, path: unknown, name: unknown) =>
+  gitAction(path, async (root) => {
+    if (typeof name !== 'string') throw new GitError('invalid')
+    if (!(await confirm(L().tagDeleteQuestion.replace('{tag}', name), '', L().delete))) return { ok: false }
+    await deleteTag(root, name)
+    return { ok: true }
+  }),
+)
+
+/** A yes or no from the person, in a native dialog: true for yes. */
+async function confirm(message: string, detail: string, yes: string): Promise<boolean> {
+  if (!win) return false
+  const { response } = await dialog.showMessageBox(win, { type: 'warning', buttons: [yes, L().cancel], defaultId: 0, cancelId: 1, message, detail })
+  return response === 0
+}
+
 ipcMain.handle('git:merge-finish', (_e, path: unknown) =>
   gitAction(path, async (root) => ({ ok: true, oid: await finishMerge(root, authorOf(root, fallbackAuthor())) })),
 )
