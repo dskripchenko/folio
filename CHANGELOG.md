@@ -38,6 +38,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   graph and tasks — runs once at a time per folder and is kept until something
   there changes, instead of walking the folder on every change.
 
+### Fixed
+
+- A new note's editor takes the keys at once: typed right after **New quick
+  note** they could be lost while the window was not in front.
+
 ## [1.11.0] - 2026-11-05
 
 ### Added
