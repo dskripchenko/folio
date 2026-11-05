@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync, unlinkSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { authorOf, branchOf, commitFile, historyOf, repoOf, startHistory, statusUnder, textAt, userFromConfig } from '../../src/main/git'
+import { authorOf, branchOf, commitFile, historyOf, repoOf, repoStatus, startHistory, statusUnder, textAt, userFromConfig } from '../../src/main/git'
 import { realish } from '../../src/main/paths'
 
 const me = { name: 'Ann', email: 'ann@example.com' }
@@ -125,5 +125,42 @@ describe('history order', () => {
       await commitFile(dir, a, `v${n}`, me)
     }
     expect((await historyOf(dir, a)).map((v) => v.message)).toEqual(['v4', 'v3', 'v2', 'Start'])
+  })
+})
+
+describe('git: the status read once for many askers', () => {
+  it('shares reads: one runs, everyone asking meanwhile waits for the next one', async () => {
+    writeFileSync(join(dir, 'a.md'), 'a')
+    await startHistory(dir, me, 'Start')
+    const first = repoStatus(dir)
+    // Asked while the first one runs: one more read, shared by all of them.
+    const later = Array.from({ length: 20 }, () => repoStatus(dir))
+    expect(new Set(later).size).toBe(1)
+    expect(later[0]).not.toBe(first)
+    await Promise.all([first, ...later])
+    // Nothing running any more: a new read.
+    const again = repoStatus(dir)
+    expect(again).not.toBe(first)
+    await again
+  })
+
+  it('sees a change made while a read was running', async () => {
+    writeFileSync(join(dir, 'a.md'), 'a')
+    await startHistory(dir, me, 'Start')
+    const before = statusUnder(dir, dir)
+    writeFileSync(join(dir, 'b.md'), 'b')
+    const after = statusUnder(dir, dir)
+    await before
+    expect((await after).get(join(dir, 'b.md'))).toBe('new')
+  })
+
+  it('tells a folder its own files only', async () => {
+    mkdirSync(join(dir, 'd'))
+    mkdirSync(join(dir, 'dd'))
+    writeFileSync(join(dir, 'd', 'x.md'), 'x')
+    await startHistory(dir, me, 'Start')
+    writeFileSync(join(dir, 'd', 'y.md'), 'y')
+    writeFileSync(join(dir, 'dd', 'z.md'), 'z')
+    expect(await statusUnder(dir, join(dir, 'd'))).toEqual(new Map([[join(dir, 'd', 'y.md'), 'new']]))
   })
 })

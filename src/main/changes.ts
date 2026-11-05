@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import { join } from 'node:path'
 import git from 'isomorphic-git'
-import { headBlob, stage, statusRows, stored, toGit, type Author } from './git'
+import { headBlob, repoStatus, stage, statusRows, stored, toGit, type Author } from './git'
 
 /**
  * The changes of a repository, as a code editor's source control shows them
@@ -46,7 +46,7 @@ export function changesOfRows(rows: readonly (readonly [string, number, number, 
 }
 
 export async function changesOf(root: string): Promise<Changes> {
-  return changesOfRows(await statusRows(root))
+  return changesOfRows(await repoStatus(root))
 }
 
 /** Into the index as they are on disk (a removed one: its removal). */
