@@ -6,7 +6,9 @@
  * files dropped in are typed as paths; Cmd+F finds in the output.
  */
 import { Terminal, TerminalView, type TerminalTheme } from '@dskripchenko/terminal'
+import type { TabColor } from '../common/tabGroups'
 import type { FindTarget } from './find'
+import { GroupedTabs, SEPARATOR, type TabMenuText } from './groupedTabs'
 import { icon, iconButton, type IconName } from './icons'
 import { popMenuAt, type MenuItem } from './menu'
 
@@ -29,6 +31,8 @@ export interface ConsoleText {
   find: string
   closePane: string
   running: string
+  /** The tabs' colours and groups, and closing many: the documents' tabs' words. */
+  tabMenu: TabMenuText & { closeOthers: string; closeRight: string; closeAll: string }
 }
 
 export interface ConsoleBridge {
@@ -89,6 +93,9 @@ interface Group {
   activity: boolean
   /** A task's name: the tab's label, whatever runs in it. */
   task?: string
+  /** Its own colour, and the group of tabs it is in. */
+  color: TabColor | null
+  group: string | null
 }
 
 type Position = 'bottom' | 'right'
@@ -109,6 +116,8 @@ export class ConsolePanel {
   private readonly body: HTMLElement
   private readonly groups: Group[] = []
   private active: Group | null = null
+  /** The tabs' colours and groups, as the documents' tabs have them. */
+  private readonly grouped: GroupedTabs<Group>
   private dark = false
   private position: Position = 'bottom'
   private size: Record<Position, number> = { bottom: 300, right: 520 }
@@ -139,6 +148,18 @@ export class ConsolePanel {
     this.tabsEl = document.createElement('div')
     this.tabsEl.className = 'console-tabs'
     this.tabsEl.setAttribute('role', 'tablist')
+    this.grouped = new GroupedTabs<Group>({
+      row: this.tabsEl,
+      tabs: this.groups,
+      text: () => this.text.tabMenu,
+      active: () => this.active,
+      activate: (g) => this.activate(g),
+      close: (list) => {
+        for (const g of [...list]) this.closeGroup(g)
+      },
+      changed: () => undefined,
+      testid: 'console-',
+    })
     const add = iconButton('plus', text.newConsole, () => void this.open(this.active?.active.cwd ?? null))
     add.dataset.testid = 'console-new'
     this.buttons = {
@@ -288,7 +309,7 @@ export class ConsolePanel {
     el.className = 'console-group'
     const button = document.createElement('button')
     const label = document.createElement('span')
-    const group: Group = { panes: [], active: null as unknown as Pane, el, button, label, activity: false, ...(task ? { task: task.name } : {}) }
+    const group: Group = { panes: [], active: null as unknown as Pane, el, button, label, activity: false, color: null, group: null, ...(task ? { task: task.name } : {}) }
     button.type = 'button'
     button.className = 'console-tab'
     button.setAttribute('role', 'tab')
@@ -309,9 +330,15 @@ export class ConsolePanel {
     button.addEventListener('auxclick', (e) => {
       if (e.button === 1) this.closeGroup(group)
     })
+    // Its menu: a colour, a group; it and others closed.
+    button.addEventListener('contextmenu', (e) => {
+      e.preventDefault()
+      this.tabMenu(group, e.clientX, e.clientY)
+    })
     this.tabsEl.append(button)
     this.body.append(el)
     this.groups.push(group)
+    this.grouped.layout()
     this.activate(group)
     return this.addPane(group, cwd, task?.command)
   }
@@ -434,6 +461,7 @@ export class ConsolePanel {
     group.button.remove()
     const i = this.groups.indexOf(group)
     this.groups.splice(i, 1)
+    this.grouped.layout()
     if (this.active === group) {
       const next = this.groups[Math.min(i, this.groups.length - 1)] ?? null
       if (next) this.activate(next)
@@ -451,6 +479,7 @@ export class ConsolePanel {
   }
 
   private activate(group: Group): void {
+    this.grouped.unfold(group)
     this.active = group
     group.activity = false
     for (const g of this.groups) {
@@ -493,6 +522,25 @@ export class ConsolePanel {
   }
 
   // Actions ---------------------------------------------------------------------------------
+
+  /** A tab's menu: its colour and group; it, the others, those to its right or all closed. */
+  private tabMenu(group: Group, x: number, y: number): void {
+    const m = this.text.tabMenu
+    const i = this.groups.indexOf(group)
+    const others = this.groups.filter((g) => g !== group)
+    const right = this.groups.slice(i + 1)
+    const closeAll = (list: Group[]) => {
+      for (const g of list) this.closeGroup(g)
+    }
+    popMenuAt(x, y, [
+      ...this.grouped.tabItems(group, x, y),
+      SEPARATOR,
+      { label: this.text.close, testid: 'console-tab-close', action: () => this.closeGroup(group) },
+      { label: m.closeOthers, testid: 'console-tab-close-others', disabled: others.length === 0, action: () => closeAll(others) },
+      { label: m.closeRight, testid: 'console-tab-close-right', disabled: right.length === 0, action: () => closeAll(right) },
+      { label: m.closeAll, testid: 'console-tab-close-all', action: () => closeAll([...this.groups]) },
+    ])
+  }
 
   private async openPath(pane: Pane, text: string): Promise<void> {
     const found = await this.bridge.resolve(pane.cwd, text)

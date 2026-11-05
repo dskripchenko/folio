@@ -566,7 +566,10 @@ unterstrichen. Ein Klick auf das Etikett klappt die Gruppe ein (ihre Tabs
 verborgen, ihre Zahl gezeigt); ein Tab kommt über sein Menü in eine Gruppe oder
 indem man ihn auf das Etikett oder zwischen ihre Tabs fallen lässt. Das Menü des
 Etiketts benennt um, färbt um, löst die Gruppe auf oder schließt sie. Farben und
-Gruppen bleiben in der Sitzung erhalten.
+Gruppen bleiben in der Sitzung erhalten. **In der Seitenleiste zeigen** im Menü
+(und in der Palette) findet das Projekt der Datei — oder Gemeinsam —, öffnet
+ihre Ordner und bringt ihre Zeile mit Fokus in Sicht: im ausklappenden Baum,
+wenn die Seitenleiste eingeklappt ist; ein verborgenes Projekt wird gezeigt.
 
 **Eingebettete Dateien.** `![[foto.png]]`, `![[clip.mp4]]`, `![[lied.mp3]]`
 und `![[bericht.pdf]]` zeigen die Datei in der Notiz, gefunden über ihren Namen
@@ -786,7 +789,12 @@ Mac) gehen von Befehl zu Befehl, `Cmd+K` (`Strg+Umschalt+K`) leert, `Cmd+D`
 (`Strg+Umschalt+D`) öffnet eine zweite Konsole daneben; `Cmd+F` in einer Konsole
 sucht in ihrer Ausgabe. Ein Pfad in der Ausgabe — `src/app.ts:12:3` — öffnet
 sich mit Cmd (Strg) und Klick in folio an seiner Zeile; eine aus dem Baum (oder
-dem System) gezogene Datei wird als ihr Pfad getippt. Der Rechtsklick bietet
+dem System) gezogene Datei wird als ihr Pfad getippt. Das Rad bewegt die Ausgabe
+zeilenweise, höchstens drei je Ereignis, wie sehr das System ein Mausrad oder
+einen Wisch auf dem Trackpad auch beschleunigt — lange Ausgabe liest sich ein
+paar Zeilen auf einmal. Die Tabs haben Farben und Gruppen wie die der
+Dokumente (das Menü des Tabs, das des Etiketts) und schließen die anderen, die
+rechts davon oder alle. Der Rechtsklick bietet
 Kopieren, Einfügen, Alles auswählen, Suchen, Leeren, Teilen, das Feld neben der
 Seite oder im ganzen Fenster. `FOLIO_SHELL_INTEGRATION=0` startet Shells, wie
 sie sind. Gezeichnet von `@dskripchenko/terminal`, die

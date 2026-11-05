@@ -7,6 +7,31 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-05
+
+### Added
+
+- **Show in the Sidebar** in a tab's menu (and the command palette): the file's
+  project found, its folders opened, its row brought into view and focused —
+  in the flyout when the sidebar is folded, a hidden project shown — so a tab
+  tells where its file is and which project it belongs to.
+- Console tabs have colours and groups as the documents' tabs do: a colour
+  from the tab's menu, a group named in place, folded by a click on its chip,
+  recoloured, ungrouped or closed from the chip's menu; the others, those to
+  the right or all consoles closed from a tab's menu.
+
+### Fixed
+
+- The consoles' wheel: a turn of a mouse's wheel sped up by the system, or a
+  flick of a trackpad, moved the output by a screen, so long output was hard
+  to read a few lines at a time. The wheel now moves at most three rows an
+  event, small moves as they are; in a full-screen program (`less`, `vim`)
+  short moves add up to whole rows before an arrow is sent
+  (`@dskripchenko/terminal` 0.3.0).
+- The tree could spin forever when a new note or folder was asked for in a
+  folded project; folders are now opened one above the other, waiting for
+  each list from the disk.
+
 ## [1.8.2] - 2026-11-05
 
 ### Fixed

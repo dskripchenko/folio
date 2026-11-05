@@ -516,7 +516,9 @@ together and are underlined in that colour. A click on the chip folds the
 group (its tabs hidden, their number shown); a tab joins a group from its menu
 or by being dropped on the chip or between the group's tabs. The chip's menu
 renames, recolours, ungroups or closes the group. Colours and groups are kept
-in the session.
+in the session. **Show in the Sidebar** in the menu (and the palette) finds the
+file's project — or Shared — opens its folders and brings its row into view,
+focused: in the flyout when the sidebar is folded, a hidden project shown.
 
 **Embeds of files.** `![[photo.png]]`, `![[clip.mp4]]`, `![[song.mp3]]` and
 `![[report.pdf]]` show the file in the note, found by its name anywhere in the
@@ -717,7 +719,11 @@ the first; `Cmd+F` in a console finds in its output. A path in the output —
 `src/app.ts:12:3` — opens in folio at its line with Cmd (Ctrl) and a click; a
 file dragged from the tree (or the system) is typed as its path. The right
 click has copy, paste, select all, find, clear, split, the panel beside the page
-or on the whole window. `FOLIO_SHELL_INTEGRATION=0` starts shells as they are. Drawn by `@dskripchenko/terminal`; the shell runs in `node-pty`.
+or on the whole window. The wheel moves the output by rows, at most three an
+event, however the system speeds a mouse's wheel or a trackpad's flick up, so
+long output reads a few lines at a time. The tabs have colours and groups as
+the documents' tabs do (a tab's menu, the chip's), and close the others, those
+to the right or all. `FOLIO_SHELL_INTEGRATION=0` starts shells as they are. Drawn by `@dskripchenko/terminal`; the shell runs in `node-pty`.
 
 Review comments go to a console as one paste (see *Reviewing an agent's work*):
 folio pastes only into a program that takes a paste as one — zsh, bash 5.1+,
