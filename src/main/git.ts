@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import { homedir } from 'node:os'
 import { isAbsolute, join, relative, sep } from 'node:path'
 import git from 'isomorphic-git'
+import { flights } from './flight'
 
 /**
  * History with git (ADR-001, stage 4), through isomorphic-git: it works on a
@@ -376,40 +377,15 @@ export async function statusRows(root: string, filepaths?: string[]): Promise<Ro
   return rows
 }
 
-/** A repository's status being read, and the one asked for meanwhile, which reads the disk after it. */
-const reads = new Map<string, { running: Promise<readonly Row[]> | null; queued: Promise<readonly Row[]> | null }>()
+const statusReads = flights<readonly Row[]>('git-status')
 
 /**
  * The status of the whole repository, for what only shows it (the tree's marks,
  * the changes panel). The tree asks once for every folder in view, again on every
- * change on disk: each asked for itself, an agent writing files queued reads
- * faster than they finished, and memory grew without end. Here at most one read
- * runs per repository; whoever asks meanwhile shares the next one, which starts
- * after it, so it still sees every change made before it was asked for.
+ * change on disk: at most one read runs per repository (ADR-008, `Flights`).
  */
 export function repoStatus(root: string): Promise<readonly Row[]> {
-  let r = reads.get(root)
-  if (!r) reads.set(root, (r = { running: null, queued: null }))
-  const slot = r
-  if (slot.queued) return slot.queued
-  const read = (): Promise<readonly Row[]> => {
-    const p = statusRows(root)
-    slot.running = p
-    const done = () => {
-      if (slot.running === p) slot.running = null
-      if (!slot.running && !slot.queued) reads.delete(root)
-    }
-    p.then(done, done)
-    return p
-  }
-  if (!slot.running) return read()
-  const after = () => {
-    slot.queued = null
-    return read()
-  }
-  const queued = slot.running.then(after, after)
-  slot.queued = queued
-  return queued
+  return statusReads.run(root, () => statusRows(root))
 }
 
 /** The status of the files under a folder of the repository, by their absolute paths. */

@@ -375,12 +375,20 @@ export interface FolioBridge {
   awakeSet(how: 'off' | 'on' | 'until' | 'busy' | 'display', o?: { display?: boolean; minutes?: number; until?: number }): Promise<AwakeState>
   onAwake: Listener
   appSettings(): Promise<AppSettings>
-  setAppSettings(o: { logDays?: number; limits?: Partial<AppSettings['limits']> }): Promise<Pick<AppSettings, 'logDays' | 'limits'>>
+  setAppSettings(o: { logDays?: number; limits?: Partial<AppSettings['limits']>; alerts?: Partial<AppSettings['alerts']> }): Promise<Pick<AppSettings, 'logDays' | 'limits' | 'alerts'>>
   relaunch(): Promise<void>
   /** A ZIP of the log, crash dumps and versions, where people choose; its path, or null. */
   saveReport(): Promise<string | null>
   openLog(): Promise<void>
   onMenuReport: Listener
+  onResConsole: Listener
+  onResDisk: Listener
+  onConsoleFocus: Listener
+  onConsoleCloseTab: Listener
+  /** How the run before ended, said once (ADR-008). */
+  lastRun(): Promise<{ ended: 'clean' | 'crashed' | 'unknown'; at: string | null }>
+  dataSize(): Promise<Record<'total' | 'chromium' | 'update' | 'crashes' | 'logs' | 'session' | 'review', number>>
+  clearCaches(): Promise<boolean>
   /** Today's daily note (made when missing), or the one before / after a daily note's day. */
   dailyOpen(from: string | null, step: 0 | -1 | 1): Promise<OpenResult>
   templates(): Promise<{ name: string; path: string }[]>
@@ -480,6 +488,7 @@ export interface ResSample {
   outside: { memory: number; cpu: number }
   heap: { used: number; limit: number }
   procs: ResProc[]
+  lag?: { max: number; p99: number }
 }
 
 export interface AwakeState {
@@ -493,6 +502,7 @@ export interface AwakeState {
 export interface AppSettings {
   logDays: number
   limits: { softGb: number; lspGb: number; heapGb: number }
+  alerts: { diskGb: number; commandSec: number; consoleGb: number }
   /** The main process's heap limit now (bytes), and the machine's memory. */
   heapLimit: number
   memory: number

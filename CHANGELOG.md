@@ -7,6 +7,42 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-05
+
+### Added
+
+- **Notifications from the consoles** while folio is not in front: a command
+  that ran longer than a minute has ended (its text, time, whether it failed),
+  or a program asks for attention — OSC 9 / OSC 777 or a bell, as Claude Code
+  sends when it is done or waits for an answer. A click brings folio forward at
+  that console.
+- A console's programs on its tab: memory and processor in the tooltip, a mark
+  past a gigabyte; a note when they pass 8 GB or keep the processor busy for
+  five minutes (folio never touches them).
+- **After a crash** — the last run never quit — folio says so once at start,
+  with the log and a report at hand.
+- **Little room on the disk** (under 5 GB) is said, with **Clear caches**;
+  **App** in the settings tells what `folio-data` holds and clears Chromium's
+  cache, downloaded updates and crash dumps (never the unsaved or settings).
+- The log tells what was slow: the window's requests over 2 s, the main
+  process standing still, the event loop's delay and queued work each minute;
+  **Processes** shows the delay too. On battery folio samples once a minute.
+
+### Changed
+
+- Changes inside build output and tools' caches (`dist`, `build`, `vendor`,
+  `coverage`, `.next`, `target`…) are not followed: an agent building or
+  testing no longer floods folio. A project sets its own list with
+  `watchExclude` in `.folio/settings.json`.
+- What every change on disk recomputes — the files behind links, tags, the
+  graph and tasks — runs once at a time per folder and is kept until something
+  there changes, instead of walking the folder on every change.
+
+### Fixed
+
+- A new note's editor takes the keys at once: typed right after **New quick
+  note** they could be lost while the window was not in front.
+
 ## [1.11.0] - 2026-11-05
 
 ### Added

@@ -858,6 +858,57 @@ nehmen ihn an, ein reiner Fenstermanager vielleicht nicht — dann sagt der Tool
 dass das System die Anfrage nicht angenommen hat). Ein Mac mit geschlossenem Deckel
 schläft ohne externen Bildschirm und Strom trotzdem: das umgeht folio nicht.
 
+### Unter der Last eines Agenten, nach einem Absturz, die Maschine
+
+**Änderungen auf der Platte werden sparsam verfolgt.** Was bei jeder Änderung neu
+berechnet wird — die Git-Marken im Baum, die Dateien hinter Links, Tags, Graph und
+Aufgaben —, läuft je Repository oder Ordner höchstens einmal gleichzeitig; wer
+währenddessen fragt, teilt sich den nächsten Lauf, und die Dateiliste eines Ordners
+bleibt, bis sich darin etwas ändert. Änderungen in Build-Ausgaben und Caches von
+Werkzeugen werden gar nicht verfolgt: `dist`, `build`, `out`, `target`, `vendor`,
+`coverage`, `.next`, `.nuxt`, `.turbo`, `.cache`, `__pycache__`, `.venv`, `venv`,
+`.gradle` — ein Agent schreibt dort beim Bauen und Testen tausende Dateien. Der Ordner
+selbst erscheint und verschwindet im Baum, seine Dateien stehen beim Aufklappen da. Ein
+Projekt setzt seine eigene Liste in `.folio/settings.json`, die dann die
+voreingestellte ersetzt: `"watchExclude": ["generated", "src/gen"]` (Namen überall,
+Pfade ab der Wurzel).
+
+**Das Protokoll sagt, was langsam war**: eine Anfrage des Fensters über 2 Sekunden (ihr
+Name und ihre Zeit — nie Pfade oder Texte), ein Stillstand des Hauptprozesses ab einer
+Sekunde und in der Minutenmessung die Verzögerung der Ereignisschleife und die
+wartende Arbeit. **Prozesse** zeigt die Verzögerung des Hauptprozesses ebenfalls.
+
+**Nach einem Absturz** — der letzte Lauf begann und endete nie: vom System gestoppt,
+abgestürzt — sagt folio es beim nächsten Start einmal, mit **Protokollordner öffnen**
+und **Bericht speichern…**.
+
+**Die Platte** unter `folio-data` wird beim Start und alle zehn Minuten geprüft; mit
+weniger als 5 GB frei (**App** in den Einstellungen; 0 — nie) sagt folio es, mit
+**Caches leeren**. **App** zeigt auch, wie viel `folio-data` belegt und womit —
+Chromiums Cache, Updates, Absturzberichte, Protokoll, Ungespeichertes —, und **Caches
+leeren** entfernt Chromiums Cache, heruntergeladene Updates (ein installationsbereites
+bleibt) und Absturzberichte; Ungespeichertes, die Marken des Reviews und die
+Einstellungen werden nie angerührt. **Im Akkubetrieb** misst folio einmal pro Minute
+statt alle 15 Sekunden.
+
+### Benachrichtigungen aus den Konsolen
+
+Solange folio nicht vorn ist, meldet eine Systembenachrichtigung:
+
+- ein Befehl einer Konsole, der länger als eine Minute lief (**App**: Sekunden; 0 —
+  nie), ist fertig — der Befehl, seine Dauer, ob er fehlschlug;
+- ein Programm in einer Konsole bittet um Aufmerksamkeit: eine Nachricht per OSC 9
+  oder OSC 777 oder ein Klingelton, während ein Befehl läuft (höchstens alle 30
+  Sekunden je Konsole). Claude Code sendet sie, wenn es fertig ist oder auf eine
+  Antwort wartet — mit `claude config set --global preferredNotifChannel iterm2`
+  (Nachricht) oder `terminal_bell` (Klingelton).
+
+Ein Klick auf die Benachrichtigung holt folio bei dieser Konsole nach vorn. Der Tooltip
+jedes Konsolen-Tabs nennt Speicher und Prozessor seiner Programme, und ein Tab, dessen
+Programme mehr als ein Gigabyte belegen, zeigt es an. Über 8 GB (**App**; 0 — nie) oder
+bei fünf Minuten ausgelastetem Prozessor sagt folio es mit **Prozesse** und **Konsole
+schließen** — und tut selbst nichts: es sind nicht seine Programme.
+
 ## Wo die Daten liegen
 
 Electron legt seine Daten standardmäßig im Benutzerprofil ab. folio verlegt sie

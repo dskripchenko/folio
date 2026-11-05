@@ -1,4 +1,4 @@
-import { app, BrowserWindow, crashReporter, dialog, ipcMain, Menu, net, powerSaveBlocker, safeStorage, session as electronSession, shell, systemPreferences } from 'electron'
+import { app, BrowserWindow, crashReporter, dialog, ipcMain, Menu, net, Notification, powerMonitor, powerSaveBlocker, safeStorage, session as electronSession, shell, systemPreferences } from 'electron'
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -68,15 +68,16 @@ import { create as createEntry, duplicate as duplicateEntry, FileOpError, move a
 import { Consoles } from './pty'
 import { parseQuery, pathPasses, replaceInFiles, searchFiles, tagsPass, type SearchFile } from './search'
 import { patternOf } from '../common/pattern'
-import { Watcher } from './watcher'
-import { aliasIndex, aliasesOf, backlinksOf, filesOf, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
+import { BUILD_FOLDERS, Watcher } from './watcher'
+import { aliasIndex, aliasesOf, backlinksOf, filesOf as walkFiles, isNote, linkMention, linkName, linksOf, mentionsOf, mover, resolveWiki, rewriteLinks, wikiTarget } from './wikilinks'
 import { isInside, real, realish, resolveInside } from './paths'
 import { tagIndex, tagsOf } from './tags'
 import { tasksOf, toggleTask } from './tasks'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
 import { Updater } from './update'
 import { Workspace, type Project } from './workspace'
-import { startHealth } from './health'
+import { startHealth, timeHandlers } from './health'
+import { Kept } from './flight'
 import { heapFlag } from './limits'
 import { Log } from './log'
 
@@ -98,6 +99,13 @@ const workspace = new Workspace(data)
 // folio's log, and its crash dumps kept here only (ADR-007).
 const log = new Log(join(data, 'logs'), { days: workspace.logDays(), alsoPrune: [join(data, 'crashes')] })
 crashReporter.start({ uploadToServer: false })
+/** Requests that make, move or remove files, or check out others: a folder's kept list of files is stale at once. */
+const RELISTS = new Set(['fs:trash', 'fs:create', 'fs:rename', 'fs:move', 'fs:new-kind', 'wiki:open', 'wiki:moved', 'daily:open', 'doc:save', 'doc:save-as', 'export:save', 'git:discard', 'git:branch-switch', 'git:stash-push', 'git:stash-apply', 'git:revert', 'git:sync', 'git:merge-finish', 'git:merge-abort', 'git:clone'])
+timeHandlers(ipcMain, log, (channel) => {
+  if (RELISTS.has(channel)) noteFiles.clear()
+})
+// How the run before ended: read before this one writes its start (ADR-008).
+const lastRun = log.lastRun()
 log.info('app', 'start', { version: app.getVersion(), electron: process.versions.electron, os: `${process.platform} ${process.getSystemVersion()} ${process.arch}`, packaged: app.isPackaged, projects: workspace.projects().length })
 // A hard heap limit set: the windows take it from the switch; the main process only from its own command line, so it starts again with it once.
 const heap = heapFlag(workspace.limits().heapGb)
@@ -163,9 +171,11 @@ const watcher = new Watcher((changes) => {
       ;(c as typeof c & { all?: boolean }).all = true
     }
     fileIndex.changed(c.root, c.files)
+    const dir = roots.dir(c.root)
+    if (dir) noteFiles.changed(dir, sep)
   }
   send('fs:changed', changes)
-})
+}, 150, (dir) => settingsOf(dir).watchExclude ?? BUILD_FOLDERS)
 
 /** A folder's kind: its project's (Shared and other folders are notes). */
 function kindOfDir(dir: string): ProjectKind {
@@ -770,6 +780,8 @@ const consoles = new Consoles(
     exit: (id, code) => send('console:exit', id, code),
     started: (id, pid) => health.sampler.own(pid, { kind: 'console', name: `Console ${id}`, ref: String(id) }),
     running: (count) => health.running(count),
+    finished: (id, done) => health.consoleFinished(id, done),
+    attention: (id, text) => health.consoleAttention(id, text),
   },
   join(data, 'shell-integration'),
 )
@@ -787,12 +799,37 @@ const health = startHealth({
   setApp: (o) => workspace.setApp(o),
   logDays: () => workspace.logDays(),
   relieve: () => {
+    noteFiles.clear()
+    noteTexts.clear()
     fileIndex.clear()
     symbolIndex.clear()
   },
   recycleServer: (pid) => lsp.recycle(pid),
-  closeConsole: (id) => consoles.close(id),
   openLog: () => shell.openPath(log.dir),
+  powerMonitor,
+  data,
+  alerts: () => workspace.alerts(),
+  lastRun,
+  notify: (title, body, consoleId) => {
+    // Under test: kept for the test to read, never shown on the person's screen.
+    if (process.env.FOLIO_E2E === '1') {
+      const g = globalThis as { folioNotified?: { title: string; body: string; consoleId: number | null }[] }
+      ;(g.folioNotified ??= []).push({ title, body, consoleId })
+      return
+    }
+    if (!Notification.isSupported()) return
+    const n = new Notification({ title, body, silent: false })
+    n.on('click', () => {
+      if (!win) return
+      if (win.isMinimized()) win.restore()
+      win.show()
+      win.focus()
+      if (consoleId !== null) send('console:focus', consoleId)
+    })
+    n.show()
+  },
+  words: () => ({ commandDone: L().commandDone, commandFailed: L().commandFailed, attention: L().attention, attentionBody: L().attentionBody, console: L().consoleN }),
+  tidyUpdates: () => updater.tidy(),
   reportPath: async () => {
     const options = { defaultPath: join(app.getPath('downloads'), `folio-report-${new Date().toISOString().slice(0, 10)}.zip`), filters: [{ name: 'ZIP', extensions: ['zip'] }] }
     const r = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)
@@ -1048,6 +1085,7 @@ ipcMain.handle('wiki:moved', async (_e, from: unknown, to: unknown, skip: unknow
   if (linkRoot(from) !== dir) return 0
   const skipped = new Set(Array.isArray(skip) ? skip.filter((s): s is string => typeof s === 'string') : [])
   const map = mover(relIn(dir, from), relIn(dir, to))
+  noteFiles.changed(dir, sep)
   const after = await filesOf(dir)
   const toRel = relIn(dir, to)
   const back = mover(toRel, relIn(dir, from))
@@ -1080,6 +1118,9 @@ ipcMain.handle('wiki:moved', async (_e, from: unknown, to: unknown, skip: unknow
 /** The notes of a root, read once and kept while unchanged on disk: for the links panel. */
 const noteTexts = new Map<string, { mtime: number; size: number; text: string }>()
 const MAX_NOTES = 5000
+/** A folder's files for links, tags, the graph and tasks: walked again only after a change there (ADR-008). */
+const noteFiles = new Kept<string[]>('note-files', (dir) => walkFiles(dir))
+const filesOf = (dir: string) => noteFiles.get(dir)
 async function notesIn(dir: string, files: string[]): Promise<{ rel: string; text: string }[]> {
   const out: { rel: string; text: string }[] = []
   for (const rel of files) {
@@ -1091,7 +1132,10 @@ async function notesIn(dir: string, files: string[]): Promise<{ rel: string; tex
       let hit = noteTexts.get(file)
       if (!hit || hit.mtime !== st.mtimeMs || hit.size !== st.size) {
         hit = { mtime: st.mtimeMs, size: st.size, text: readFileSync(file, 'utf8') }
+        noteTexts.delete(file)
         noteTexts.set(file, hit)
+        // Bounded: the oldest read go first (ADR-008).
+        while (noteTexts.size > MAX_NOTES * 2) noteTexts.delete(noteTexts.keys().next().value!)
       }
       out.push({ rel, text: hit.text })
     } catch {
@@ -2219,7 +2263,7 @@ void app.whenReady().then(() => {
   useLanguage()
   buildMenu()
   win = createWindow()
-  health.sampler.start()
+  health.ready()
   void startMcp()
   updater.tidy()
   // Once a day at start, a while after the window is up; a source checkout (no release to replace) never looks.

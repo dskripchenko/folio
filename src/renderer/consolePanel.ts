@@ -294,6 +294,64 @@ export class ConsolePanel {
     await this.openGroup(cwd)
   }
 
+  /** A console brought into view and focused (a notification clicked, ADR-008); false — gone. */
+  focusConsole(id: number): boolean {
+    const found = this.paneOf(id)
+    if (!found) return false
+    this.setVisible(true)
+    this.activate(found.group)
+    found.group.active = found.pane
+    this.markActivePane(found.group)
+    found.pane.view.focus()
+    return true
+  }
+
+  /** A console closed by its id, as its tab's close would (ADR-008); false — gone. */
+  closeConsole(id: number): boolean {
+    const found = this.paneOf(id)
+    if (!found) return false
+    this.closePane(found.group, found.pane)
+    return true
+  }
+
+  /**
+   * What each console's programs take (ADR-008): in its tab's tooltip, and as a
+   * mark on the tab past a gigabyte. `usage` by console id; `format` says bytes.
+   */
+  showUsage(usage: ReadonlyMap<number, { memory: number; cpu: number }>, format: (bytes: number) => string): void {
+    for (const g of this.groups) {
+      let memory = 0
+      let cpu = 0
+      let any = false
+      for (const p of g.panes) {
+        const u = p.id === null ? undefined : usage.get(p.id)
+        if (!u) continue
+        any = true
+        memory += u.memory
+        cpu += u.cpu
+      }
+      let mark = g.button.querySelector<HTMLElement>('.console-tab-usage')
+      if (!any) {
+        mark?.remove()
+        if (g.button.dataset.usage !== undefined) {
+          delete g.button.dataset.usage
+          this.decorate(g)
+        }
+        continue
+      }
+      g.button.dataset.usage = `${format(memory)} · ${Math.round(cpu)}%`
+      this.decorate(g)
+      if (memory >= 1024 ** 3) {
+        if (!mark) {
+          mark = document.createElement('span')
+          mark.className = 'console-tab-usage'
+          g.button.insertBefore(mark, g.button.querySelector('.console-tab-close'))
+        }
+        mark.textContent = format(memory)
+      } else mark?.remove()
+    }
+  }
+
   /**
    * A task: its command run in a console of its own in the folder, the tab
    * named after it, ending when the command does. The console's id, to follow
@@ -512,7 +570,7 @@ export class ConsolePanel {
     const runningText = last && last.output !== undefined && last.end === undefined ? last.text : null
     const where = pane.cwd ? baseName(pane.cwd) : this.text.title
     group.label.textContent = group.task ? `${group.task} · ${where}` : runningText ? `${runningText.split(/\s+/)[0]} · ${where}` : where
-    group.button.title = [pane.cwd, runningText ? this.text.running.replace('{command}', runningText) : ''].filter(Boolean).join('\n')
+    group.button.title = [pane.cwd, runningText ? this.text.running.replace('{command}', runningText) : '', group.button.dataset.usage ?? ''].filter(Boolean).join('\n')
     // How the last finished command ended (the last one may be the empty prompt after it).
     const done = [...pane.term.commands].reverse().find((c) => c.end !== undefined)
     const failed = !!done && (done.exitCode ?? 0) !== 0

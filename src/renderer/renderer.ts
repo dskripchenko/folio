@@ -90,6 +90,27 @@ folio.onResSample((s) => resources?.sample(s as ResSample))
 folio.onResLimit((e) => resources?.limitEvent(e as Parameters<Resources['limitEvent']>[0]))
 folio.onAwake((s) => awakeButton?.update(s as AwakeState))
 folio.onMenuReport(() => void folio.saveReport().then((path) => path && notify(t.resources.reportSaved.replace('{path}', path))))
+// ADR-008: what the consoles' programs take on their tabs; a console grown big; little room on the disk; a notification clicked.
+folio.onResSample((v) => {
+  const s = v as ResSample
+  const usage = new Map(s.procs.filter((p) => p.kind === 'console' && p.ref).map((p) => [Number(p.ref), { memory: p.memory, cpu: p.cpu }]))
+  consolePanel.showUsage(usage, (n) => bytes(n, lang, t.media.units))
+})
+folio.onResConsole((v) => {
+  const e = v as { id: number; name: string; memory: number; cpu: number; why: 'memory' | 'cpu' }
+  const r = t.resources
+  const message = (e.why === 'memory' ? r.consoleBig.replace('{memory}', bytes(e.memory, lang, t.media.units)) : r.consoleHot).replace('{name}', e.name)
+  resources?.toast(message, [
+    [r.show, () => void resources?.open()],
+    [r.closeConsole, () => void consolePanel.closeConsole(e.id)],
+  ])
+})
+folio.onResDisk((v) => {
+  const e = v as { free: number }
+  resources?.toast(t.resources.diskLow.replace('{free}', bytes(e.free, lang, t.media.units)), [[t.settingsWindow.clearCaches, () => void folio.clearCaches()]])
+})
+folio.onConsoleFocus((id) => void consolePanel.focusConsole(Number(id)))
+folio.onConsoleCloseTab((id) => void consolePanel.closeConsole(Number(id)))
 /** The outline of the note in view. */
 let outlinePanel: OutlinePanel | null = null
 /** Spelling checked as text is written (folio's setting). */
@@ -1019,6 +1040,8 @@ const settingsDialog = new SettingsDialog({
   },
   lang: () => lang,
   units: () => t.media.units,
+  dataSize: () => folio.dataSize(),
+  clearCaches: () => folio.clearCaches(),
   chooseLanguage: async (code) => {
     const state = await folio.i18nSet(code)
     // The window may change before the main process's word comes back: at once.
@@ -1956,7 +1979,10 @@ function reviewsSoon(): void {
 function newNote(): void {
   const tab = makeTab({ path: null, text: '', saved: null, view: 'edit' })
   activate(tab)
-  requestAnimationFrame(() => (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { focus(): void }) | null)?.focus())
+  // At once, and again on the next frame (the editor may come up only then): a window not in front gets few frames.
+  const focus = () => (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { focus(): void }) | null)?.focus()
+  focus()
+  requestAnimationFrame(focus)
 }
 
 /** Closed tabs of files, last first: reopened with Cmd/Ctrl+Shift+T where they were. */
@@ -3139,6 +3165,15 @@ void folio.startup().then(async ({ tabs: restored, groups: savedGroups, active: 
   applyI18n(state)
   applyTheme(theme)
   buildRail()
+  // The run before ended without quitting (ADR-008): said once, with the log at hand.
+  void folio.lastRun().then((r) => {
+    if (r.ended !== 'crashed') return
+    const time = r.at ? new Date(r.at).toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' }) : '—'
+    resources?.toast(t.resources.crashed.replace('{time}', time), [
+      [t.resources.openLog, () => void folio.openLog()],
+      [t.resources.report, () => void folio.saveReport().then((path) => path && notify(t.resources.reportSaved.replace('{path}', path)))],
+    ])
+  })
   void sidebar.load()
   for (const g of savedGroups ?? []) grouped.restore(g)
   for (const r of restored) {

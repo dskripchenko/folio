@@ -7,6 +7,24 @@ import { join } from 'node:path'
  * document again). Recursive watching is native on macOS and Windows and, in
  * Node 22, on Linux too.
  */
+/**
+ * Build output and tooling's caches: written by the thousand while an agent
+ * builds or tests, never what people read in folio (ADR-008). A project's own
+ * `watchExclude` takes their place.
+ */
+export const BUILD_FOLDERS = ['dist', 'build', 'out', 'target', 'vendor', 'coverage', '.next', '.nuxt', '.turbo', '.cache', '__pycache__', '.venv', 'venv', '.gradle']
+
+/**
+ * Whether a change at `rel` (its parts from the top) is left out by the list:
+ * a name anywhere, a path from the top. What is inside such a folder is left
+ * out, the folder itself is not — made or removed, the tree still shows it.
+ */
+export function excluded(rel: readonly string[], list: readonly string[]): boolean {
+  const path = rel.join('/')
+  const parents = rel.slice(0, -1)
+  return list.some((x) => (x.includes('/') ? path.startsWith(`${x}/`) : parents.includes(x)))
+}
+
 export interface Changes {
   root: string
   dirs: string[]
@@ -21,6 +39,8 @@ export class Watcher {
   constructor(
     private readonly onChange: (changes: Changes[]) => void,
     private readonly delay = 150,
+    /** The folders left out under a root's folder; build folders by default. */
+    private readonly excludeOf: (dir: string) => readonly string[] = () => BUILD_FOLDERS,
   ) {}
 
   /** Watch a root (by its id and folder); watching it again changes nothing. */
@@ -32,6 +52,7 @@ export class Watcher {
         const rel = String(name).split(/[\\/]/).filter((p) => p !== '')
         // Tooling and hidden folders are not watched — but a `.gitignore` is: what is shown follows it.
         if (rel.some((p, i) => p === '.git' || p === 'node_modules' || (p.startsWith('.') && !(i === rel.length - 1 && p === '.gitignore')))) return
+        if (excluded(rel, this.excludeOf(dir))) return
         const entry = this.pending.get(id) ?? { dirs: new Set<string>(), files: new Set<string>() }
         entry.dirs.add(rel.slice(0, -1).join('/'))
         entry.files.add(join(dir, ...rel))

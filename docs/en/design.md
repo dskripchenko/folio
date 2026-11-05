@@ -779,6 +779,55 @@ take it, a bare window manager may not — the cup's tooltip then says the syste
 not take it). A Mac with its lid closed still sleeps without an external display
 and power: folio does not get around it.
 
+### Under an agent's load, after a crash, the machine
+
+**Changes on disk are followed sparingly.** What is recomputed on every change —
+the tree's git marks, the files behind links, tags, the graph and tasks — runs at
+most once at a time per repository or folder; whoever asks meanwhile shares the
+next run, and a folder's list of files is kept until something in it changes. The
+changes inside build output and tools' caches are not followed at all: `dist`,
+`build`, `out`, `target`, `vendor`, `coverage`, `.next`, `.nuxt`, `.turbo`,
+`.cache`, `__pycache__`, `.venv`, `venv`, `.gradle` — an agent building or testing
+writes thousands of files there. Such a folder still appears and disappears in the
+tree, and its files are listed when it is opened. A project sets its own list in
+`.folio/settings.json`, which then replaces the default:
+`"watchExclude": ["generated", "src/gen"]` (names anywhere, paths from the top).
+
+**The log tells what was slow**: a request of the window that took more than 2
+seconds (its name and time — never its paths or texts), the main process standing
+still for a second or more, and in each minute's sample the event loop's delay and
+the work queued. **Processes** shows the main process's delay too.
+
+**After a crash** — the last run started and never quit: stopped by the system,
+fallen — folio says so once at the next start, with **Open the log folder** and
+**Save a report…**.
+
+**The disk** under `folio-data` is looked at on start and every ten minutes; with
+less than 5 GB free (**App** in the settings; 0 — never) folio says so, with **Clear
+caches**. **App** also tells how much `folio-data` holds and of what — Chromium's
+cache, updates, crash dumps, the log, the unsaved — and **Clear caches** lets go of
+Chromium's cache, downloaded updates (one ready to install is kept) and crash dumps;
+the unsaved, the review's marks and the settings are never touched. **On battery**
+folio samples what it takes once a minute instead of every 15 seconds.
+
+### Notifications from the consoles
+
+While folio is not in front, a system notification says:
+
+- a console's command that ran longer than a minute (**App**: the seconds; 0 —
+  never) has ended — the command, its time, whether it failed;
+- a program in a console asks for attention: a message by OSC 9 or OSC 777, or a
+  bell, while a command runs (at most once in 30 seconds a console). Claude Code
+  sends them when it is done or waits for an answer — with
+  `claude config set --global preferredNotifChannel iterm2` (a message) or
+  `terminal_bell` (a bell).
+
+A click on the notification brings folio forward at that console. Each console
+tab's tooltip tells the memory and processor of its programs, and a tab whose
+programs take more than a gigabyte shows it. Past 8 GB (**App**; 0 — never), or with
+the processor busy for five minutes, folio says so with **Processes** and **Close
+the console** — and does nothing by itself: they are not its programs.
+
 ## Where the data lives
 
 Electron keeps its data in the user profile by default. folio moves all of it —

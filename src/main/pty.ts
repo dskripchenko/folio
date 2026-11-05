@@ -8,7 +8,7 @@ import { chmodSync, existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { IPty } from 'node-pty'
-import { commandMarks } from './awake'
+import { consoleEvents } from './consoleEvents'
 import { integrate } from './shellIntegration'
 
 export interface ConsoleSink {
@@ -18,6 +18,10 @@ export interface ConsoleSink {
   started?(id: number, pid: number): void
   /** Commands running in all the consoles now (a task's console: until it ends). */
   running?(count: number): void
+  /** A command ended (ADR-008): its text as typed, exit code, how long it ran. */
+  finished?(id: number, done: { command: string | null; code: number | null; ms: number }): void
+  /** A program in the console asks for attention while it runs: a message (OSC 9, 777), or a bell. */
+  attention?(id: number, text: string | null): void
 }
 
 /** The shell people use: theirs on macOS and Linux, PowerShell on Windows. */
@@ -119,12 +123,31 @@ export class Consoles {
     this.sink.started?.(id, p.pid)
     // A task runs from the start to its end.
     if (command !== undefined) this.setBusy(id, true)
+    // The command running now: its text and when it began (ADR-008).
+    let current: { command: string | null; at: number } | null = command !== undefined ? { command, at: Date.now() } : null
+    let typed: string | null = null
     let pending = ''
     let timer: ReturnType<typeof setTimeout> | null = null
     p.onData((data) => {
-      if (command === undefined && data.includes('\x1b]133;')) {
-        const marks = commandMarks(data)
-        if (marks.length > 0) this.setBusy(id, marks[marks.length - 1] === 'start')
+      for (const e of consoleEvents(data)) {
+        if (e.kind === 'command') typed = e.text
+        else if (command !== undefined) {
+          if (e.kind === 'notify' || e.kind === 'bell') this.sink.attention?.(id, e.kind === 'notify' ? e.text : null)
+        } else if (e.kind === 'start') {
+          current = { command: typed, at: Date.now() }
+          typed = null
+          this.setBusy(id, true)
+        } else if (e.kind === 'end') {
+          // zsh and bash say the command before it runs; PowerShell after, at the next prompt, just before its end.
+          if (current) this.sink.finished?.(id, { command: current.command ?? typed, code: e.code, ms: Date.now() - current.at })
+          typed = null
+          current = null
+          this.setBusy(id, false)
+        } else if (e.kind === 'prompt') {
+          // A prompt with no end before it: whatever ran is over.
+          current = null
+          this.setBusy(id, false)
+        } else if (current !== null) this.sink.attention?.(id, e.kind === 'notify' ? e.text : null)
       }
       pending += data
       if (timer) return
@@ -139,6 +162,8 @@ export class Consoles {
       if (timer) clearTimeout(timer)
       if (pending) this.sink.data(id, pending)
       this.ptys.delete(id)
+      // A task's command is the console's: done when it ends.
+      if (command !== undefined && current) this.sink.finished?.(id, { command, code: exitCode, ms: Date.now() - current.at })
       this.setBusy(id, false)
       this.sink.exit(id, exitCode)
     })

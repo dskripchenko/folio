@@ -3,7 +3,7 @@ import { detectKind, type ProjectKind } from './visibility'
 import { basename, join, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { readJson, writeJson } from './jsonFile'
-import { limitSettings, type LimitSettings } from './limits'
+import { alertSettings, limitSettings, type AlertSettings, type LimitSettings } from './limits'
 import { logDays } from './log'
 import { isInside, realish } from './paths'
 
@@ -51,6 +51,8 @@ export interface WorkspaceData {
   logDays?: number
   /** Memory limits (ADR-007); unset — the defaults. */
   limits?: Partial<LimitSettings>
+  /** When folio speaks up (ADR-008); unset — the defaults. */
+  alerts?: Partial<AlertSettings>
 }
 
 export class Workspace {
@@ -70,6 +72,7 @@ export class Workspace {
       ...(typeof loaded.updates === 'boolean' ? { updates: loaded.updates } : {}),
       ...(typeof loaded.logDays === 'number' ? { logDays: logDays(loaded.logDays) } : {}),
       ...(loaded.limits && typeof loaded.limits === 'object' ? { limits: limitSettings(loaded.limits) } : {}),
+      ...(loaded.alerts && typeof loaded.alerts === 'object' ? { alerts: alertSettings(loaded.alerts) } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
@@ -162,10 +165,15 @@ export class Workspace {
     return limitSettings(this.data.limits)
   }
 
-  /** The app's own settings (ADR-007): how long the log is kept, the memory limits. */
-  setApp(o: { logDays?: unknown; limits?: unknown }): void {
+  alerts(): AlertSettings {
+    return alertSettings(this.data.alerts)
+  }
+
+  /** The app's own settings (ADR-007, 008): how long the log is kept, the memory limits, when folio speaks up. */
+  setApp(o: { logDays?: unknown; limits?: unknown; alerts?: unknown }): void {
     if (o.logDays !== undefined) this.data.logDays = logDays(o.logDays)
     if (o.limits !== undefined) this.data.limits = limitSettings({ ...this.limits(), ...(o.limits as object) })
+    if (o.alerts !== undefined) this.data.alerts = alertSettings({ ...this.alerts(), ...(o.alerts as object) })
     this.save()
   }
 

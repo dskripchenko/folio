@@ -5,7 +5,7 @@
  * day; a day's file stops at a size and goes on in `.1`, `.2`... Nothing of a
  * document's text, no tokens: what happened, where, how long, how much.
  */
-import { appendFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 export type Level = 'debug' | 'info' | 'warn' | 'error'
@@ -203,13 +203,46 @@ export class Log {
     }
   }
 
-  /** The files there are, newest first. */
+  /**
+   * How the run before this one ended, from the newest file: `crashed` when its
+   * last start has no quit after it (killed by the system, fallen), `clean`
+   * when it quit or started again on purpose, `unknown` with no log. Asked
+   * before this run writes its own start.
+   */
+  lastRun(): { ended: 'clean' | 'crashed' | 'unknown'; at: string | null } {
+    for (const file of this.files().slice(0, 2)) {
+      let lines: string[]
+      try {
+        lines = readFileSync(file, 'utf8').trimEnd().split('\n')
+      } catch {
+        continue
+      }
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const l = lines[i]!
+        if (!l.includes('"area":"app"')) continue
+        let line: LogLine
+        try {
+          line = JSON.parse(l) as LogLine
+        } catch {
+          continue
+        }
+        if (line.msg === 'quit' || line.msg === 'starting again with a heap limit') return { ended: 'clean', at: line.ts }
+        if (line.msg === 'start') return { ended: 'crashed', at: line.ts }
+      }
+    }
+    return { ended: 'unknown', at: null }
+  }
+
+  /** The files there are, newest first (a day's later parts before its first). */
   files(): string[] {
+    const key = (n: string) => {
+      const m = n.match(/^folio-(\d{4}-\d{2}-\d{2})(?:\.(\d+))?\.log$/)!
+      return `${m[1]}#${String(Number(m[2] ?? 0)).padStart(4, '0')}`
+    }
     try {
       return readdirSync(this.dir)
         .filter((n) => DAY.test(n))
-        .sort()
-        .reverse()
+        .sort((a, b) => key(b).localeCompare(key(a)))
         .map((n) => join(this.dir, n))
     } catch {
       return []

@@ -33,6 +33,8 @@ export interface Sample {
   /** The main process's JavaScript heap: used and its limit (bytes). */
   heap: { used: number; limit: number }
   procs: ProcSample[]
+  /** The main process's event loop delay since the last sample (ms): the most, and 99 of 100 under it. */
+  lag?: { max: number; p99: number }
 }
 
 /** A process of the system, as `ps` (or Windows) tells it. */
@@ -210,9 +212,14 @@ export class Sampler {
 
   constructor(
     private readonly deps: SamplerDeps,
-    private readonly every = { idle: 15_000, watched: 2_000 },
+    private readonly every: { idle: number; watched: number } = { idle: 15_000, watched: 2_000 },
     private readonly keep = 30 * 60_000,
   ) {}
+
+  /** How often while nobody looks (seldom on battery, ADR-008). */
+  setIdle(ms: number): void {
+    this.every.idle = ms
+  }
 
   own(pid: number | undefined, what: Owned): void {
     if (pid) this.owned.set(pid, what)
