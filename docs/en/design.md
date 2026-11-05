@@ -736,6 +736,49 @@ Review comments go to a console as one paste (see *Reviewing an agent's work*):
 folio pastes only into a program that takes a paste as one — zsh, bash 5.1+,
 PowerShell, an agent's CLI — and never presses Enter.
 
+## What folio takes, its log, staying awake
+
+**The gauge** at the bottom of the right rail shows the memory folio takes — the
+main process, its window, graphics, Chromium's helpers, the language servers it
+started — with a bar up to the memory limit; it turns amber at three quarters of
+the limit and red past it. Its tooltip adds the processor. A click opens
+**Processes**: each process with its memory and processor, a chart of the last
+half hour with the limit, a language server started again with **Start again**,
+a console closed with **Close**. What runs in folio's consoles — an agent, a
+build — is shown apart, under **In consoles (not counted)**: it is not folio's,
+so it counts neither to its total nor to its limits. A sample is taken every 15
+seconds, every 2 while the window is open.
+
+**Limits** are in the settings window, **App**. The memory limit for folio (4 GB
+by default, 0 — none) is a soft one: past it folio lets go of its file and symbol
+indexes and Chromium's cache and starts the heaviest language server again; if a
+minute later it is still past, it says so, naming what takes the most, with
+**Start it again**, **Restart folio** and **Processes**. A language server has its
+own limit (2 GB by default): past it, it is started again with its files; one on
+Node also gets it as its heap limit. A hard heap limit for each process (off by
+default) is a last resort — a process reaching it falls with what is not saved —
+and is taken at the next start.
+
+**The log** is `folio-data/logs/folio-YYYY-MM-DD.log`, a JSON object a line: starts
+and quits, errors of the app and its window, processes that fell or stopped
+answering, language servers started, limits reached, staying awake turned on and
+off, and a sample of what each process takes once a minute — so a slowdown can be
+traced afterwards. Files older than the days kept (5 by default, 1–30 in the
+settings) are removed, crash dumps (`folio-data/crashes/`, never sent anywhere)
+with them; a day's file stops at 50 MB and goes on in `.1`. No text of documents,
+no tokens. **Help → Open the Log Folder**, and **Save a Report…** — a ZIP of the
+latest log files, crash dumps and versions to send. An agent reads the log through
+folio's MCP server, `get_app_log`.
+
+**Keep awake** — the cup in the rail, or the command palette: until turned off, for
+1, 2 or 4 hours, or **while a command runs in a console** and a minute after (by the
+shell integration's marks: an agent at work keeps the computer awake, the prompt
+lets it sleep); **Keep the display on too** keeps the screen lit as well. It works
+on macOS, Windows and Linux (on Linux through the desktop's inhibit: GNOME and KDE
+take it, a bare window manager may not — the cup's tooltip then says the system did
+not take it). A Mac with its lid closed still sleeps without an external display
+and power: folio does not get around it.
+
 ## Where the data lives
 
 Electron keeps its data in the user profile by default. folio moves all of it —
@@ -758,7 +801,7 @@ Inside it: the workspace and settings (`workspace.json`), keys of your own
 encrypted (`logins.json`), Shared (`library/`), the open tabs and unsaved edits
 (`session/`), the review's marks — files viewed, comments, checkpoints of the
 last look and the edits Claude Code reported (`review/`) — languages of your own
-(`locales/`), updates (`update/`), logs, and Chromium's own data (`chromium/`).
+(`locales/`), updates (`update/`), the log (`logs/`) and crash dumps (`crashes/`), and Chromium's own data (`chromium/`).
 
 Two things are written into your folders, and only when asked: a project's
 settings from the settings window go to its `.folio/settings.json`, and

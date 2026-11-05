@@ -36,6 +36,11 @@ const NOT_CODE = new Set(['markdown', 'json', 'jsonc', 'jsonl', 'yaml', 'toml', 
 export class SymbolIndex {
   private readonly cache = new Map<string, { mtime: number; list: Omit<ProjectSymbol, 'root' | 'label' | 'path'>[] }>()
 
+  /** Files read again when next asked (memory let go, ADR-007). */
+  clear(): void {
+    this.cache.clear()
+  }
+
   async symbolsOf(files: readonly SourceFile[], limit = 100_000): Promise<ProjectSymbol[]> {
     const out: ProjectSymbol[] = []
     let since = Date.now()

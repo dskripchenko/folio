@@ -3,6 +3,8 @@ import { detectKind, type ProjectKind } from './visibility'
 import { basename, join, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { readJson, writeJson } from './jsonFile'
+import { limitSettings, type LimitSettings } from './limits'
+import { logDays } from './log'
 import { isInside, realish } from './paths'
 
 /**
@@ -45,6 +47,10 @@ export interface WorkspaceData {
   welcomed?: boolean
   /** A new version looked for once a day at start; unset — on. */
   updates?: boolean
+  /** Days folio's log is kept (ADR-007); unset — 5. */
+  logDays?: number
+  /** Memory limits (ADR-007); unset — the defaults. */
+  limits?: Partial<LimitSettings>
 }
 
 export class Workspace {
@@ -62,6 +68,8 @@ export class Workspace {
       ...(typeof loaded.language === 'string' ? { language: loaded.language } : {}),
       ...(loaded.welcomed === true ? { welcomed: true } : {}),
       ...(typeof loaded.updates === 'boolean' ? { updates: loaded.updates } : {}),
+      ...(typeof loaded.logDays === 'number' ? { logDays: logDays(loaded.logDays) } : {}),
+      ...(loaded.limits && typeof loaded.limits === 'object' ? { limits: limitSettings(loaded.limits) } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
@@ -143,6 +151,21 @@ export class Workspace {
 
   setUpdates(on: boolean): void {
     this.data.updates = on
+    this.save()
+  }
+
+  logDays(): number {
+    return logDays(this.data.logDays)
+  }
+
+  limits(): LimitSettings {
+    return limitSettings(this.data.limits)
+  }
+
+  /** The app's own settings (ADR-007): how long the log is kept, the memory limits. */
+  setApp(o: { logDays?: unknown; limits?: unknown }): void {
+    if (o.logDays !== undefined) this.data.logDays = logDays(o.logDays)
+    if (o.limits !== undefined) this.data.limits = limitSettings({ ...this.limits(), ...(o.limits as object) })
     this.save()
   }
 

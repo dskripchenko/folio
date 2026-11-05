@@ -363,6 +363,24 @@ export interface FolioBridge {
   setAutoUpdate(on: boolean): Promise<boolean>
   restartToUpdate(): Promise<boolean>
   onUpdate: Listener
+  /** What folio takes now, the last half hour of it, sampled often while looked at (ADR-007). */
+  resNow(): Promise<ResSample | null>
+  resPast(): Promise<ResSample[]>
+  resWatch(on: boolean): void
+  /** A process ended by hand: a language server started again, a console closed. */
+  resEnd(pid: number, ref: string | undefined): Promise<boolean>
+  onResSample: Listener
+  onResLimit: Listener
+  awakeGet(): Promise<AwakeState>
+  awakeSet(how: 'off' | 'on' | 'until' | 'busy' | 'display', o?: { display?: boolean; minutes?: number; until?: number }): Promise<AwakeState>
+  onAwake: Listener
+  appSettings(): Promise<AppSettings>
+  setAppSettings(o: { logDays?: number; limits?: Partial<AppSettings['limits']> }): Promise<Pick<AppSettings, 'logDays' | 'limits'>>
+  relaunch(): Promise<void>
+  /** A ZIP of the log, crash dumps and versions, where people choose; its path, or null. */
+  saveReport(): Promise<string | null>
+  openLog(): Promise<void>
+  onMenuReport: Listener
   /** Today's daily note (made when missing), or the one before / after a daily note's day. */
   dailyOpen(from: string | null, step: 0 | -1 | 1): Promise<OpenResult>
   templates(): Promise<{ name: string; path: string }[]>
@@ -442,4 +460,40 @@ export const prefs = {
       // Storage unavailable: the convenience is lost, nothing else.
     }
   },
+}
+
+export type ResKind = 'main' | 'window' | 'gpu' | 'utility' | 'lsp' | 'console' | 'formatter' | 'other'
+
+export interface ResProc {
+  pid: number
+  kind: ResKind
+  name: string
+  memory: number
+  cpu: number
+  outside: boolean
+  ref?: string
+}
+
+export interface ResSample {
+  at: number
+  total: { memory: number; cpu: number }
+  outside: { memory: number; cpu: number }
+  heap: { used: number; limit: number }
+  procs: ResProc[]
+}
+
+export interface AwakeState {
+  how: 'off' | 'on' | 'until' | 'busy'
+  display: boolean
+  until: number | null
+  holding: boolean
+  granted: boolean
+}
+
+export interface AppSettings {
+  logDays: number
+  limits: { softGb: number; lspGb: number; heapGb: number }
+  /** The main process's heap limit now (bytes), and the machine's memory. */
+  heapLimit: number
+  memory: number
 }

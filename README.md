@@ -113,6 +113,12 @@ A folder that is a git repository keeps its history in folio too — versions of
 a document, what changed between them, going back to one — with commits made as
 you save. It is optional: a folder without git works the same.
 
+folio keeps an eye on itself: a gauge shows the memory it takes, a processes
+window shows each of its processes (an agent in its console apart), soft memory
+limits let go of caches and restart a heavy language server, a log of five days
+records what happened, and **Keep awake** stops the computer from sleeping —
+until turned off, for a while, or while a command runs in a console.
+
 Unsaved changes never get lost and never reach the file on their own: a quick
 note in an untitled tab, or an edit you have not saved, survives closing folio
 and restarting the computer, exactly as it was.

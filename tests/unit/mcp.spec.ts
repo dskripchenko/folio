@@ -59,7 +59,7 @@ describe('folio\'s MCP server', () => {
       expect(init.result).toMatchObject({ protocolVersion: '2025-03-26', serverInfo: { name: 'folio', version: '9.9.9' }, capabilities: { tools: {} } })
       expect((await post(url, token, { jsonrpc: '2.0', method: 'notifications/initialized' })).status).toBe(202)
       const list = await (await post(url, token, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json()
-      expect(list.result.tools.map((t: { name: string }) => t.name)).toEqual(['show_changes', 'get_review_comments', 'open_file', 'list_worktrees'])
+      expect(list.result.tools.map((t: { name: string }) => t.name)).toEqual(['show_changes', 'get_review_comments', 'open_file', 'list_worktrees', 'get_app_log'])
       const call = await (await post(url, token, { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list_worktrees', arguments: { repo: '/r' } } })).json()
       expect(call.result).toEqual({ content: [{ type: 'text', text: 'worktrees of /r' }], isError: false })
       const unknown = await (await post(url, token, { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'rm_rf' } })).json()

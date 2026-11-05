@@ -8,11 +8,16 @@ import { chmodSync, existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { IPty } from 'node-pty'
+import { commandMarks } from './awake'
 import { integrate } from './shellIntegration'
 
 export interface ConsoleSink {
   data(id: number, data: string): void
   exit(id: number, code: number): void
+  /** A shell started: its process, for what folio takes (ADR-007). */
+  started?(id: number, pid: number): void
+  /** Commands running in all the consoles now (a task's console: until it ends). */
+  running?(count: number): void
 }
 
 /** The shell people use: theirs on macOS and Linux, PowerShell on Windows. */
@@ -72,6 +77,8 @@ export function shellEnv(from: NodeJS.ProcessEnv, platform = process.platform): 
 
 export class Consoles {
   private readonly ptys = new Map<number, IPty>()
+  /** The consoles running a command now, by the shell integration's marks. */
+  private readonly busy = new Set<number>()
   private next = 1
   private fixed = false
 
@@ -109,9 +116,16 @@ export class Consoles {
     }
     const id = this.next++
     this.ptys.set(id, p)
+    this.sink.started?.(id, p.pid)
+    // A task runs from the start to its end.
+    if (command !== undefined) this.setBusy(id, true)
     let pending = ''
     let timer: ReturnType<typeof setTimeout> | null = null
     p.onData((data) => {
+      if (command === undefined && data.includes('\x1b]133;')) {
+        const marks = commandMarks(data)
+        if (marks.length > 0) this.setBusy(id, marks[marks.length - 1] === 'start')
+      }
       pending += data
       if (timer) return
       timer = setTimeout(() => {
@@ -125,9 +139,22 @@ export class Consoles {
       if (timer) clearTimeout(timer)
       if (pending) this.sink.data(id, pending)
       this.ptys.delete(id)
+      this.setBusy(id, false)
       this.sink.exit(id, exitCode)
     })
     return { id }
+  }
+
+  private setBusy(id: number, on: boolean): void {
+    if (on === this.busy.has(id)) return
+    if (on) this.busy.add(id)
+    else this.busy.delete(id)
+    this.sink.running?.(this.busy.size)
+  }
+
+  /** The shells' processes, by console. */
+  pids(): Map<number, number> {
+    return new Map([...this.ptys].map(([id, p]) => [id, p.pid]))
   }
 
   write(id: number, data: string): void {
@@ -145,6 +172,7 @@ export class Consoles {
   close(id: number): void {
     const p = this.ptys.get(id)
     this.ptys.delete(id)
+    this.setBusy(id, false)
     try {
       p?.kill()
     } catch {

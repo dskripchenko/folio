@@ -4,7 +4,8 @@
  * from the keys pressed, clashes shown — and the project's own settings over
  * its `.folio/settings.json`, as a form.
  */
-import type { ProjectSettingsData } from './bridge'
+import type { AppSettings, ProjectSettingsData } from './bridge'
+import { bytes } from './mediaView'
 
 export interface SettingsText {
   title: string
@@ -45,6 +46,16 @@ export interface SettingsText {
   save: string
   saved: string
   close: string
+  appTab: string
+  logDays: string
+  logHint: string
+  softLimit: string
+  softHint: string
+  lspLimit: string
+  lspHint: string
+  heapLimit: string
+  heapHint: string
+  applied: string
 }
 
 export interface KeyedCommand {
@@ -70,6 +81,11 @@ export interface SettingsDeps {
   /** The languages there are and the one chosen (null: the system's); another chosen. */
   languages(): { list: { code: string; name: string }[]; choice: string | null }
   chooseLanguage(code: string | null): Promise<void>
+  /** The app's own settings (ADR-007): the log's days, the memory limits; saved. */
+  app(): Promise<AppSettings>
+  saveApp(o: { logDays: number; limits: AppSettings['limits'] }): Promise<void>
+  lang(): string
+  units(): readonly string[]
 }
 
 const KNOWN_FORMATTERS = ['prettier', 'pint', 'gofmt', 'ruff', 'rustfmt', 'black', 'lsp']
@@ -109,7 +125,7 @@ function sameKey(a: string, b: string, mac: boolean): boolean {
 export class SettingsDialog {
   readonly el: HTMLElement
   private readonly box: HTMLElement
-  private pane: 'keys' | 'project' | 'language' = 'keys'
+  private pane: 'keys' | 'project' | 'language' | 'app' = 'keys'
   private list: { key: string; command: string }[] = []
   private filter = ''
   private capturing: string | null = null
@@ -174,7 +190,7 @@ export class SettingsDialog {
     title.textContent = t.title
     const tabs = document.createElement('div')
     tabs.className = 'settings-tabs'
-    for (const [pane, label] of [['keys', t.keys], ['project', t.project], ['language', t.languageTab]] as const) {
+    for (const [pane, label] of [['keys', t.keys], ['project', t.project], ['language', t.languageTab], ['app', t.appTab]] as const) {
       const b = document.createElement('button')
       b.type = 'button'
       b.textContent = label
@@ -193,8 +209,54 @@ export class SettingsDialog {
     close.setAttribute('aria-label', t.close)
     close.addEventListener('click', () => this.close())
     head.append(title, tabs, close)
-    const body = this.pane === 'keys' ? this.keysPane() : this.pane === 'language' ? this.languagePane() : await this.projectPane()
+    const body = this.pane === 'keys' ? this.keysPane() : this.pane === 'language' ? this.languagePane() : this.pane === 'app' ? await this.appPane() : await this.projectPane()
     this.box.replaceChildren(head, body)
+  }
+
+  // The app (ADR-007) ---------------------------------------------------------------------
+
+  private async appPane(): Promise<HTMLElement> {
+    const t = this.deps.text()
+    const s = await this.deps.app()
+    const pane = document.createElement('form')
+    pane.className = 'settings-project'
+    pane.dataset.testid = 'settings-app-form'
+    const number = (name: string, label: string, hint: string, value: number, min: number, max: number, step: number | 'any') => {
+      const row = document.createElement('label')
+      row.className = 'settings-field'
+      const span = document.createElement('span')
+      span.textContent = label
+      const input = Object.assign(document.createElement('input'), { type: 'number', name, min: String(min), max: String(max), step: String(step), value: String(value) })
+      input.dataset.testid = `settings-${name}`
+      row.append(span, input)
+      const p = document.createElement('p')
+      p.className = 'settings-hint'
+      p.textContent = hint
+      pane.append(row, p)
+      return input
+    }
+    const logDays = number('logDays', t.logDays, t.logHint, s.logDays, 1, 30, 1)
+    const soft = number('softGb', t.softLimit, t.softHint, s.limits.softGb, 0, 256, 'any')
+    const lsp = number('lspGb', t.lspLimit, t.lspHint, s.limits.lspGb, 0, 64, 'any')
+    const heap = number('heapGb', t.heapLimit, t.heapHint.replace('{now}', bytes(s.heapLimit, this.deps.lang(), this.deps.units())), s.limits.heapGb, 0, 64, 'any')
+    const status = document.createElement('p')
+    status.className = 'settings-hint'
+    status.setAttribute('role', 'status')
+    status.dataset.testid = 'settings-app-status'
+    const save = document.createElement('button')
+    save.type = 'submit'
+    save.className = 'settings-add'
+    save.textContent = t.save
+    save.dataset.testid = 'settings-app-save'
+    pane.append(save, status)
+    const n = (el: HTMLInputElement, fallback: number) => (Number.isFinite(el.valueAsNumber) ? el.valueAsNumber : fallback)
+    pane.addEventListener('submit', (e) => {
+      e.preventDefault()
+      void this.deps
+        .saveApp({ logDays: n(logDays, s.logDays), limits: { softGb: n(soft, s.limits.softGb), lspGb: n(lsp, s.limits.lspGb), heapGb: n(heap, s.limits.heapGb) } })
+        .then(() => (status.textContent = t.applied))
+    })
+    return pane
   }
 
   // Language ---------------------------------------------------------------------------

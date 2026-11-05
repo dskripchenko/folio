@@ -7,6 +7,33 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-11-05
+
+### Added
+
+- **What folio takes.** A gauge at the bottom of the right rail: folio's memory,
+  a bar up to the limit (amber near it, red past it), the processor in its
+  tooltip. A click opens **Processes**: the main process, the window, graphics,
+  Chromium's helpers, each language server and each console with what runs in
+  it — memory, processor, a chart of the last half hour with the limit; a
+  language server started again, a console closed from there. What runs in the
+  consoles (an agent, a build) is shown apart and is not counted as folio's.
+- **Memory limits** in the settings window, **App**: a soft limit for folio
+  (4 GB by default) — past it folio lets go of its indexes and caches and starts
+  the heaviest language server again, and says so if that does not help, with
+  **Restart folio** at hand; a limit for a language server (2 GB), started
+  again past it; a hard heap limit per process as a last resort (off), taken at
+  the next start.
+- **A log** in `folio-data/logs`, a file a day, kept 5 days (1–30 in the
+  settings): starts, errors of the app and its window, fallen processes, limits
+  reached, a memory sample of each process a minute. Crash dumps stay local and
+  go with the log's days. **Help → Open the Log Folder**, **Save a Report…** (a
+  ZIP to send), and `get_app_log` in folio's MCP server for an agent.
+- **Keep awake** (the cup in the rail): the computer does not sleep until
+  turned off, for 1, 2 or 4 hours, or while a command runs in one of folio's
+  consoles and a minute after; the display kept on too if asked. macOS, Windows
+  and Linux; a Mac with its lid closed still sleeps without an external display.
+
 ## [1.10.1] - 2026-11-05
 
 ### Fixed

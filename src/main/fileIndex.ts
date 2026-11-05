@@ -44,6 +44,11 @@ export class FileIndex {
     this.cache.delete(root)
   }
 
+  /** Every root walked again when next asked (memory let go, ADR-007). */
+  clear(): void {
+    this.cache.clear()
+  }
+
   /** Files changed on disk under a root: walked again only if one came or went. */
   changed(root: string, paths: string[]): void {
     const hit = this.cache.get(root)
