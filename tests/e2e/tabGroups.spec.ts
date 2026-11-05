@@ -75,6 +75,8 @@ test('tabs: a colour of their own, groups named, folded and kept across a restar
 
     // A note with changes: closing the others closes the saved ones; a Cancel keeps the note.
     await win.keyboard.press(`${mod}+n`)
+    // The new note's editor takes the keys: typed once it has them.
+    await expect.poll(() => win.evaluate(() => !!document.activeElement?.closest('dsk-markdown-editor'))).toBe(true)
     await win.keyboard.type('Draft')
     await expect(win.getByRole('tab').filter({ hasText: 'Draft' })).toHaveClass(/dirty/)
     await app.evaluate(({ dialog }) => {

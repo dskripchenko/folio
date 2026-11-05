@@ -1979,7 +1979,10 @@ function reviewsSoon(): void {
 function newNote(): void {
   const tab = makeTab({ path: null, text: '', saved: null, view: 'edit' })
   activate(tab)
-  requestAnimationFrame(() => (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { focus(): void }) | null)?.focus())
+  // At once, and again on the next frame (the editor may come up only then): a window not in front gets few frames.
+  const focus = () => (tab.pane.querySelector('dsk-markdown-editor') as (HTMLElement & { focus(): void }) | null)?.focus()
+  focus()
+  requestAnimationFrame(focus)
 }
 
 /** Closed tabs of files, last first: reopened with Cmd/Ctrl+Shift+T where they were. */
