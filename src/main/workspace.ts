@@ -53,6 +53,8 @@ export interface WorkspaceData {
   limits?: Partial<LimitSettings>
   /** When folio speaks up (ADR-008); unset — the defaults. */
   alerts?: Partial<AlertSettings>
+  /** Staying awake keeps the display on too; unset — on. */
+  awakeDisplay?: boolean
 }
 
 export class Workspace {
@@ -73,6 +75,7 @@ export class Workspace {
       ...(typeof loaded.logDays === 'number' ? { logDays: logDays(loaded.logDays) } : {}),
       ...(loaded.limits && typeof loaded.limits === 'object' ? { limits: limitSettings(loaded.limits) } : {}),
       ...(loaded.alerts && typeof loaded.alerts === 'object' ? { alerts: alertSettings(loaded.alerts) } : {}),
+      ...(typeof loaded.awakeDisplay === 'boolean' ? { awakeDisplay: loaded.awakeDisplay } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
@@ -163,6 +166,15 @@ export class Workspace {
 
   limits(): LimitSettings {
     return limitSettings(this.data.limits)
+  }
+
+  awakeDisplay(): boolean {
+    return this.data.awakeDisplay ?? true
+  }
+
+  setAwakeDisplay(on: boolean): void {
+    this.data.awakeDisplay = on
+    this.save()
   }
 
   alerts(): AlertSettings {

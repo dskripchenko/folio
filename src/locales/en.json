@@ -837,7 +837,7 @@
       "on": "Until turned off",
       "hours": "For {n} h",
       "busy": "While a command runs in a console",
-      "display": "Keep the display on too",
+      "display": "Let the display sleep",
       "nowOff": "Keep awake: off",
       "nowOn": "Keeping the computer awake",
       "nowUntil": "Keeping the computer awake until {time}",

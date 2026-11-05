@@ -44,6 +44,9 @@ export interface HealthDeps {
   notify(title: string, body: string, consoleId: number | null): void
   /** The words of the notifications, in folio's language. */
   words(): { commandDone: string; commandFailed: string; attention: string; attentionBody: string; console: string }
+  /** Whether staying awake keeps the display on too; kept across starts. */
+  awakeDisplay(): boolean
+  setAwakeDisplay(on: boolean): void
   /** Downloaded updates removed (a ready one kept). */
   tidyUpdates(): void
   /** Where a report is saved; null — not saved. */
@@ -250,7 +253,7 @@ export function startHealth(d: HealthDeps) {
   let lastRun = d.lastRun
   if (lastRun.ended === 'crashed') log.warn('app', 'the last run ended without quitting', { started: lastRun.at })
 
-  const awake = new Awake(d.powerSaveBlocker)
+  const awake = new Awake(d.powerSaveBlocker, { display: d.awakeDisplay() })
   awake.onChange((s) => d.send('awake:changed', s))
   let lastHow: AwakeHow = 'off'
   awake.onChange((s) => {
@@ -284,7 +287,10 @@ export function startHealth(d: HealthDeps) {
   ipcMain.handle('awake:get', () => awake.state)
   ipcMain.handle('awake:set', (_e, how: unknown, o: unknown) => {
     const opts = (o ?? {}) as { display?: unknown; minutes?: unknown; until?: unknown }
-    if (how === 'display') return awake.setDisplay(opts.display === true)
+    if (how === 'display') {
+      d.setAwakeDisplay(opts.display === true)
+      return awake.setDisplay(opts.display === true)
+    }
     if (how !== 'off' && how !== 'on' && how !== 'until' && how !== 'busy') return awake.state
     return awake.set(how, {
       ...(typeof opts.display === 'boolean' ? { display: opts.display } : {}),

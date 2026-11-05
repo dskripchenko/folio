@@ -67,6 +67,15 @@ test('what folio takes: the gauge, the processes window, a report, the log, the 
     await win.getByTestId('awake-off').click()
     await expect(awake).toHaveAttribute('data-state', 'off')
 
+    // The display stays on by default; letting it sleep is remembered.
+    await awake.click()
+    await expect(win.getByTestId('awake-display')).toHaveAttribute('aria-checked', 'false')
+    await win.getByTestId('awake-display').click()
+    await expect.poll(() => JSON.parse(readFileSync(join(f.data, 'workspace.json'), 'utf8')).awakeDisplay).toBe(false)
+    await awake.click()
+    await win.getByTestId('awake-display').click()
+    await expect.poll(() => JSON.parse(readFileSync(join(f.data, 'workspace.json'), 'utf8')).awakeDisplay).toBe(true)
+
     // While a command runs: armed, on while it runs.
     await awake.click()
     await win.getByTestId('awake-busy').click()

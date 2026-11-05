@@ -852,7 +852,7 @@ zum Verschicken. Ein Agent liest das Protokoll über folios MCP-Server, `get_app
 Ausschalten, für 1, 2 oder 4 Stunden oder **solange in einer Konsole ein Befehl
 läuft** und eine Minute danach (nach den Marken der Shell-Integration: ein
 arbeitender Agent hält den Rechner wach, die Eingabeaufforderung lässt ihn
-schlafen); **Auch den Bildschirm anlassen** hält den Bildschirm an. Es geht unter
+schlafen); der Bildschirm bleibt dabei an, ohne Bildschirmschoner, außer **Bildschirm darf ausgehen** ist angehakt (wird gemerkt). Es geht unter
 macOS, Windows und Linux (unter Linux über den Inhibit des Desktops: GNOME und KDE
 nehmen ihn an, ein reiner Fenstermanager vielleicht nicht — dann sagt der Tooltip,
 dass das System die Anfrage nicht angenommen hat). Ein Mac mit geschlossenem Deckel

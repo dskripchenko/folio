@@ -3,7 +3,7 @@
  * IOPMAssertion on macOS, SetThreadExecutionState on Windows, an inhibit over
  * D-Bus on Linux. Until turned off, for a while, until a time, or while a
  * command runs in one of folio's consoles (an agent at work) and a minute
- * after. The display may sleep, or stay on too. A Mac with its lid closed still
+ * after. The display stays on too (no screen saver), unless people let it sleep. A Mac with its lid closed still
  * sleeps (without an external display and power): folio does not get around it.
  */
 export type AwakeHow = 'off' | 'on' | 'until' | 'busy'
@@ -28,7 +28,7 @@ export interface Blocker {
 
 export class Awake {
   private how: AwakeHow = 'off'
-  private display = false
+  private display: boolean
   private until: number | null = null
   private id: number | null = null
   private idType: 'prevent-app-suspension' | 'prevent-display-sleep' | null = null
@@ -39,8 +39,11 @@ export class Awake {
 
   constructor(
     private readonly blocker: Blocker,
-    private readonly o: { now?: () => number; grace?: number } = {},
-  ) {}
+    private readonly o: { now?: () => number; grace?: number; display?: boolean } = {},
+  ) {
+    // As Amphetamine: the display stays on unless asked otherwise (a screen saver, a lock, are sleep to people).
+    this.display = o.display ?? true
+  }
 
   private now(): number {
     return this.o.now?.() ?? Date.now()

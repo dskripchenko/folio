@@ -773,7 +773,7 @@ folio's MCP server, `get_app_log`.
 **Keep awake** — the cup in the rail, or the command palette: until turned off, for
 1, 2 or 4 hours, or **while a command runs in a console** and a minute after (by the
 shell integration's marks: an agent at work keeps the computer awake, the prompt
-lets it sleep); **Keep the display on too** keeps the screen lit as well. It works
+lets it sleep); the display stays on too, with no screen saver, unless **Let the display sleep** is checked (remembered). It works
 on macOS, Windows and Linux (on Linux through the desktop's inhibit: GNOME and KDE
 take it, a bare window manager may not — the cup's tooltip then says the system did
 not take it). A Mac with its lid closed still sleeps without an external display

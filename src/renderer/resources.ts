@@ -455,7 +455,8 @@ export class AwakeButton {
       ...[1, 2, 4].map((n) => ({ label: t.hours.replace('{n}', String(n)), testid: `awake-${n}h`, action: set('until', n * 60) })),
       { label: t.busy, checked: s.how === 'busy', testid: 'awake-busy', action: set('busy') },
       { separator: true, label: '', action: () => undefined },
-      { label: t.display, checked: s.display, testid: 'awake-display', action: () => void this.deps.set('display', { display: !s.display }).then((x) => this.update(x)) },
+      // The display stays on by default; letting it sleep is the choice made here.
+      { label: t.display, checked: !s.display, testid: 'awake-display', action: () => void this.deps.set('display', { display: !s.display }).then((x) => this.update(x)) },
       // Said where it matters: a Mac's closed lid is beyond a program's reach.
       ...(this.deps.mac ? [{ label: t.lid, disabled: true, action: () => undefined }] : []),
     ]
