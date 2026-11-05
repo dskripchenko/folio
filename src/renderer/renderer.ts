@@ -59,11 +59,12 @@ import {
 } from './lsp'
 import { GraphPanel } from './graphPanel'
 import { StatusBar } from './statusBar'
+import { AwakeButton, Resources } from './resources'
 import { headingsOf, OutlinePanel, type Heading } from './outline'
 import { CommandPalette, type Command } from './commandPalette'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
-import type { GitRefusal, I18nState, UpdateState, Version, WorkspaceView } from './bridge'
+import type { AwakeState, GitRefusal, I18nState, ResSample, UpdateState, Version, WorkspaceView } from './bridge'
 
 /** The window's words: English until the main process gives the language in use (ADR-005). */
 type WindowText = typeof enLocale.window
@@ -83,6 +84,12 @@ let symbolPalette: SymbolPalette | null = null
 let problemsPanel: ProblemsPanel | null = null
 /** The status line under the page. */
 let statusBar: StatusBar | null = null
+let resources: Resources | null = null
+let awakeButton: AwakeButton | null = null
+folio.onResSample((s) => resources?.sample(s as ResSample))
+folio.onResLimit((e) => resources?.limitEvent(e as Parameters<Resources['limitEvent']>[0]))
+folio.onAwake((s) => awakeButton?.update(s as AwakeState))
+folio.onMenuReport(() => void folio.saveReport().then((path) => path && notify(t.resources.reportSaved.replace('{path}', path))))
 /** The outline of the note in view. */
 let outlinePanel: OutlinePanel | null = null
 /** Spelling checked as text is written (folio's setting). */
@@ -620,7 +627,25 @@ function buildRail(): void {
   )
   const bottom = document.createElement('div')
   bottom.className = 'rail-group rail-bottom'
-  bottom.append(iconButton('settings', t.settings, (e) => openSettings(e.currentTarget as HTMLElement), 'rail-settings'))
+  // What folio takes and staying awake (ADR-007): made once, their words again with the rail's.
+  resources ??= new Resources({
+    text: () => t.resources,
+    units: () => t.media.units,
+    lang: () => lang,
+    now: () => folio.resNow(),
+    past: () => folio.resPast(),
+    watch: (on) => folio.resWatch(on),
+    end: (pid, ref) => folio.resEnd(pid, ref),
+    limit: async () => (await folio.appSettings()).limits.softGb * 1024 ** 3,
+    relaunch: () => void folio.relaunch(),
+    openLog: () => void folio.openLog(),
+    saveReport: () => folio.saveReport(),
+    notify: (m) => notify(m),
+  })
+  awakeButton ??= new AwakeButton({ text: () => t.awake, lang: () => lang, mac: folio.platform === 'darwin', get: () => folio.awakeGet(), set: (how, o) => folio.awakeSet(how, o) })
+  resources.refresh()
+  void folio.awakeGet().then((s) => awakeButton?.update(s))
+  bottom.append(resources.gauge, awakeButton.el, iconButton('settings', t.settings, (e) => openSettings(e.currentTarget as HTMLElement), 'rail-settings'))
   railRight.append(modes, tools, bottom)
   syncRail()
 }
@@ -987,6 +1012,13 @@ const settingsDialog = new SettingsDialog({
   project: () => (active?.path ? folio.projectSettingsOf(active.path) : Promise.resolve(null)),
   saveProject: async (path, settings) => (await folio.setProjectSettings(path, settings)) !== null,
   languages: () => ({ list: i18n?.languages ?? [], choice: i18n?.choice ?? null }),
+  app: () => folio.appSettings(),
+  saveApp: async (o) => {
+    const saved = await folio.setAppSettings(o)
+    resources?.setLimit(saved.limits.softGb * 1024 ** 3)
+  },
+  lang: () => lang,
+  units: () => t.media.units,
   chooseLanguage: async (code) => {
     const state = await folio.i18nSet(code)
     // The window may change before the main process's word comes back: at once.
@@ -2547,6 +2579,8 @@ function commands(): Command[] {
     { id: 'compare-with', group: file, title: t.compareWithCommand, icon: 'split', when: () => !!active?.path && !active.doc?.media, run: () => compareWithChosen() },
     { id: 'welcome', group: view, title: t.welcomeDoc, icon: 'read', run: () => void openWelcome() },
     { id: 'settings', group: view, title: t.settingsWindow.title, keys: `${mod},`, icon: 'settings', run: () => void settingsDialog.open() },
+    { id: 'processes', group: view, title: t.resources.title, icon: 'activity', run: () => void resources?.open() },
+    { id: 'keep-awake', group: view, title: t.awake.title, icon: 'awake', run: () => awakeButton?.menu() },
     { id: 'toggle-wrap', group: view, title: t.wrapLines, keys: '⌥Z', icon: 'source', when: () => !!codeEditorOf(active), run: () => toggleWrap() },
     { id: 'go-to-line', group: c.edit, title: c.goToLine, keys: 'Ctrl+G', icon: 'search', when: () => !!codeEditorOf(active), run: () => codeEditorOf(active)?.openGoToLine() },
     { id: 'symbol-file', group: c.edit, title: t.symbols.file, keys: `${mod}⇧O`, icon: 'outline', when: () => !!navOf(active), run: () => goToSymbol('file') },

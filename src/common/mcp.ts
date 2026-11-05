@@ -69,6 +69,19 @@ export const MCP_TOOLS: McpTool[] = [
     description: 'The repository\'s worktrees: path, branch, files changed and not committed, commits ahead of and behind the base.',
     inputSchema: { type: 'object', properties: { repo }, required: ['repo'] },
   },
+  {
+    name: 'get_app_log',
+    description:
+      "folio's own log, the newest lines last: starts, errors of the app and its window, processes that fell, memory samples a minute, limits reached. " +
+      'Use it when folio misbehaves (slow, a panel empty, a crash) to see what happened.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        lines: { type: 'number', description: 'How many lines, from the newest (default 200, at most 1000).' },
+        level: { type: 'string', enum: ['all', 'warn', 'error'], description: '"warn" — warnings and errors, "error" — errors only (default all).' },
+      },
+    },
+  },
 ]
 
 /** The person's answer to `show_changes`. */

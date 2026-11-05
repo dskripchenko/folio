@@ -95,7 +95,9 @@
     "removeWorktree": "Remove",
     "claudeConnectQuestion": "Let Claude Code tell folio what it edits?",
     "claudeConnectDetail": "A hook is added to {file} (local settings, not committed). After each edit Claude Code appends the file, its session and the time to folio's data:\n\n{command}\n\nfolio's MCP server is added to Claude Code for this project (its local settings, not in the repository): the agent can show you its changes and wait for your answer, read your comments, open a file at a line. folio runs:\n\n{mcp}\n\nNothing else changes. The same command takes both out.",
-    "claudeConnect": "Connect"
+    "claudeConnect": "Connect",
+    "openLog": "Open the Log Folder",
+    "saveReport": "Save a Report…"
   },
   "window": {
     "open": "Open…",
@@ -422,7 +424,17 @@
       "close": "Close",
       "languageSystem": "As the system’s",
       "languageHint": "Another language is one JSON file in folio-data/locales (its meta: code and name); what it leaves out is English.",
-      "languageTab": "Language"
+      "languageTab": "Language",
+      "appTab": "App",
+      "logDays": "Keep the log, days",
+      "logHint": "folio’s log is in folio-data/logs, a file a day: starts, errors, fallen processes, a memory sample a minute.",
+      "softLimit": "Memory limit for folio, GB",
+      "softHint": "Over it folio lets go of caches and starts the heaviest language server again; if that does not help, it says so. 0 — no limit. Programs in consoles do not count.",
+      "lspLimit": "Memory limit for a language server, GB",
+      "lspHint": "Over it the server is started again. 0 — no limit.",
+      "heapLimit": "Hard heap limit of a process, GB",
+      "heapHint": "A process reaching it falls, with what is not saved: only as a last resort. Taken at the next start. 0 — V8’s own; now {now}.",
+      "applied": "Saved."
     },
     "exportHtml": "Export as HTML (one page)…",
     "exportDocx": "Export as Word (DOCX)…",
@@ -763,6 +775,56 @@
       "taken": "The changes are in the main copy, not committed.",
       "merged": "Merged.",
       "agent": "Claude · {session} · {when}"
+    },
+    "resources": {
+      "title": "Processes",
+      "gauge": "folio: {memory}, processor {cpu} — processes",
+      "folio": "folio",
+      "outside": "In consoles (not counted)",
+      "heap": "Main process heap: {used} of {limit}",
+      "kinds": {
+        "main": "Main process",
+        "window": "Window",
+        "gpu": "Graphics",
+        "utility": "Helper",
+        "lsp": "Language server",
+        "console": "Console",
+        "formatter": "Formatter",
+        "other": "Other"
+      },
+      "name": "Process",
+      "memory": "Memory",
+      "cpu": "Processor",
+      "restart": "Start again",
+      "end": "End",
+      "close": "Close",
+      "endConfirm": "End {name}?",
+      "chart": "Memory, the last 30 minutes",
+      "limit": "limit {n}",
+      "over": "folio takes {memory}, over its limit of {limit}. Most of it: {name}, {heavy}.",
+      "restartIt": "Start it again",
+      "restartFolio": "Restart folio",
+      "show": "Processes",
+      "dismiss": "Close",
+      "lspRestarted": "{name} took {memory}, over a language server’s limit: started again.",
+      "report": "Save a report…",
+      "reportSaved": "Report saved: {path}",
+      "openLog": "Open the log folder"
+    },
+    "awake": {
+      "title": "Keep awake",
+      "off": "Off — the computer may sleep",
+      "on": "Until turned off",
+      "hours": "For {n} h",
+      "busy": "While a command runs in a console",
+      "display": "Keep the display on too",
+      "nowOff": "Keep awake: off",
+      "nowOn": "Keeping the computer awake",
+      "nowUntil": "Keeping the computer awake until {time}",
+      "nowBusy": "Keeping the computer awake: a command runs",
+      "nowBusyIdle": "Will keep the computer awake while a command runs",
+      "notGranted": "The system did not take the request",
+      "lid": "A Mac with its lid closed still sleeps without an external display and power."
     }
   },
   "print": {

@@ -67,6 +67,10 @@ export interface LspDeps {
   diagnostics(path: string, server: string, list: unknown[]): void
   /** A server asks for edits (a rename's, an action's): the window applies them. */
   applyEdit(edit: unknown): Promise<boolean>
+  /** A server's process started, for what folio takes (ADR-007). */
+  started?(pid: number, name: string): void
+  /** More of the environment a server starts with (a heap limit for one on Node). */
+  env?(): Record<string, string>
 }
 
 export type OpenResult =
@@ -147,12 +151,13 @@ class ServerClient {
     const PATH = await userPath()
     const proc = spawn(this.found.command, this.found.args, {
       cwd: this.root,
-      env: { ...process.env, PATH },
+      env: { ...process.env, ...this.manager.extraEnv(), PATH },
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
       shell: process.platform === 'win32' && /\.(cmd|bat)$/i.test(this.found.command),
     })
     this.proc = proc
+    if (proc.pid) this.manager.started(proc.pid, this.name)
     const conn = new Connection((bytes) => proc.stdin?.write(bytes))
     this.conn = conn
     proc.stdout?.on('data', (b: Buffer) => conn.receive(b))
@@ -209,6 +214,16 @@ class ServerClient {
     setTimeout(() => this.proc?.kill(), 500)
   }
 
+  get pid(): number | undefined {
+    return this.proc?.pid
+  }
+
+  /** Ended to be started again at once with its files (too much memory, ADR-007). */
+  recycle(): void {
+    this.restarts = 0
+    this.proc?.kill()
+  }
+
   private exited(code: number | null): void {
     this.conn?.close()
     this.note(`[folio] the server ended (${code ?? 'signal'})\n`)
@@ -251,6 +266,24 @@ export class LspManager {
   private readonly docs = new Map<string, Doc>()
 
   constructor(private readonly deps: LspDeps) {}
+
+  extraEnv(): Record<string, string> {
+    return this.deps.env?.() ?? {}
+  }
+
+  started(pid: number, name: string): void {
+    this.deps.started?.(pid, name)
+  }
+
+  /** The server of a process started again; false — none such. */
+  recycle(pid: number): boolean {
+    for (const c of new Set(this.clients.values())) {
+      if (c.pid !== pid) continue
+      c.recycle()
+      return true
+    }
+    return false
+  }
 
   /** A file opened in the code editor: its server found (started, trusted), the file opened in it. */
   async open(path: string, root: string, language: string, text: string): Promise<OpenResult> {

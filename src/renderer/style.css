@@ -914,3 +914,37 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 /* Who edited (Claude Code's hook, R6). */
 .rv-agent { padding: 0 6px; border-radius: 8px; background: color-mix(in srgb, #d97757 16%, transparent); color: #c4613f; font-size: 11px; white-space: nowrap; }
 .worktree-agent { margin: -2px 0 6px; color: #c4613f; font-size: 11px; }
+
+/* What folio takes (ADR-007): the rail's gauge, the processes window, the note past the limit. */
+.rail-gauge { display: grid; justify-items: center; gap: 2px; width: 40px; padding: 4px 0 5px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 9.5px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.rail-gauge:hover { background: color-mix(in srgb, var(--line) 70%, transparent); color: var(--fg); }
+.rail-gauge-bar { display: block; width: 26px; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--line) 80%, transparent); overflow: hidden; }
+.rail-gauge-bar > span { display: block; height: 100%; background: var(--accent); }
+.rail-gauge[data-state="near"] { color: var(--warn-line); }
+.rail-gauge[data-state="near"] .rail-gauge-bar > span { background: var(--warn-line); }
+.rail-gauge[data-state="over"] { color: #cf222e; }
+.rail-gauge[data-state="over"] .rail-gauge-bar > span { background: #cf222e; }
+.rail-awake[data-state="on"] { color: var(--accent); }
+.rail-awake[data-state="armed"] { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); }
+.res-dialog > header { justify-content: flex-start; }
+.res-sum { flex: 1; color: var(--muted); font-variant-numeric: tabular-nums; }
+.res-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; }
+.res-chart { margin: 0 0 12px; }
+.res-chart svg { display: block; width: 100%; height: 90px; border: 1px solid var(--line); border-radius: 6px; background: color-mix(in srgb, var(--tab) 60%, var(--bg)); }
+.res-chart figcaption { margin-top: 4px; color: var(--muted); font-size: 11.5px; }
+.res-line { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.res-limit { stroke: #cf222e; stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.res-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.res-table th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11.5px; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.res-table td { padding: 5px 6px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.res-table td:nth-child(2), .res-table td:nth-child(3), .res-table th:nth-child(2), .res-table th:nth-child(3) { text-align: right; white-space: nowrap; }
+.res-table td:last-child { text-align: right; width: 1%; white-space: nowrap; }
+.res-table button, .res-foot button, .res-toast button { border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); font: inherit; padding: 2px 8px; cursor: pointer; }
+.res-kind { font-weight: 500; }
+.res-name { margin-left: 8px; color: var(--muted); }
+.res-group td { padding-top: 12px; color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.res-foot { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); background: var(--tab); color: var(--muted); font-size: 12px; }
+.res-foot > span { flex: 1; }
+.res-toast { position: fixed; right: 64px; bottom: 16px; z-index: 900; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: min(520px, calc(100vw - 96px)); padding: 10px 12px; border: 1px solid #cf222e; border-radius: 8px; background: var(--bg); color: var(--fg); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); font-size: 12.5px; }
+.res-toast > span { flex: 1 1 100%; }
+.res-dot { stroke: var(--accent); stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }

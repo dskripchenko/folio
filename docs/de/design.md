@@ -814,6 +814,50 @@ eines Agenten prüfen*): folio fügt nur in ein Programm ein, das ein Einfügen 
 Ganzes nimmt — zsh, bash 5.1+, PowerShell, die CLI eines Agenten — und drückt
 nie Enter.
 
+## Was folio belegt, sein Protokoll, wach bleiben
+
+**Die Anzeige** unten in der rechten Leiste zeigt den Speicher, den folio belegt —
+Hauptprozess, Fenster, Grafik, Chromiums Hilfsprozesse, die von ihm gestarteten
+Sprachserver —, mit einem Balken bis zur Speichergrenze: ab drei Vierteln der Grenze
+gelb, darüber rot. Der Tooltip nennt auch den Prozessor. Ein Klick öffnet
+**Prozesse**: jeder Prozess mit Speicher und Prozessor, ein Diagramm der letzten
+halben Stunde mit der Grenze, ein Sprachserver neu gestartet mit **Neu starten**,
+eine Konsole geschlossen mit **Schließen**. Was in folios Konsolen läuft — ein
+Agent, ein Build — steht getrennt unter **In Konsolen (nicht gezählt)**: es gehört
+nicht zu folio und zählt weder zu seiner Summe noch zu seinen Grenzen. Gemessen wird
+alle 15 Sekunden, alle 2, solange das Fenster offen ist.
+
+**Grenzen** stehen im Einstellungsfenster unter **App**. Die Speichergrenze für folio
+(4 GB, 0 — keine) ist weich: darüber verwirft folio seine Datei- und Symbolindizes
+und Chromiums Cache und startet den schwersten Sprachserver neu; ist es eine Minute
+später immer noch darüber, sagt es das, nennt den größten Verbraucher und bietet
+**Neu starten**, **folio neu starten** und **Prozesse** an. Ein Sprachserver hat eine
+eigene Grenze (2 GB): darüber wird er mit seinen Dateien neu gestartet; einer auf
+Node bekommt sie auch als Heap-Grenze. Eine harte Heap-Grenze je Prozess (aus) ist
+das letzte Mittel — ein Prozess, der sie erreicht, stürzt mit Ungespeichertem ab — und
+gilt ab dem nächsten Start.
+
+**Das Protokoll** ist `folio-data/logs/folio-JJJJ-MM-TT.log`, ein JSON-Objekt pro Zeile:
+Starts und Beenden, Fehler der App und ihres Fensters, abgestürzte oder hängende
+Prozesse, gestartete Sprachserver, erreichte Grenzen, Wachbleiben an und aus und
+einmal pro Minute eine Messung je Prozess — so lässt sich eine Verlangsamung
+nachträglich verfolgen. Dateien älter als die behaltenen Tage (5, in den
+Einstellungen 1–30) werden gelöscht, Absturzberichte (`folio-data/crashes/`, nie
+versendet) mit ihnen; die Datei eines Tages endet bei 50 MB und geht in `.1` weiter.
+Keine Dokumenttexte, keine Tokens. **Hilfe → Protokollordner öffnen** und **Bericht
+speichern…** — ein ZIP der letzten Protokolldateien, Absturzberichte und Versionen
+zum Verschicken. Ein Agent liest das Protokoll über folios MCP-Server, `get_app_log`.
+
+**Wach bleiben** — die Tasse in der Leiste oder die Befehlspalette: bis zum
+Ausschalten, für 1, 2 oder 4 Stunden oder **solange in einer Konsole ein Befehl
+läuft** und eine Minute danach (nach den Marken der Shell-Integration: ein
+arbeitender Agent hält den Rechner wach, die Eingabeaufforderung lässt ihn
+schlafen); **Auch den Bildschirm anlassen** hält den Bildschirm an. Es geht unter
+macOS, Windows und Linux (unter Linux über den Inhibit des Desktops: GNOME und KDE
+nehmen ihn an, ein reiner Fenstermanager vielleicht nicht — dann sagt der Tooltip,
+dass das System die Anfrage nicht angenommen hat). Ein Mac mit geschlossenem Deckel
+schläft ohne externen Bildschirm und Strom trotzdem: das umgeht folio nicht.
+
 ## Wo die Daten liegen
 
 Electron legt seine Daten standardmäßig im Benutzerprofil ab. folio verlegt sie

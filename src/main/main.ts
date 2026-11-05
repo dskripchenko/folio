@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, safeStorage, session as electronSession, shell, systemPreferences } from 'electron'
+import { app, BrowserWindow, crashReporter, dialog, ipcMain, Menu, net, powerSaveBlocker, safeStorage, session as electronSession, shell, systemPreferences } from 'electron'
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -76,6 +76,9 @@ import { tasksOf, toggleTask } from './tasks'
 import { dailyName, dayOf, fillTemplate, neighbourDaily, templatesIn } from './notes'
 import { Updater } from './update'
 import { Workspace, type Project } from './workspace'
+import { startHealth } from './health'
+import { heapFlag } from './limits'
+import { Log } from './log'
 
 // Before anything reads it: settings, caches and session data live beside the program.
 const data = dataDir({ env: process.env, platform: process.platform, execPath: process.execPath, packaged: app.isPackaged, cwd: process.cwd() })
@@ -91,6 +94,23 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 const workspace = new Workspace(data)
+
+// folio's log, and its crash dumps kept here only (ADR-007).
+const log = new Log(join(data, 'logs'), { days: workspace.logDays(), alsoPrune: [join(data, 'crashes')] })
+crashReporter.start({ uploadToServer: false })
+log.info('app', 'start', { version: app.getVersion(), electron: process.versions.electron, os: `${process.platform} ${process.getSystemVersion()} ${process.arch}`, packaged: app.isPackaged, projects: workspace.projects().length })
+// A hard heap limit set: the windows take it from the switch; the main process only from its own command line, so it starts again with it once.
+const heap = heapFlag(workspace.limits().heapGb)
+if (heap) {
+  app.commandLine.appendSwitch('js-flags', heap)
+  if (!process.argv.some((a) => a.startsWith('--js-flags')) && process.env.FOLIO_E2E !== '1' && process.env.FOLIO_HEAP_RELAUNCH !== '1') {
+    process.env.FOLIO_HEAP_RELAUNCH = '1'
+    log.info('app', 'starting again with a heap limit', { heap })
+    log.close()
+    app.relaunch({ args: [...process.argv.slice(1), `--js-flags=${heap}`] })
+    app.exit(0)
+  }
+}
 const roots = new Roots()
 const consent = new Consent(data)
 const session = new Session(data)
@@ -204,7 +224,9 @@ function open(path: string): Opened {
 }
 
 function send(channel: string, ...args: unknown[]): void {
-  win?.webContents.send(channel, ...args)
+  // A window closing (its consoles ending, a sample on its way): nothing to tell.
+  if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return
+  win.webContents.send(channel, ...args)
 }
 
 function openInWindow(paths: string[]): void {
@@ -335,6 +357,7 @@ function createWindow(): BrowserWindow {
   // open (another test's window shown over this one, the person's mouse) would send the page moves and
   // leaves of its own — a hover being tested lost midway.
   w.once('ready-to-show', () => (underTest ? w.showInactive() : w.show()))
+  health.watchWindow(w)
   if (underTest) w.setIgnoreMouseEvents(true)
   spelling(w)
   // A link: another document of a root opens in a tab; the web goes to the system browser.
@@ -420,7 +443,15 @@ function buildMenu(): void {
       ],
     },
     { role: 'windowMenu' },
-    { role: 'help', submenu: [{ label: L().welcome, click: () => send('menu:welcome') }] },
+    {
+      role: 'help',
+      submenu: [
+        { label: L().welcome, click: () => send('menu:welcome') },
+        { type: 'separator' },
+        { label: L().openLog, click: () => void shell.openPath(log.dir) },
+        { label: L().saveReport, click: () => send('menu:report') },
+      ],
+    },
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
@@ -523,6 +554,17 @@ const lsp = new LspManager({
     return response === 0
   },
   diagnostics: (path, server, list) => send('lsp:diagnostics', { path, server, list }),
+  started: (pid, name) => {
+    health.sampler.own(pid, { kind: 'lsp', name, ref: `lsp:${pid}` })
+    log.info('lsp', 'server started', { name })
+  },
+  // A server on Node keeps to its limit (ADR-007); others take no notice.
+  env: (): Record<string, string> => {
+    const gb = workspace.limits().lspGb
+    if (gb <= 0) return {}
+    const own = (process.env.NODE_OPTIONS ?? '').replace(/--max-old-space-size=\d+/g, '').trim()
+    return { NODE_OPTIONS: `${own} --max-old-space-size=${Math.round(gb * 1024)}`.trim() }
+  },
   applyEdit: (edit) =>
     new Promise((resolveApplied) => {
       const id = ++editSeq
@@ -726,9 +768,37 @@ const consoles = new Consoles(
   {
     data: (id, data) => send('console:data', id, data),
     exit: (id, code) => send('console:exit', id, code),
+    started: (id, pid) => health.sampler.own(pid, { kind: 'console', name: `Console ${id}`, ref: String(id) }),
+    running: (count) => health.running(count),
   },
   join(data, 'shell-integration'),
 )
+
+// What folio takes, its limits, staying awake (ADR-007).
+const health = startHealth({
+  app,
+  ipcMain,
+  powerSaveBlocker,
+  log,
+  crashes: join(data, 'crashes'),
+  send,
+  window: () => win,
+  limits: () => workspace.limits(),
+  setApp: (o) => workspace.setApp(o),
+  logDays: () => workspace.logDays(),
+  relieve: () => {
+    fileIndex.clear()
+    symbolIndex.clear()
+  },
+  recycleServer: (pid) => lsp.recycle(pid),
+  closeConsole: (id) => consoles.close(id),
+  openLog: () => shell.openPath(log.dir),
+  reportPath: async () => {
+    const options = { defaultPath: join(app.getPath('downloads'), `folio-report-${new Date().toISOString().slice(0, 10)}.zip`), filters: [{ name: 'ZIP', extensions: ['zip'] }] }
+    const r = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)
+    return r.canceled || !r.filePath ? null : r.filePath
+  },
+})
 ipcMain.handle('console:open', (_e, cwd: unknown, cols: unknown, rows: unknown, command: unknown) => {
   const dir = typeof cwd === 'string' && existsSync(cwd) && statSync(cwd).isDirectory() ? cwd : workspace.shared()
   const opened = consoles.open(dir, Number(cols) || 80, Number(rows) || 24, typeof command === 'string' && command.trim() !== '' ? command : undefined)
@@ -1733,6 +1803,23 @@ const mcpTools = registerReview({
  */
 const MCP_INFO = join(data, 'review', 'mcp.json')
 const MCP_BRIDGE = join(data, 'review', 'mcp-bridge.cjs')
+// The log for an agent: what went wrong in folio (ADR-007).
+mcpTools.get_app_log = async (args) => {
+  log.flush()
+  const lines = Math.min(1000, Math.max(1, typeof args.lines === 'number' ? Math.round(args.lines) : 200))
+  const levels = args.level === 'error' ? ['error'] : args.level === 'warn' ? ['warn', 'error'] : null
+  const out: string[] = []
+  for (const file of log.files()) {
+    const text = readFileSync(file, 'utf8').trimEnd().split('\n').reverse()
+    for (const l of text) {
+      if (levels && !levels.some((v) => l.includes(`"level":"${v}"`))) continue
+      out.push(l)
+      if (out.length >= lines) break
+    }
+    if (out.length >= lines) break
+  }
+  return { text: out.length ? out.reverse().join('\n') : 'The log is empty.' }
+}
 const mcp = new McpServer(mcpTools, app.getVersion())
 /** Claude Code's command (FOLIO_CLAUDE: another, for the tests; none under test otherwise). */
 const CLAUDE = process.env.FOLIO_CLAUDE || (process.env.FOLIO_E2E === '1' ? '' : 'claude')
@@ -2095,6 +2182,7 @@ app.on('before-quit', (event) => {
 })
 
 app.on('will-quit', () => {
+  health.stop()
   mcp.stop(MCP_INFO)
   watcher.close()
   void lsp.stopAll()
@@ -2131,6 +2219,7 @@ void app.whenReady().then(() => {
   useLanguage()
   buildMenu()
   win = createWindow()
+  health.sampler.start()
   void startMcp()
   updater.tidy()
   // Once a day at start, a while after the window is up; a source checkout (no release to replace) never looks.
