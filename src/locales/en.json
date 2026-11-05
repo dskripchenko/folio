@@ -676,6 +676,8 @@
       "unified": "One column",
       "split": "Two columns",
       "unviewedOnly": "Not viewed only",
+      "navFlat": "As a list",
+      "navTree": "As a tree",
       "refresh": "Refresh",
       "viewed": "Viewed",
       "edit": "Edit",

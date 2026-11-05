@@ -4,6 +4,7 @@
  * changed ones beside them — each staged or unstaged with a click, its
  * changes thrown away (asked first), opened by its name.
  */
+import { fileBadge, fileType, PLAIN } from './fileTypes'
 import { iconButton } from './icons'
 
 export type ChangeKind = 'added' | 'modified' | 'deleted' | 'untracked'
@@ -281,11 +282,12 @@ export class ChangesPanel {
     name.className = 'changes-name'
     const parts = entry.path.split('/')
     const file = document.createElement('span')
+    file.className = 'changes-file'
     file.textContent = parts.pop()!
     const dir = document.createElement('span')
     dir.className = 'changes-dir'
     dir.textContent = parts.join('/')
-    name.append(file, dir)
+    name.append(fileBadge(fileType(entry.path) ?? PLAIN), file, dir)
     name.title = entry.path
     name.addEventListener('click', () => {
       if (entry.kind !== 'deleted') this.deps.open(view.root, entry.path)

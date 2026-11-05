@@ -8,6 +8,7 @@
  * is opened or the click goes elsewhere.
  */
 import { folio, prefs, type Changes, type Entry, type ProjectView, type WorkspaceView } from './bridge'
+import { fileBadge, fileType } from './fileTypes'
 import { icon, iconButton, mediaIcon, type IconName } from './icons'
 import { closeMenu, popMenu, popMenuAt } from './menu'
 
@@ -551,7 +552,8 @@ export class Sidebar {
     const name = document.createElement('span')
     name.className = 'name'
     name.textContent = entry.name
-    row.append(twisty, icon(entry.type === 'dir' ? 'folder' : entry.kind === 'media' ? mediaIcon(entry.name) : (FILE_ICON[entry.kind ?? 'other'] ?? 'file'), 15), name)
+    const type = entry.type === 'file' && (entry.kind === 'code' || entry.kind === 'other' || !entry.kind) ? fileType(entry.name) : null
+    row.append(twisty, type ? fileBadge(type) : icon(entry.type === 'dir' ? 'folder' : entry.kind === 'media' ? mediaIcon(entry.name) : (FILE_ICON[entry.kind ?? 'other'] ?? 'file'), 15), name)
     li.append(row)
     // Dragged into a console: typed there as its path.
     row.draggable = true

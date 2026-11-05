@@ -206,6 +206,11 @@ a rename or a move; a document put in the trash closes, unless it has unsaved
 changes. A name with `/ \ : * ? " < > |` or one already there is refused in
 place, with the reason.
 
+A file of code shows its type beside its name: a letter or two in its stack's
+colour — `JS` yellow, `TS` blue, `<?` violet for PHP, `B` for Blade, `{}` for
+JSON and so on; `package.json`, `composer.json`, lock files, `Dockerfile` and
+`.env` are known by name. The same marks are in **Changes** and the review.
+
 ### Two documents side by side
 
 **Open beside** in a tab's menu (or `Cmd/Ctrl+\`, or the command) shows that
@@ -432,7 +437,9 @@ and review what it changed, and edit a little.
   thrown away from its heading. A double click on a line (or **Edit**) opens the
   file beside the review, to edit, at that line. The review follows the disk:
   what an agent writes shows by itself, a file changed in view is marked for a
-  moment.
+  moment. The list of files is one line each or a tree of folders (the button
+  above it, remembered): folders first, a folder holding only one folder shown
+  with it as one row (`src/http/controllers`), a folder folded by a click.
 - **Since the last look** shows only what changed since you last looked —
   edits and the agent's own commits — the newest first, with when. **Viewed**
   on a file there moves the look forward for it; **All seen** for all.
