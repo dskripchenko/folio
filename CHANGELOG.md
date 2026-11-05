@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-11-05
+
+### Fixed
+
+- **Connect Claude Code to folio** adds folio's MCP server again: the command
+  put the server's name after `--env`, which takes any number of values, so
+  Claude Code read the name as a variable and refused ("Invalid environment
+  variable format"). The name now comes first.
+
 ## [1.8.1] - 2026-11-04
 
 ### Fixed
@@ -471,7 +480,8 @@ The first release: portable builds for macOS, Windows and Linux.
   the system browser), its data kept beside the program, CI on Linux, macOS and
   Windows with the built app started and checked.
 
-[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/dskripchenko/folio/compare/v1.8.2...HEAD
+[1.8.2]: https://github.com/dskripchenko/folio/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/dskripchenko/folio/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/dskripchenko/folio/compare/v1.7.1...v1.8.0
 [1.7.1]: https://github.com/dskripchenko/folio/compare/v1.7.0...v1.7.1

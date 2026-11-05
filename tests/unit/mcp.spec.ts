@@ -134,10 +134,10 @@ describe('Claude Code\'s command', () => {
   const launch = { exe: '/Applications/folio.app/Contents/MacOS/folio', bridge: "/Users/a b/folio-data/review/mcp-bridge.cjs", info: "/Users/a b/it's/mcp.json" }
   it('adds the bridge with the local scope, the paths quoted for the shell', () => {
     expect(addCommand(launch, false)).toBe(
-      "claude mcp add --scope local --env ELECTRON_RUN_AS_NODE=1 folio -- /Applications/folio.app/Contents/MacOS/folio '/Users/a b/folio-data/review/mcp-bridge.cjs' '/Users/a b/it'\\''s/mcp.json'",
+      "claude mcp add folio --scope local --env ELECTRON_RUN_AS_NODE=1 -- /Applications/folio.app/Contents/MacOS/folio '/Users/a b/folio-data/review/mcp-bridge.cjs' '/Users/a b/it'\\''s/mcp.json'",
     )
     expect(addCommand({ exe: 'C:\\Program Files\\folio\\folio.exe', bridge: 'C:\\f\\b.cjs', info: "C:\\it's\\mcp.json" }, true)).toBe(
-      "& claude mcp add --scope local --env ELECTRON_RUN_AS_NODE=1 folio -- 'C:\\Program Files\\folio\\folio.exe' C:\\f\\b.cjs 'C:\\it''s\\mcp.json'",
+      "& claude mcp add folio --scope local --env ELECTRON_RUN_AS_NODE=1 -- 'C:\\Program Files\\folio\\folio.exe' C:\\f\\b.cjs 'C:\\it''s\\mcp.json'",
     )
     expect(removeCommand(false)).toBe('claude mcp remove --scope local folio')
     expect(quote('$(rm -rf ~)', false)).toBe("'$(rm -rf ~)'")

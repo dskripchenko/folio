@@ -27,7 +27,9 @@ export function quote(word: string, powershell: boolean): string {
 export function addCommand(launch: BridgeLaunch, powershell: boolean, claude = 'claude'): string {
   const q = (w: string) => quote(w, powershell)
   // On PowerShell a native program is run by `&`, and `--` passed as is.
-  return [powershell ? `& ${q(claude)}` : q(claude), 'mcp', 'add', '--scope', 'local', '--env', 'ELECTRON_RUN_AS_NODE=1', MCP_NAME, '--', q(launch.exe), q(launch.bridge), q(launch.info)].join(' ')
+  // The name comes before the options: `--env` takes any number of values, so
+  // a name after it is read as one more variable and the command fails.
+  return [powershell ? `& ${q(claude)}` : q(claude), 'mcp', 'add', MCP_NAME, '--scope', 'local', '--env', 'ELECTRON_RUN_AS_NODE=1', '--', q(launch.exe), q(launch.bridge), q(launch.info)].join(' ')
 }
 
 export function removeCommand(powershell: boolean, claude = 'claude'): string {
