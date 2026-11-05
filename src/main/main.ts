@@ -830,6 +830,8 @@ const health = startHealth({
   },
   words: () => ({ commandDone: L().commandDone, commandFailed: L().commandFailed, attention: L().attention, attentionBody: L().attentionBody, console: L().consoleN }),
   tidyUpdates: () => updater.tidy(),
+  awakeDisplay: () => workspace.awakeDisplay(),
+  setAwakeDisplay: (on) => workspace.setAwakeDisplay(on),
   reportPath: async () => {
     const options = { defaultPath: join(app.getPath('downloads'), `folio-report-${new Date().toISOString().slice(0, 10)}.zip`), filters: [{ name: 'ZIP', extensions: ['zip'] }] }
     const r = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)

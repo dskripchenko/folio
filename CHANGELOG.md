@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-11-05
+
+### Fixed
+
+- **Keep awake** keeps the display on too, as Amphetamine does: the screen no
+  longer dims and the screen saver no longer starts after a few minutes while
+  folio keeps the computer awake. **Let the display sleep** in its menu keeps
+  only the system awake, and is remembered.
+
 ## [1.12.0] - 2026-11-05
 
 ### Added

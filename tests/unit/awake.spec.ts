@@ -14,13 +14,14 @@ function blocker() {
 }
 
 describe('awake: the system kept from sleeping', () => {
-  it('on until off; the display too when asked', () => {
+  it('on until off; the display kept on too unless let sleep (no screen saver)', () => {
     const b = blocker()
     const a = new Awake(b)
-    expect(a.set('on').holding).toBe(true)
-    expect([...b.started.values()]).toEqual(['prevent-app-suspension'])
-    a.setDisplay(true)
+    expect(a.set('on')).toMatchObject({ holding: true, display: true })
     expect([...b.started.values()]).toEqual(['prevent-display-sleep'])
+    a.setDisplay(false)
+    expect([...b.started.values()]).toEqual(['prevent-app-suspension'])
+    expect(new Awake(blocker(), { display: false }).state.display).toBe(false)
     expect(a.set('off').holding).toBe(false)
     expect(b.started.size).toBe(0)
   })
