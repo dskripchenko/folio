@@ -138,9 +138,11 @@ In a project of code folio runs its **tasks** (`⌘⇧B`) and lists their
 
 ## Tabs
 
-The right click on a tab gives it a colour, puts it in a group (a click on the
-group's name folds it) and closes the others, those to its right, the saved
-ones or all of them (`⌘⇧W`); `⌘⇧T` brings back the last one closed.
+The right click on a tab shows its file in the sidebar (its project found, its
+folders opened), gives it a colour, puts it in a group (a click on the group's
+name folds it) and closes the others, those to its right, the saved ones or all
+of them (`⌘⇧W`); `⌘⇧T` brings back the last one closed. The consoles' tabs
+have colours and groups too.
 
 ## Reviewing an agent's work
 

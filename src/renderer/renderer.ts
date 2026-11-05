@@ -19,11 +19,12 @@ import { GoToFile } from './goToFile'
 import { SearchPanel } from './searchPanel'
 import { ConsolePanel } from './consolePanel'
 import { icon, iconButton, type IconName } from './icons'
-import { popMenu, popMenuAt, type MenuItem } from './menu'
+import { GroupedTabs, SEPARATOR } from './groupedTabs'
+import { popMenu, popMenuAt } from './menu'
 import { ReviewView } from './review/reviewView'
 import { WorktreesPanel } from './worktreesPanel'
 import { rootOf, type ChangeSpec } from '../common/review'
-import { TAB_COLORS, freeColor, groupAt, isTabColor, keepTogether, type GroupData, type TabColor } from '../common/tabGroups'
+import { isTabColor, type TabColor } from '../common/tabGroups'
 import { openCloneDialog } from './clone'
 import { openPdfDialog, type PdfTarget } from './pdfDialog'
 import { Presentation, slidesOf } from './slides'
@@ -171,7 +172,7 @@ function applyText(): void {
   statusBar?.setText(t.status)
   syncStatus()
   palette.setText(t.commands)
-  consolePanel.setText(t.console)
+  consolePanel.setText(consoleText())
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const value = t[el.dataset.i18n as keyof typeof t]
     if (typeof value === 'string') el.textContent = value
@@ -1443,7 +1444,7 @@ function report(): void {
     tabs.map((tab) => ({ path: tab.path, buffer: tab.buffer, color: tab.color, group: tab.group, review: tab.review?.spec ?? null })),
     index >= 0 ? index : null,
     active?.path ?? null,
-    [...groups.values()].map(({ id, name, color, collapsed }) => ({ id, name, color, collapsed })),
+    [...grouped.groups.values()].map(({ id, name, color, collapsed }) => ({ id, name, color, collapsed })),
   )
 }
 
@@ -1456,11 +1457,7 @@ function report(): void {
  */
 function activate(tab: Tab | null): void {
   // A tab of a folded group: the group opens.
-  const folded = tab?.group ? groups.get(tab.group) : undefined
-  if (folded?.collapsed) {
-    folded.collapsed = false
-    layoutTabs()
-  }
+  if (tab) grouped.unfold(tab)
   const wasShown = tab !== null && (tab === mainTab || tab === beside)
   if (tab !== beside && mainTab && mainTab !== tab) mainTab.scroll = viewEl.scrollTop
   if (tab !== beside) mainTab = tab
@@ -1613,7 +1610,7 @@ function makeTab(init: Partial<Tab> & { path: string | null; text: string; saved
   tabs.push(tab)
   tabsEl.append(button)
   viewEl.append(pane)
-  paintTab(tab)
+  grouped.paint(tab)
   syncLabel(tab)
   render(tab)
   pane.hidden = true
@@ -1686,7 +1683,7 @@ async function reopenClosed(): Promise<void> {
     await add(result, false, { color: last.color })
     const tab = tabs.find((x) => x.path === result.path)
     if (!tab) return
-    moveTab(tab, last.index)
+    grouped.move(tab, last.index)
     tab.mode = last.mode
     if (last.view !== tab.view && (last.view === 'read' || canEdit(formatOf(tab)))) {
       tab.view = last.view
@@ -1710,232 +1707,44 @@ async function reopenClosed(): Promise<void> {
 }
 
 /** A tab to another place in the row (and its session order); dragged, it joins or leaves a group by where it lands. */
-function moveTab(tab: Tab, index: number, regroup = false): void {
-  const from = tabs.indexOf(tab)
-  if (from < 0) return
-  tabs.splice(from, 1)
-  tabs.splice(Math.max(0, Math.min(index, tabs.length)), 0, tab)
-  if (regroup) tab.group = groupAt(tabs, tabs.indexOf(tab))
-  layoutTabs()
-}
-
 // Colours and groups -------------------------------------------------------------
 
-interface TabGroup extends GroupData {
-  chip: HTMLButtonElement
-}
-
-const groups = new Map<string, TabGroup>()
-const colorOf = (c: TabColor) => `var(--tc-${c})`
-
-/** A tab's own colour on its button. */
-function paintTab(tab: Tab): void {
-  tab.button.classList.toggle('colored', tab.color !== null)
-  if (tab.color) tab.button.style.setProperty('--tab-color', colorOf(tab.color))
-  else tab.button.style.removeProperty('--tab-color')
-  tab.button.dataset.color = tab.color ?? ''
-}
-
-function makeGroup(data: GroupData): TabGroup {
-  const chip = document.createElement('button')
-  chip.type = 'button'
-  chip.className = 'tab-group'
-  chip.dataset.testid = 'tab-group'
-  const g: TabGroup = { ...data, chip }
-  chip.addEventListener('click', () => toggleGroup(g))
-  chip.addEventListener('contextmenu', (event) => {
-    event.preventDefault()
-    groupMenu(g, event.clientX, event.clientY)
-  })
-  // A tab dropped on the chip: into the group, at its end.
-  chip.addEventListener('dragover', (event) => {
-    if (!draggedTab) return
-    event.preventDefault()
-    event.stopPropagation()
-    chip.classList.add('drop-into')
-  })
-  chip.addEventListener('dragleave', () => chip.classList.remove('drop-into'))
-  chip.addEventListener('drop', (event) => {
-    chip.classList.remove('drop-into')
-    const tab = draggedTab
-    if (!tab) return
-    event.preventDefault()
-    event.stopPropagation()
-    joinGroup(tab, g)
-  })
-  groups.set(g.id, g)
-  return g
-}
-
-/**
- * The row drawn again from `tabs`: each group's tabs together after its chip,
- * folded ones hidden; a group left with no tabs gone.
- */
-function layoutTabs(): void {
-  tabs.splice(0, tabs.length, ...keepTogether(tabs))
-  for (const tab of tabs) if (tab.group && !groups.has(tab.group)) tab.group = null
-  for (const [id, g] of groups) {
-    if (!tabs.some((x) => x.group === id)) {
-      g.chip.remove()
-      groups.delete(id)
-    }
-  }
-  const row: HTMLElement[] = []
-  tabs.forEach((tab, i) => {
-    const g = tab.group ? groups.get(tab.group) : undefined
-    if (g && tabs[i - 1]?.group !== g.id) row.push(g.chip)
-    tab.button.hidden = !!g?.collapsed
-    tab.button.classList.toggle('grouped', !!g)
-    tab.button.classList.toggle('group-end', !!g && tabs[i + 1]?.group !== g.id)
-    if (g) tab.button.style.setProperty('--group-color', colorOf(g.color))
-    else tab.button.style.removeProperty('--group-color')
-    tab.button.dataset.group = g?.id ?? ''
-    row.push(tab.button)
-  })
-  for (const g of groups.values()) {
-    const n = tabs.filter((x) => x.group === g.id).length
-    g.chip.textContent = g.name
-    g.chip.classList.toggle('unnamed', g.name === '')
-    g.chip.style.setProperty('--group-color', colorOf(g.color))
-    g.chip.setAttribute('aria-expanded', String(!g.collapsed))
-    g.chip.dataset.count = String(n)
-    g.chip.title = t.tabMenu.groupOf.replace('{name}', g.name || t.tabMenu.unnamed).replace('{n}', String(n))
-  }
-  // Moved only where the order differs: a button being dragged or focused stays put.
-  row.forEach((el, i) => {
-    if (tabsEl.children[i] !== el) tabsEl.insertBefore(el, tabsEl.children[i] ?? null)
-  })
-  while (tabsEl.children.length > row.length) tabsEl.lastElementChild!.remove()
-  report()
-}
-
-/** A new group of one tab, its name typed in place. */
-function newGroup(tab: Tab): void {
-  const g = makeGroup({ id: crypto.randomUUID(), name: '', color: freeColor([...groups.values()].map((x) => x.color)), collapsed: false })
-  tab.group = g.id
-  layoutTabs()
-  renameGroup(g)
-}
-
-/** A tab into a group, after its last tab. */
-function joinGroup(tab: Tab, g: TabGroup): void {
-  const last = tabs.findLastIndex((x) => x.group === g.id && x !== tab)
-  tab.group = g.id
-  if (last < 0) return layoutTabs()
-  const without = tabs.filter((x) => x !== tab)
-  moveTab(tab, without.indexOf(tabs[last]!) + 1)
-}
-
-/** Folded (its tabs hidden) or opened; the tab in use moves out of a group being folded. */
-function toggleGroup(g: TabGroup): void {
-  if (!g.collapsed && active?.group === g.id) {
-    const at = tabs.indexOf(active)
-    const outside = [...tabs.slice(at), ...tabs.slice(0, at).reverse()].find((x) => x.group !== g.id && !(x.group && groups.get(x.group)?.collapsed))
-    if (!outside) return
-    g.collapsed = true
-    activate(outside)
-  } else g.collapsed = !g.collapsed
-  layoutTabs()
-}
-
-/** The group's name edited in its chip: Enter or leaving keeps it, Escape does not. */
-function renameGroup(g: TabGroup): void {
-  const input = document.createElement('input')
-  input.className = 'tab-group-input'
-  input.dataset.testid = 'tab-group-name'
-  input.value = g.name
-  input.placeholder = t.tabMenu.groupName
-  input.spellcheck = false
-  let done = false
-  const end = (keep: boolean) => {
-    if (done) return
-    done = true
-    if (keep) g.name = input.value.trim().slice(0, 80)
-    input.remove()
-    g.chip.hidden = false
-    layoutTabs()
-  }
-  for (const type of ['click', 'mousedown', 'dblclick'] as const) input.addEventListener(type, (e) => e.stopPropagation())
-  input.addEventListener('keydown', (e) => {
-    e.stopPropagation()
-    if (e.key === 'Enter') end(true)
-    else if (e.key === 'Escape') end(false)
-  })
-  input.addEventListener('blur', () => end(true))
-  g.chip.hidden = true
-  g.chip.after(input)
-  input.style.setProperty('--group-color', colorOf(g.color))
-  input.focus()
-  input.select()
-}
-
-function colorItems(current: TabColor | null, set: (c: TabColor | null) => void, none: boolean): MenuItem[] {
-  return [
-    ...(none ? [{ label: t.tabMenu.noColor, testid: 'color-none', checked: current === null, action: () => set(null) }] : []),
-    ...TAB_COLORS.map((c) => ({ label: t.tabMenu.colors[c], testid: `color-${c}`, swatch: colorOf(c), checked: current === c, action: () => set(c) })),
-  ]
-}
-
-const SEPARATOR: MenuItem = { separator: true, label: '', action: () => undefined }
+const grouped = new GroupedTabs<Tab>({
+  row: tabsEl,
+  tabs,
+  text: () => t.tabMenu,
+  active: () => active,
+  activate: (tab) => activate(tab),
+  close: (list) => void closeTabs(list),
+  changed: () => report(),
+  dragged: () => draggedTab,
+})
 
 function tabMenu(tab: Tab, x: number, y: number): void {
   const m = t.tabMenu
   const i = tabs.indexOf(tab)
   const others = tabs.filter((o) => o !== tab)
   const right = tabs.slice(i + 1)
-  const groupItems: MenuItem[] = [
-    { label: m.newGroup, testid: 'tab-new-group', action: () => newGroup(tab) },
-    ...(groups.size > (tab.group ? 1 : 0)
-      ? [{ label: `${m.addToGroup}…`, testid: 'tab-add-to-group', action: () => popMenuAt(x, y, [...groups.values()].filter((g) => g.id !== tab.group).map((g) => ({ label: g.name || m.unnamed, swatch: colorOf(g.color), testid: 'group-choice', action: () => joinGroup(tab, g) }))) }]
-      : []),
-    ...(tab.group
-      ? [{ label: m.removeFromGroup, testid: 'tab-ungroup', action: () => {
-          const end = tabs.findLastIndex((o) => o.group === tab.group)
-          tab.group = null
-          moveTab(tab, end)
-        } }]
-      : []),
-  ]
   popMenuAt(x, y, [
     ...(tab.path
-      ? [bookmarked(tab.path)
-          ? { label: t.commands.unbookmark, testid: 'tab-unbookmark', action: () => void folio.bookmark(tab.path!, false) }
-          : { label: t.commands.bookmark, testid: 'tab-bookmark', action: () => void folio.bookmark(tab.path!, true) }]
+      ? [
+          { label: m.reveal, testid: 'tab-reveal', icon: 'folder' as const, action: () => void sidebar.reveal(tab.path!) },
+          bookmarked(tab.path)
+            ? { label: t.commands.unbookmark, testid: 'tab-unbookmark', action: () => void folio.bookmark(tab.path!, false) }
+            : { label: t.commands.bookmark, testid: 'tab-bookmark', action: () => void folio.bookmark(tab.path!, true) },
+        ]
       : []),
     tab === beside
       ? { label: t.backToMain, testid: 'tab-back', action: () => closeBeside() }
       : { label: t.openBeside, testid: 'tab-beside', disabled: others.length === 0, action: () => openBeside(tab) },
     SEPARATOR,
-    { label: `${m.color}…`, testid: 'tab-color', swatch: tab.color ? colorOf(tab.color) : undefined, action: () => popMenuAt(x, y, colorItems(tab.color, (c) => {
-      tab.color = c
-      paintTab(tab)
-      report()
-    }, true)) },
-    ...groupItems,
+    ...grouped.tabItems(tab, x, y),
     SEPARATOR,
     { label: t.close, testid: 'tab-close', action: () => void close(tab) },
     { label: m.closeOthers, testid: 'tab-close-others', disabled: others.length === 0, action: () => void closeTabs(others) },
     { label: m.closeRight, testid: 'tab-close-right', disabled: right.length === 0, action: () => void closeTabs(right) },
     { label: m.closeSaved, testid: 'tab-close-saved', disabled: !tabs.some((o) => !isDirty(o)), action: () => void closeTabs(tabs.filter((o) => !isDirty(o))) },
     { label: m.closeAll, testid: 'tab-close-all', action: () => void closeTabs(tabs) },
-  ])
-}
-
-function groupMenu(g: TabGroup, x: number, y: number): void {
-  const m = t.tabMenu
-  popMenuAt(x, y, [
-    { label: m.rename, testid: 'group-rename', action: () => renameGroup(g) },
-    { label: `${m.color}…`, testid: 'group-color', swatch: colorOf(g.color), action: () => popMenuAt(x, y, colorItems(g.color, (c) => {
-      g.color = c ?? g.color
-      layoutTabs()
-    }, false)) },
-    { label: g.collapsed ? m.expand : m.collapse, testid: 'group-toggle', action: () => toggleGroup(g) },
-    SEPARATOR,
-    { label: m.ungroup, testid: 'group-ungroup', action: () => {
-      for (const tab of tabs) if (tab.group === g.id) tab.group = null
-      layoutTabs()
-    } },
-    { label: m.closeGroup, testid: 'group-close', action: () => void closeTabs(tabs.filter((o) => o.group === g.id)) },
   ])
 }
 
@@ -1985,7 +1794,7 @@ tabsEl.addEventListener('drop', (event) => {
   event.preventDefault()
   const before = tabAt(event.clientX)
   const without = tabs.filter((x) => x !== tab)
-  moveTab(tab, before && before !== tab ? without.indexOf(before) : before === tab ? tabs.indexOf(tab) : without.length, true)
+  grouped.move(tab, before && before !== tab ? without.indexOf(before) : before === tab ? tabs.indexOf(tab) : without.length, true)
 })
 const contentEl = document.querySelector<HTMLElement>('.content')!
 // Caught on the way down: the editors inside (a contenteditable takes drops) never see a tab dragged.
@@ -2135,7 +1944,7 @@ function remove(tab: Tab): void {
   if (tab === beside) backToMain(tab)
   tab.pane.remove()
   tab.button.remove()
-  if (tab.group) layoutTabs()
+  if (tab.group) grouped.layout()
   if (tab === mainTab) {
     // The main view takes a neighbour, never the document beside.
     const rest = tabs.filter((x) => x !== beside)
@@ -2709,6 +2518,7 @@ function commands(): Command[] {
     { id: 'open', group: file, title: t.open, keys: `${mod}O`, icon: 'open', run: () => void folio.openDialog().then(async (docs) => { for (const d of docs) await add(d) }) },
     { id: 'go-to-file', group: file, title: c.goToFile, keys: `${mod}T`, icon: 'file', run: () => void goToFile.open() },
     { id: 'add-project', group: file, title: c.addProject, icon: 'folderPlus', run: () => void sidebar.addProject() },
+    { id: 'reveal', group: file, title: t.tabMenu.reveal, icon: 'folder', when: () => !!active?.path, run: () => active?.path && void sidebar.reveal(active.path) },
     { id: 'clone', group: file, title: c.clone, icon: 'clone', run: () => openClone() },
     { id: 'save', group: file, title: c.save, keys: `${mod}S`, icon: 'save', when: has, run: () => active && void save(active, false) },
     { id: 'save-as', group: file, title: c.saveAs, keys: `${mod}⇧S`, icon: 'save', when: has, run: () => active && void save(active, true) },
@@ -2974,8 +2784,10 @@ function checkUpdate(): void {
 }
 linksPanel.show(noteOf(active))
 
+/** The consoles' words, with the tab menu's for their tabs' colours and groups. */
+const consoleText = () => ({ ...t.console, tabMenu: t.tabMenu })
 const consolePanel = new ConsolePanel(
-  t.console,
+  consoleText(),
   {
     open: (cwd, cols, rows, command) => folio.openConsole(cwd, cols, rows, command),
     input: (id, data) => folio.consoleInput(id, data),
@@ -3281,7 +3093,7 @@ function applyI18n(state: I18nState, redraw = false): void {
       closedTabs.shift()
       await add(next, wasActive)
       const added = tabs.find((x) => x.path === next.path)
-      if (added) moveTab(added, index)
+      if (added) grouped.move(added, index)
     }
   })()
 }
@@ -3294,11 +3106,11 @@ void folio.startup().then(async ({ tabs: restored, groups: savedGroups, active: 
   applyTheme(theme)
   buildRail()
   void sidebar.load()
-  for (const g of savedGroups ?? []) makeGroup(g)
+  for (const g of savedGroups ?? []) grouped.restore(g)
   for (const r of restored) {
     const doc = isOpened(r.doc) ? r.doc : null
     const b = r.buffer
-    const look = { color: isTabColor(r.color) ? r.color : null, group: typeof r.group === 'string' && groups.has(r.group) ? r.group : null }
+    const look = { color: isTabColor(r.color) ? r.color : null, group: typeof r.group === 'string' && grouped.groups.has(r.group) ? r.group : null }
     if (r.review) {
       openReview(r.review, false, look)
       continue
@@ -3321,7 +3133,7 @@ void folio.startup().then(async ({ tabs: restored, groups: savedGroups, active: 
       })
     } else if (r.doc) await add(r.doc, false, look)
   }
-  layoutTabs()
+  grouped.layout()
   for (const tab of tabs) syncLabel(tab)
   activate(tabs[activeIndex ?? -1] ?? tabs[tabs.length - 1] ?? null)
   // The first start: what folio can do, in the language in use.

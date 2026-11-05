@@ -633,6 +633,7 @@
     "welcomeDoc": "What folio can do",
     "welcomeButton": "What folio can do →",
     "tabMenu": {
+      "reveal": "Show in the Sidebar",
       "closeOthers": "Close Others",
       "closeRight": "Close to the Right",
       "closeSaved": "Close Saved",

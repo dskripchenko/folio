@@ -641,6 +641,7 @@
     "welcomeDoc": "Возможности folio",
     "welcomeButton": "Что умеет folio →",
     "tabMenu": {
+      "reveal": "Показать в дереве",
       "closeOthers": "Закрыть другие",
       "closeRight": "Закрыть справа",
       "closeSaved": "Закрыть сохранённые",

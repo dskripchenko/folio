@@ -544,6 +544,12 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .console-tab-close { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; opacity: 0; }
 .console-tab:hover .console-tab-close, .console-tab[aria-selected="true"] .console-tab-close { opacity: 0.6; }
 .console-tab-close:hover { opacity: 1 !important; background: color-mix(in srgb, currentColor 15%, transparent); }
+.console-tab[hidden] { display: none; }
+.console-tab.colored { background: color-mix(in srgb, var(--tab-color) 16%, transparent); }
+.console-tab.colored[aria-selected="true"] { background: color-mix(in srgb, var(--tab-color) 26%, transparent); }
+.console-tab.colored[data-state=""] .console-tab-status { background: var(--tab-color); }
+.console-tab.grouped { border-radius: 6px 6px 0 0; box-shadow: inset 0 -2px 0 var(--group-color); }
+.console-tabs .tab-group { margin-left: 6px; }
 .console-body { position: relative; flex: 1; min-height: 0; }
 .console-group { position: absolute; inset: 0; display: flex; }
 .console-group[hidden] { display: none; }

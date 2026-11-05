@@ -180,6 +180,7 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 15 | Tabs closed many at once, coloured, grouped — **1.6** |
 | 16 | Reviewing an AI agent's work: review tabs, since the last look, worktrees, comments to its console, Claude Code's hook — **1.7** |
 | 17 | An agent asks for a review over MCP and waits for the answer — **1.8** |
+| 18 | A tab's file shown in the tree, console tabs coloured and grouped, the wheel by rows — **1.9** |
 
 ## Development
 

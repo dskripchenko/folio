@@ -124,6 +124,39 @@ export class Sidebar {
     }
   }
 
+  /**
+   * A file shown in its tree: the project (or Shared) it is under, its folders
+   * opened, its row brought into view and focused — the flyout when the
+   * sidebar is folded, a hidden project shown. False when it is under none.
+   */
+  async reveal(path: string): Promise<boolean> {
+    const ws = this.ws
+    if (!ws) return false
+    const bare = (p: string) => p.replace(/[\\/]+$/, '')
+    const homes = [
+      { id: 'shared', root: ws.shared.root, path: bare(ws.shared.path), hidden: false },
+      ...ws.projects.filter((p) => !p.missing).map((p) => ({ id: p.id, root: p.root, path: bare(p.path), hidden: !!p.hidden })),
+    ]
+    const home = homes.filter((h) => path.startsWith(h.path + this.sep)).sort((a, b) => b.path.length - a.path.length)[0]
+    if (!home) return false
+    const rel = path.slice(home.path.length + 1).split(this.sep).join('/')
+    if (home.hidden && !this.showHidden) {
+      this.showHidden = true
+      prefs.set('showHidden', true)
+      this.render(ws)
+    }
+    if (this.collapsed) this.openFlyout(home.id)
+    const ul = await this.listOf(home.root, rel.includes('/') ? rel.split('/').slice(0, -1).join('/') : '')
+    if (!ul) return false
+    // The rows come from the disk: the file's among them, when it is listed at all.
+    let row: HTMLElement | null = null
+    for (let i = 0; i < 40 && !(row = ul.querySelector<HTMLElement>(`:scope > li > .row[data-rel="${CSS.escape(rel)}"]`)); i++) await new Promise((r) => setTimeout(r, 25))
+    if (!row) return false
+    row.scrollIntoView({ block: 'center' })
+    row.focus()
+    return true
+  }
+
   private key(root: string, rel: string): string {
     return `${root}:${rel}`
   }
@@ -582,23 +615,28 @@ export class Sidebar {
 
   // Making, renaming and moving files ------------------------------------------------------
 
-  /** A folder's list, opened if it is folded; null when it is not shown. */
+  /**
+   * A folder's list, opened if it is folded (its own folders above it first,
+   * the project's row for the top); null when it is not shown. The list is
+   * there at once; its rows come from the disk.
+   */
   private async listOf(root: string, dir: string): Promise<HTMLElement | null> {
     const box = this.flown ? this.o.flyout : this.o.el
     const find = (): HTMLElement | null => box.querySelector<HTMLElement>(`ul.tree[data-root="${root}"][data-rel="${CSS.escape(dir)}"]`)
     let ul = find()
     if (ul) return ul
-    // Folded: unfold it (its parent first), then wait for the list.
     const project = this.ws?.projects.find((p) => p.root === root)
-    const row =
+    const rowOf = (): HTMLElement | null =>
       dir === ''
         ? project
           ? box.querySelector<HTMLElement>(`[data-project="${project.id}"] > .project-row`)
           : null
         : box.querySelector<HTMLElement>(`ul.tree[data-root="${root}"] .row.dir[data-rel="${CSS.escape(dir)}"]`)
-    if (!row && dir.includes('/')) {
-      await this.listOf(root, dir.split('/').slice(0, -1).join('/'))
-      return this.listOf(root, dir)
+    let row = rowOf()
+    if (!row && dir !== '') {
+      // Its folder is folded too: that one opened first, its row among the rows that come from the disk.
+      if (!(await this.listOf(root, dir.includes('/') ? dir.split('/').slice(0, -1).join('/') : ''))) return null
+      for (let i = 0; i < 40 && !(row = rowOf()); i++) await new Promise((r) => setTimeout(r, 25))
     }
     if (!row) return null
     if (!row.classList.contains('open')) row.click()
