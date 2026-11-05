@@ -138,7 +138,9 @@ export class Consoles {
           typed = null
           this.setBusy(id, true)
         } else if (e.kind === 'end') {
-          if (current) this.sink.finished?.(id, { command: current.command, code: e.code, ms: Date.now() - current.at })
+          // zsh and bash say the command before it runs; PowerShell after, at the next prompt, just before its end.
+          if (current) this.sink.finished?.(id, { command: current.command ?? typed, code: e.code, ms: Date.now() - current.at })
+          typed = null
           current = null
           this.setBusy(id, false)
         } else if (e.kind === 'prompt') {

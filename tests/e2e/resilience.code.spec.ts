@@ -43,7 +43,7 @@ test('after a crash, said once; a long command and a program asking for attentio
     await typeIn(win, win32 ? 'Start-Sleep 2' : 'sleep 2')
     await expect.poll(async () => (await notified(app)).length, { timeout: 15_000 }).toBe(1)
     const [done] = await notified(app)
-    expect(done!.body).toContain('sleep 2')
+    expect(done!.body).toContain(win32 ? 'Start-Sleep 2' : 'sleep 2')
     expect(done!.consoleId).toBe(1)
 
     // A program asks for attention while it runs (OSC 9, as Claude Code does).
