@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Log, dayOf, logDays } from '../../src/main/log'
 
@@ -84,7 +84,7 @@ describe('log: how the last run ended', () => {
     writeFileSync(join(dir, 'folio-2026-11-05.log'), JSON.stringify({ ts: 't1', level: 'info', proc: 'main', area: 'app', msg: 'start' }) + '\n')
     expect(log.lastRun()).toEqual({ ended: 'crashed', at: 't1' })
     writeFileSync(join(dir, 'folio-2026-11-05.1.log'), JSON.stringify({ ts: 't2', level: 'info', proc: 'main', area: 'app', msg: 'quit' }) + '\n')
-    expect(log.files().map((f) => f.split('/').pop())).toEqual(['folio-2026-11-05.1.log', 'folio-2026-11-05.log'])
+    expect(log.files().map((f) => basename(f))).toEqual(['folio-2026-11-05.1.log', 'folio-2026-11-05.log'])
     expect(log.lastRun()).toEqual({ ended: 'clean', at: 't2' })
   })
 })
