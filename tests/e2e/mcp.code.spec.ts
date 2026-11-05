@@ -142,7 +142,7 @@ test('an agent over MCP: changes shown and the answer awaited — comments back,
       await win.keyboard.press(process.platform === 'darwin' ? 'Meta+k' : 'Control+k')
       await win.keyboard.type('Claude')
       await win.locator('[data-command="claude-connect"]').click()
-      await expect.poll(() => (existsSync(asked) ? readFileSync(asked, 'utf8') : '')).toContain('mcp add --scope local --env ELECTRON_RUN_AS_NODE=1 folio --')
+      await expect.poll(() => (existsSync(asked) ? readFileSync(asked, 'utf8') : '')).toContain('mcp add folio --scope local --env ELECTRON_RUN_AS_NODE=1 --')
       expect(readFileSync(asked, 'utf8')).toContain(bridge)
     }
   } finally {
