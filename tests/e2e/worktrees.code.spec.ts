@@ -63,7 +63,7 @@ test('worktrees: an agent’s listed with where it stands, reviewed against the 
     await agent.getByTestId('worktree-more').click()
     await win.getByTestId('worktree-take').click()
     await expect.poll(() => readFileSync(join(proj, 'a.ts'), 'utf8')).toBe('export const a = 2\n')
-    expect(readFileSync(join(proj, 'b.ts'), 'utf8')).toBe('export const b = 1\n')
+    await expect.poll(() => (existsSync(join(proj, 'b.ts')) ? readFileSync(join(proj, 'b.ts'), 'utf8') : null)).toBe('export const b = 1\n')
     expect(git(proj, 'log', '--oneline').trim().split('\n')).toHaveLength(1)
 
     // Removed, asked first: its folder and branch gone.

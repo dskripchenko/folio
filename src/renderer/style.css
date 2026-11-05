@@ -84,6 +84,11 @@ body.sidebar-collapsed .rail-left { display: flex; }
 .row.dir > .icon-svg, .project-row > .icon-svg { color: color-mix(in srgb, var(--accent) 70%, var(--muted)); }
 .row.kind-diagram > .icon-svg { color: var(--accent); }
 .row .name { overflow: hidden; text-overflow: ellipsis; }
+/* A file's type: a letter or two in its stack's colour, as wide as an icon. */
+.ft { display: inline-grid; place-items: center; flex: none; width: 16px; height: 15px; font: 700 9.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -0.5px; color: color-mix(in srgb, var(--ft) 80%, var(--fg)); user-select: none; }
+.ft[data-glyphs="1"] { font-size: 11.5px; }
+.ft[data-glyphs="3"] { font-size: 7px; }
+.changes-name > .ft { align-self: center; }
 .project-row { font-weight: 500; }
 .project-row.pinned .name::after { content: ' •'; color: var(--accent); }
 .project-row.hidden-project { opacity: 0.55; }
@@ -621,7 +626,7 @@ body.console-max .content > .console-panel { flex: 1; width: auto !important; }
 .changes-row:hover { background: color-mix(in srgb, var(--line) 50%, transparent); }
 .changes-name { flex: 1; min-width: 0; display: flex; gap: 6px; padding: 2px 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
 .changes-dir { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
-.changes-deleted .changes-name > span:first-child { text-decoration: line-through; }
+.changes-deleted .changes-file { text-decoration: line-through; }
 .changes-actions { display: flex; opacity: 0; }
 .changes-row:hover .changes-actions, .changes-row:focus-within .changes-actions { opacity: 1; }
 .changes-actions .icon-button { width: 22px; height: 22px; }
@@ -768,6 +773,20 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .rv-nav-item[data-viewed] { opacity: 0.5; }
 .rv-nav-item[data-viewed] .rv-nav-name::after { content: ' ✓'; color: #2da44e; }
 .rv-nav-dir { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+.rv-nav-item > .ft { align-self: center; }
+.rv-nav-name { overflow: hidden; text-overflow: ellipsis; }
+.rv-nav-tools { position: sticky; top: 0; z-index: 1; display: flex; justify-content: flex-end; padding: 2px 6px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.rv-nav-tools .icon-button { width: 24px; height: 24px; }
+.rv-nav-tools .icon-button[aria-pressed="true"] { color: var(--accent); }
+.rv-nav[data-mode="tree"] .rv-nav-dir { display: none; }
+.rv-nav-folder { display: flex; align-items: center; gap: 4px; padding: 3px 12px; cursor: pointer; white-space: nowrap; overflow: hidden; color: var(--muted); font-size: 12px; }
+.rv-nav-folder:hover { background: var(--tab); }
+.rv-nav-folder > .icon-svg { flex: none; color: color-mix(in srgb, var(--accent) 70%, var(--muted)); }
+.rv-nav-folder-name { overflow: hidden; text-overflow: ellipsis; }
+.rv-nav-twisty { display: grid; place-items: center; width: 11px; flex: none; }
+.rv-nav-twisty .icon-svg { transform: rotate(90deg); transition: transform 0.12s; }
+.rv-nav-folder[data-closed] .rv-nav-twisty .icon-svg { transform: none; }
+.rv-file-head > .ft { align-self: center; }
 .rv-files { min-width: 0; padding: 12px 16px 64px; }
 .rv-message { color: var(--muted); padding: 24px 0; }
 .rv-file { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 8px; }
@@ -812,7 +831,7 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .rv-gap-button { width: 100%; border: 0; border-radius: 0; background: transparent; color: var(--muted); text-align: left; padding: 2px 12px; }
 .rv-gap-button:hover { color: var(--accent); }
 .rv-row:hover .rv-n { color: var(--fg); }
-.review.rv-unviewed-only .rv-file[data-viewed], .review.rv-unviewed-only .rv-nav-item[data-viewed] { display: none; }
+.review.rv-unviewed-only .rv-file[data-viewed], .review.rv-unviewed-only .rv-nav-item[data-viewed], .review.rv-unviewed-only .rv-nav-folder[data-viewed] { display: none; }
 /* Scrolled to: below the sticky heads of the review and of the file. */
 .rv-file { scroll-margin-top: calc(var(--rv-head) + 8px); }
 .rv-diff tr { scroll-margin-top: calc(var(--rv-head) + 44px); }

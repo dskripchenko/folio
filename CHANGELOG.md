@@ -7,6 +7,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-05
+
+### Added
+
+- Files show their type: a letter or two in the colour of their stack beside
+  the name — `JS` yellow, `TS` blue, `<?` violet for PHP, `B` for Blade, `V`
+  for Vue, `Py`, `Go`, `Rs`, `{}` for JSON, `Y` for YAML, `$` for shell and
+  many more; `package.json`, `composer.json`, lock files, `Dockerfile`, `.env`
+  and `.gitignore` known by name. In the tree, in **Changes** and in the
+  review's list of files and file headings, readable in both themes.
+- The review's list of files as a tree: a button above the list switches
+  between one line per file and folders (remembered); folders come first, a
+  folder holding only one folder is shown with it as one row
+  (`src/http/controllers`), a folder folds with a click and hides with
+  **Not viewed only** once all its files are viewed.
+
 ## [1.9.0] - 2026-11-05
 
 ### Added

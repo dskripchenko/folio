@@ -224,6 +224,12 @@ Umbenennung oder Verschiebung; ein in den Papierkorb gelegtes schließt sich,
 außer es hat ungespeicherte Änderungen. Ein Name mit `/ \ : * ? " < > |` oder
 einer, den es schon gibt, wird an Ort und Stelle abgelehnt, mit dem Grund.
 
+Eine Code-Datei zeigt ihren Typ neben dem Namen: ein, zwei Zeichen in der Farbe
+ihres Stacks — `JS` gelb, `TS` blau, `<?` violett für PHP, `B` für Blade, `{}`
+für JSON usw.; `package.json`, `composer.json`, Lock-Dateien, `Dockerfile` und
+`.env` werden am Namen erkannt. Dieselben Zeichen stehen in **Änderungen** und
+im Review.
+
 ### Zwei Dokumente nebeneinander
 
 **Daneben öffnen** im Menü eines Tabs (oder `Cmd/Strg+\`, oder der Befehl)
@@ -472,7 +478,10 @@ lesen und prüfen vor allem, was er geändert hat, und bearbeiten ein wenig.
   dem Index genommen oder verworfen. Ein Doppelklick auf eine Zeile (oder
   **Bearbeiten**) öffnet die Datei neben dem Review an dieser Zeile. Das Review
   folgt der Platte: was ein Agent schreibt, erscheint von selbst, eine
-  geänderte Datei wird kurz hervorgehoben.
+  geänderte Datei wird kurz hervorgehoben. Die Dateiliste ist flach oder ein
+  Ordnerbaum (die Schaltfläche darüber, gemerkt): Ordner zuerst, ein Ordner mit
+  nur einem Ordner darin als eine Zeile (`src/http/controllers`), ein Ordner
+  per Klick eingeklappt.
 - **Seit dem letzten Blick** zeigt nur, was sich seitdem geändert hat —
   Bearbeitungen und die eigenen Commits des Agenten —, das Neueste zuerst, mit
   Zeit. **Gesehen** an einer Datei rückt den Blick für sie vor, **Alles

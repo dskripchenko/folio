@@ -8,6 +8,9 @@ import type { McpAnswer } from '../../common/mcp'
 import { syntaxTheme } from '../code'
 import { anchorOf, compose, contextOf, excerptOf } from './comments'
 import { blocksOf, fileDiff, markRanges, type FileDiff, type Row } from './rows'
+import { fileBadge, fileType, PLAIN } from '../fileTypes'
+import { icon, iconButton } from '../icons'
+import { navTree } from './navTree'
 
 /**
  * A set of changes in a tab (ADR-006, R2), as a pull request's files: the
@@ -56,6 +59,8 @@ interface FileView {
 }
 
 type Layout = 'unified' | 'split'
+/** The list of files: one line each, or folders as a tree. */
+type NavMode = 'flat' | 'tree'
 
 /** A short hash of texts (FNV-1a and the length): enough to tell they changed. */
 function hashOf(text: string): string {
@@ -94,6 +99,13 @@ export class ReviewView {
   /** An agent waiting for the person's answer on this set (R7). */
   private ask: { id: number; done: (a: McpAnswer) => void; bar: HTMLElement } | null = null
   private layout: Layout = prefs.get<Layout>('reviewLayout', 'unified')
+  private navMode: NavMode = prefs.get<NavMode>('reviewNavMode', 'flat')
+  /** The tree's folders closed by a click, and their rows. */
+  private readonly collapsedDirs = new Set<string>()
+  private readonly navDirs = new Map<string, HTMLElement>()
+  private navDirsQueued = false
+  private readonly nav: HTMLElement
+  private readonly navTools: HTMLElement
   private readonly head: HTMLElement
   private readonly titleEl: HTMLElement
   private readonly summary: HTMLElement
@@ -123,10 +135,13 @@ export class ReviewView {
     this.head.append(this.titleEl, this.summary)
     const body = document.createElement('div')
     body.className = 'rv-body'
-    const nav = document.createElement('nav')
+    const nav = (this.nav = document.createElement('nav'))
     nav.className = 'rv-nav'
+    nav.dataset.mode = this.navMode
+    this.navTools = document.createElement('div')
+    this.navTools.className = 'rv-nav-tools'
     this.navList = document.createElement('ul')
-    nav.append(this.navList)
+    nav.append(this.navTools, this.navList)
     this.list = document.createElement('div')
     this.list.className = 'rv-files'
     this.message = document.createElement('p')
@@ -210,6 +225,7 @@ export class ReviewView {
     if (only) only.textContent = t.unviewedOnly
     this.head.querySelector('.rv-only')?.setAttribute('title', t.unviewedOnly)
     this.syncHead()
+    this.renderNav()
   }
 
   title(): string {
@@ -319,8 +335,6 @@ export class ReviewView {
       // In the set's order.
       const after: ChildNode | null = before ? before.section.nextSibling : this.list.firstChild
       if (fv.section !== after) this.list.insertBefore(fv.section, after)
-      const navAfter: ChildNode | null = before ? before.nav.nextSibling : this.navList.firstChild
-      if (fv.nav !== navAfter) this.navList.insertBefore(fv.nav, navAfter)
       // A file marked viewed before: read now, to know whether it still is.
       if (!fv.loaded && !fv.loading && this.viewed[this.keyOf(file)]) void this.loadTexts(fv)
       before = fv
@@ -332,6 +346,82 @@ export class ReviewView {
       fv.nav.remove()
       this.files.delete(path)
     }
+    this.renderNav()
+  }
+
+  /** The list of files again: in the set's order, or as a tree of folders. */
+  private renderNav(): void {
+    const t = this.t
+    const tree = this.navMode === 'tree'
+    this.nav.dataset.mode = this.navMode
+    const toggle = iconButton(tree ? 'list' : 'listTree', tree ? t.navFlat : t.navTree, () => {
+      this.navMode = tree ? 'flat' : 'tree'
+      prefs.set('reviewNavMode', this.navMode)
+      this.renderNav()
+    }, 'review-nav-mode')
+    toggle.setAttribute('aria-pressed', String(tree))
+    this.navTools.replaceChildren(toggle)
+    this.navDirs.clear()
+    const files = this.set?.files ?? []
+    if (!tree) {
+      const items: HTMLElement[] = []
+      for (const f of files) {
+        const fv = this.files.get(f.path)
+        if (!fv) continue
+        fv.nav.style.paddingLeft = ''
+        items.push(fv.nav)
+      }
+      this.navList.replaceChildren(...items)
+      return
+    }
+    const items: HTMLElement[] = []
+    for (const r of navTree(files.map((f) => f.path), this.collapsedDirs)) {
+      const pad = `${12 + r.depth * 12}px`
+      if (r.kind === 'file') {
+        const fv = this.files.get(r.path)
+        if (!fv) continue
+        fv.nav.style.paddingLeft = pad
+        items.push(fv.nav)
+        continue
+      }
+      const li = document.createElement('li')
+      li.className = 'rv-nav-folder'
+      li.dataset.testid = 'review-nav-folder'
+      li.dataset.path = r.path
+      li.style.paddingLeft = pad
+      li.title = r.path
+      const closed = this.collapsedDirs.has(r.path)
+      li.toggleAttribute('data-closed', closed)
+      const twisty = document.createElement('span')
+      twisty.className = 'rv-nav-twisty'
+      twisty.append(icon('chevron', 11))
+      const name = document.createElement('span')
+      name.className = 'rv-nav-folder-name'
+      name.textContent = r.name
+      li.append(twisty, icon('folder', 13), name)
+      li.addEventListener('click', () => {
+        if (closed) this.collapsedDirs.delete(r.path)
+        else this.collapsedDirs.add(r.path)
+        this.renderNav()
+      })
+      this.navDirs.set(r.path, li)
+      items.push(li)
+    }
+    this.navList.replaceChildren(...items)
+    this.syncNavDirs()
+  }
+
+  /** A folder of the tree is viewed when all its files are (for "not viewed only"). */
+  private syncNavDirs(): void {
+    this.navDirsQueued = false
+    if (this.navDirs.size === 0) return
+    const left = new Set<string>()
+    for (const fv of this.files.values()) {
+      if (fv.viewed) continue
+      const parts = fv.file.path.split('/')
+      for (let i = 1; i < parts.length; i++) left.add(parts.slice(0, i).join('/'))
+    }
+    for (const [path, li] of this.navDirs) li.toggleAttribute('data-viewed', !left.has(path))
   }
 
   private keyOf(file: ChangedFile): string {
@@ -389,6 +479,7 @@ export class ReviewView {
     dir.className = 'rv-dir'
     dir.textContent = slash >= 0 ? f.path.slice(0, slash + 1) : ''
     name.append(dir, f.path.slice(slash + 1))
+    const type = fileType(f.path) ?? PLAIN
     if (f.oldPath) {
       const from = document.createElement('span')
       from.className = 'rv-from'
@@ -435,7 +526,7 @@ export class ReviewView {
     const when = document.createElement('span')
     when.className = 'rv-when'
     when.textContent = this.spec.kind === 'since' || this.spec.kind === 'working' ? this.ago(f.mtime) : ''
-    fv.head.replaceChildren(fold, status, name, stats, agent, when, actions)
+    fv.head.replaceChildren(fold, status, fileBadge(type), name, stats, agent, when, actions)
     fv.section.toggleAttribute('data-viewed', fv.viewed)
     fv.section.toggleAttribute('data-folded', fv.folded)
     // Its line in the list of files.
@@ -450,8 +541,12 @@ export class ReviewView {
     const navWhen = document.createElement('span')
     navWhen.className = 'rv-nav-when'
     navWhen.textContent = this.spec.kind === 'since' ? this.ago(f.mtime) : ''
-    fv.nav.replaceChildren(navStatus, navName, navDir, navWhen)
+    fv.nav.replaceChildren(navStatus, fileBadge(type), navName, navDir, navWhen)
     fv.nav.toggleAttribute('data-viewed', fv.viewed)
+    if (this.navDirs.size > 0 && !this.navDirsQueued) {
+      this.navDirsQueued = true
+      requestAnimationFrame(() => this.syncNavDirs())
+    }
   }
 
   private fold(fv: FileView, folded: boolean): void {
