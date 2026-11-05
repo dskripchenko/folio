@@ -23,7 +23,7 @@ test('files by type: a mark in the stack’s colour in the tree and the review; 
   try {
     const win = await app.firstWindow()
     // Wide enough for the review's list of files.
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(1500, 900))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(1100, 760))
     await expect(win.getByTestId('shared')).toBeVisible()
     await app.evaluate(({ dialog }, paths) => {
       dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: paths })) as typeof dialog.showOpenDialog
@@ -44,6 +44,10 @@ test('files by type: a mark in the stack’s colour in the tree and the review; 
     if (process.env.FOLIO_SHOTS) await win.screenshot({ path: join(process.env.FOLIO_SHOTS, 'tree.png') })
     await win.getByTestId('changes-panel').getByTestId('changes-review').click()
     const review = win.getByTestId('review')
+    // Room for the list of files on a small screen: the panel and the sidebar put away.
+    await win.getByTestId('toggle-changes').click()
+    await expect(win.getByTestId('changes-panel')).toBeHidden()
+    await win.getByTestId('side-collapse').click()
     const nav = review.getByTestId('review-nav')
     await expect(nav).toHaveCount(5)
     await expect(nav.filter({ hasText: 'Home.php' }).locator('.ft')).toHaveText('<?')
