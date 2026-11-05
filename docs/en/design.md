@@ -818,9 +818,10 @@ While folio is not in front, a system notification says:
   never) has ended — the command, its time, whether it failed;
 - a program in a console asks for attention: a message by OSC 9 or OSC 777, or a
   bell, while a command runs (at most once in 30 seconds a console). Claude Code
-  sends them when it is done or waits for an answer — with
-  `claude config set --global preferredNotifChannel iterm2` (a message) or
-  `terminal_bell` (a bell).
+  sends them when it is done or waits for an answer once its channel is set:
+  `"preferredNotifChannel": "iterm2"` (a message) or `"terminal_bell"` (a bell)
+  in `~/.claude/settings.json`, or **Local notifications** in its `/config`.
+  Its default, `auto`, sends nothing in folio's consoles.
 
 A click on the notification brings folio forward at that console. Each console
 tab's tooltip tells the memory and processor of its programs, and a tab whose

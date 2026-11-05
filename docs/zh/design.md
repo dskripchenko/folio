@@ -418,7 +418,7 @@ Windows 上为 PowerShell；项目或文件夹菜单中的**在此打开控制�
 当 folio 不在前台时，系统通知会告知：
 
 - 控制台中运行超过一分钟的命令（**应用**：秒数；0 表示从不）已结束——命令、耗时、是否失败；
-- 控制台中的程序请求关注：命令运行期间通过 OSC 9 或 OSC 777 发出的消息，或响铃（每个控制台每 30 秒最多一次）。Claude Code 在完成或等待回答时会发送它们——使用 `claude config set --global preferredNotifChannel iterm2`（消息）或 `terminal_bell`（响铃）。
+- 控制台中的程序请求关注：命令运行期间通过 OSC 9 或 OSC 777 发出的消息，或响铃（每个控制台每 30 秒最多一次）。设置好通知渠道后，Claude Code 会在完成或等待回答时发送它们：在 `~/.claude/settings.json` 中设置 `"preferredNotifChannel": "iterm2"`（消息）或 `"terminal_bell"`（响铃），或在其 `/config` 中的 **Local notifications** 设置。默认值 `auto` 在 folio 的控制台中不会发送任何通知。
 
 点击通知会把 folio 带到前台并定位到该控制台。每个控制台标签的提示显示其程序的内存和处理器占用；程序占用超过 1 GB 的标签会直接显示。超过 8 GB（**应用**；0 表示从不）或处理器连续忙碌五分钟时，folio 会提示并提供**进程**和**关闭控制台**——但自身不做任何操作：那些不是它的程序。
 

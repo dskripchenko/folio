@@ -900,8 +900,10 @@ Solange folio nicht vorn ist, meldet eine Systembenachrichtigung:
 - ein Programm in einer Konsole bittet um Aufmerksamkeit: eine Nachricht per OSC 9
   oder OSC 777 oder ein Klingelton, während ein Befehl läuft (höchstens alle 30
   Sekunden je Konsole). Claude Code sendet sie, wenn es fertig ist oder auf eine
-  Antwort wartet — mit `claude config set --global preferredNotifChannel iterm2`
-  (Nachricht) oder `terminal_bell` (Klingelton).
+  Antwort wartet, sobald sein Kanal gesetzt ist: `"preferredNotifChannel": "iterm2"`
+  (Nachricht) oder `"terminal_bell"` (Klingelton) in `~/.claude/settings.json` oder
+  **Local notifications** in seinem `/config`. Die Voreinstellung `auto` sendet in
+  folios Konsolen nichts.
 
 Ein Klick auf die Benachrichtigung holt folio bei dieser Konsole nach vorn. Der Tooltip
 jedes Konsolen-Tabs nennt Speicher und Prozessor seiner Programme, und ein Tab, dessen

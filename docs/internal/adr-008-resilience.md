@@ -92,8 +92,10 @@
   - программа в консоли **просит внимания**: OSC 9 (`ESC ] 9 ; текст BEL`, так
     уведомляет Claude Code с каналом `iterm2`) или одиночный BEL
     (`terminal_bell`). Claude Code так сообщает, что закончил или ждёт ответа.
-    В доке — как включить: `claude config set --global
-    preferredNotifChannel iterm2`;
+    В доке — как включить: `"preferredNotifChannel": "iterm2"` в
+    `~/.claude/settings.json` (или Local notifications в `/config`; подкоманды
+    `claude config` в Claude Code 2.1 уже нет; по умолчанию `auto` в консоли
+    folio ничего не шлёт);
   - по щелчку на уведомление folio выходит вперёд и открывает эту консоль.
 - **Ресурсы на вкладке консоли**: в подсказке вкладки — память и процессор
   дерева её процессов. Сверх 1 ГБ на вкладке видна метка памяти.
