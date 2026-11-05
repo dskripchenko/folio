@@ -117,7 +117,10 @@ folio keeps an eye on itself: a gauge shows the memory it takes, a processes
 window shows each of its processes (an agent in its console apart), soft memory
 limits let go of caches and restart a heavy language server, a log of five days
 records what happened, and **Keep awake** stops the computer from sleeping —
-until turned off, for a while, or while a command runs in a console.
+until turned off, for a while, or while a command runs in a console. While you
+are away it tells you when a long command ends or an agent in a console asks for
+you (Claude Code's notifications), says after a crash what happened, warns when
+the disk runs out of room, and does not follow build output an agent writes.
 
 Unsaved changes never get lost and never reach the file on their own: a quick
 note in an untitled tab, or an edit you have not saved, survives closing folio

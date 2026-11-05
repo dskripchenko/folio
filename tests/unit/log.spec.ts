@@ -76,3 +76,15 @@ describe('log: a file a day, kept for days', () => {
     expect(dayOf(new Date('2026-01-02T03:00:00'))).toBe('2026-01-02')
   })
 })
+
+describe('log: how the last run ended', () => {
+  it('crashed without a quit after its start; clean with one; parts newest first', () => {
+    const log = new Log(dir, { every: 0, now: at('2026-11-05T10:00:00') })
+    expect(log.lastRun().ended).toBe('unknown')
+    writeFileSync(join(dir, 'folio-2026-11-05.log'), JSON.stringify({ ts: 't1', level: 'info', proc: 'main', area: 'app', msg: 'start' }) + '\n')
+    expect(log.lastRun()).toEqual({ ended: 'crashed', at: 't1' })
+    writeFileSync(join(dir, 'folio-2026-11-05.1.log'), JSON.stringify({ ts: 't2', level: 'info', proc: 'main', area: 'app', msg: 'quit' }) + '\n')
+    expect(log.files().map((f) => f.split('/').pop())).toEqual(['folio-2026-11-05.1.log', 'folio-2026-11-05.log'])
+    expect(log.lastRun()).toEqual({ ended: 'clean', at: 't2' })
+  })
+})

@@ -948,3 +948,4 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .res-toast { position: fixed; right: 64px; bottom: 16px; z-index: 900; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: min(520px, calc(100vw - 96px)); padding: 10px 12px; border: 1px solid #cf222e; border-radius: 8px; background: var(--bg); color: var(--fg); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); font-size: 12.5px; }
 .res-toast > span { flex: 1 1 100%; }
 .res-dot { stroke: var(--accent); stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.console-tab-usage { margin-left: 6px; padding: 0 5px; border-radius: 8px; background: color-mix(in srgb, var(--warn-line) 22%, transparent); color: var(--fg); font-size: 10.5px; font-variant-numeric: tabular-nums; }

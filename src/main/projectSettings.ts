@@ -19,6 +19,8 @@ export interface ProjectSettings {
   formatter?: string
   /** Language servers by language: a command and its arguments, or false for none (ADR-003). */
   lsp?: Record<string, string[] | false>
+  /** Folders whose changes folio does not follow (names, or paths from the top); set — over the build folders it leaves out by itself (ADR-008). */
+  watchExclude?: string[]
 }
 
 export function readProjectSettings(dir: string): ProjectSettings {
@@ -73,5 +75,6 @@ function sanitize(r: Record<string, unknown>): ProjectSettings {
     }
     out.lsp = lsp
   }
+  if (Array.isArray(r.watchExclude)) out.watchExclude = r.watchExclude.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim().replace(/^\.?\/+|\/+$/g, ''))
   return out
 }

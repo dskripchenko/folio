@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Awake, commandMarks, type Blocker } from '../../src/main/awake'
+import { Awake, type Blocker } from '../../src/main/awake'
 
 function blocker() {
   const started = new Map<number, string>()
@@ -61,8 +61,4 @@ describe('awake: the system kept from sleeping', () => {
     expect(b.started.size).toBe(0)
   })
 
-  it('reads the shell integration’s marks', () => {
-    expect(commandMarks('$ \x1b]133;C\x07output\x1b]133;D;0\x07\x1b]133;A\x07')).toEqual(['start', 'end', 'end'])
-    expect(commandMarks('plain')).toEqual([])
-  })
 })

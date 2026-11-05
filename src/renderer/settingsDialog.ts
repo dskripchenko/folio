@@ -56,6 +56,15 @@ export interface SettingsText {
   heapLimit: string
   heapHint: string
   applied: string
+  diskGb: string
+  diskHint: string
+  commandSec: string
+  commandHint: string
+  consoleGb: string
+  consoleHint: string
+  dataSize: string
+  clearCaches: string
+  cleared: string
 }
 
 export interface KeyedCommand {
@@ -83,7 +92,9 @@ export interface SettingsDeps {
   chooseLanguage(code: string | null): Promise<void>
   /** The app's own settings (ADR-007): the log's days, the memory limits; saved. */
   app(): Promise<AppSettings>
-  saveApp(o: { logDays: number; limits: AppSettings['limits'] }): Promise<void>
+  saveApp(o: { logDays: number; limits: AppSettings['limits']; alerts: AppSettings['alerts'] }): Promise<void>
+  dataSize(): Promise<Record<'total' | 'chromium' | 'update' | 'crashes' | 'logs' | 'session' | 'review', number>>
+  clearCaches(): Promise<boolean>
   lang(): string
   units(): readonly string[]
 }
@@ -239,6 +250,30 @@ export class SettingsDialog {
     const soft = number('softGb', t.softLimit, t.softHint, s.limits.softGb, 0, 256, 'any')
     const lsp = number('lspGb', t.lspLimit, t.lspHint, s.limits.lspGb, 0, 64, 'any')
     const heap = number('heapGb', t.heapLimit, t.heapHint.replace('{now}', bytes(s.heapLimit, this.deps.lang(), this.deps.units())), s.limits.heapGb, 0, 64, 'any')
+    const disk = number('diskGb', t.diskGb, t.diskHint, s.alerts.diskGb, 0, 1024, 'any')
+    const command = number('commandSec', t.commandSec, t.commandHint, s.alerts.commandSec, 0, 86400, 1)
+    const consoleGb = number('consoleGb', t.consoleGb, t.consoleHint, s.alerts.consoleGb, 0, 256, 'any')
+    // What folio-data holds, and its caches let go (never the unsaved, the review's marks or the settings).
+    const size = (n: number) => bytes(n, this.deps.lang(), this.deps.units())
+    const data = document.createElement('p')
+    data.className = 'settings-hint'
+    data.dataset.testid = 'settings-data-size'
+    const fill = () =>
+      void this.deps.dataSize().then((z) => {
+        data.textContent = t.dataSize
+          .replace('{total}', size(z.total))
+          .replace('{chromium}', size(z.chromium))
+          .replace('{update}', size(z.update))
+          .replace('{crashes}', size(z.crashes))
+          .replace('{logs}', size(z.logs))
+          .replace('{session}', size(z.session))
+      })
+    fill()
+    const clear = document.createElement('button')
+    clear.type = 'button'
+    clear.className = 'settings-add'
+    clear.textContent = t.clearCaches
+    clear.dataset.testid = 'settings-clear-caches'
     const status = document.createElement('p')
     status.className = 'settings-hint'
     status.setAttribute('role', 'status')
@@ -248,12 +283,22 @@ export class SettingsDialog {
     save.className = 'settings-add'
     save.textContent = t.save
     save.dataset.testid = 'settings-app-save'
-    pane.append(save, status)
+    clear.addEventListener('click', () =>
+      void this.deps.clearCaches().then(() => {
+        status.textContent = t.cleared
+        fill()
+      }),
+    )
+    pane.append(data, clear, document.createElement('br'), save, status)
     const n = (el: HTMLInputElement, fallback: number) => (Number.isFinite(el.valueAsNumber) ? el.valueAsNumber : fallback)
     pane.addEventListener('submit', (e) => {
       e.preventDefault()
       void this.deps
-        .saveApp({ logDays: n(logDays, s.logDays), limits: { softGb: n(soft, s.limits.softGb), lspGb: n(lsp, s.limits.lspGb), heapGb: n(heap, s.limits.heapGb) } })
+        .saveApp({
+          logDays: n(logDays, s.logDays),
+          limits: { softGb: n(soft, s.limits.softGb), lspGb: n(lsp, s.limits.lspGb), heapGb: n(heap, s.limits.heapGb) },
+          alerts: { diskGb: n(disk, s.alerts.diskGb), commandSec: n(command, s.alerts.commandSec), consoleGb: n(consoleGb, s.alerts.consoleGb) },
+        })
         .then(() => (status.textContent = t.applied))
     })
     return pane

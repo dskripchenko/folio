@@ -15,6 +15,12 @@ export interface ResourcesText {
   folio: string
   outside: string
   heap: string
+  lag: string
+  crashed: string
+  diskLow: string
+  consoleBig: string
+  consoleHot: string
+  closeConsole: string
   kinds: Record<ResKind, string>
   name: string
   memory: string
@@ -98,7 +104,7 @@ export class Resources {
   private history: ResSample[] = []
   private limitBytes = 0
   private over = false
-  private toast: HTMLElement | null = null
+  private toastEl: HTMLElement | null = null
 
   constructor(private readonly deps: ResourcesDeps) {
     this.gauge = document.createElement('button')
@@ -154,8 +160,8 @@ export class Resources {
     if (e.kind === 'lsp') return this.deps.notify(t.lspRestarted.replace('{name}', e.name ?? '').replace('{memory}', size(e.memory)))
     if (e.kind === 'clear') {
       this.over = false
-      this.toast?.remove()
-      this.toast = null
+      this.toastEl?.remove()
+      this.toastEl = null
       return this.drawGauge()
     }
     this.over = true
@@ -173,9 +179,14 @@ export class Resources {
     this.showToast(message, actions)
   }
 
+  /** A note in the corner with what can be done about it; Close is always there. */
+  toast(message: string, actions: [string, () => void][]): void {
+    this.showToast(message, actions)
+  }
+
   private showToast(message: string, actions: [string, () => void][]): void {
     const t = this.deps.text()
-    this.toast?.remove()
+    this.toastEl?.remove()
     const el = document.createElement('div')
     el.className = 'res-toast'
     el.setAttribute('role', 'alert')
@@ -189,13 +200,13 @@ export class Resources {
       b.textContent = label
       b.addEventListener('click', () => {
         el.remove()
-        if (this.toast === el) this.toast = null
+        if (this.toastEl === el) this.toastEl = null
         run()
       })
       el.append(b)
     }
     document.body.append(el)
-    this.toast = el
+    this.toastEl = el
   }
 
   private nameOf(p: ResProc): string {
@@ -296,7 +307,8 @@ export class Resources {
     const foot = document.createElement('footer')
     foot.className = 'res-foot'
     const heap = document.createElement('span')
-    heap.textContent = s ? t.heap.replace('{used}', size(s.heap.used)).replace('{limit}', size(s.heap.limit)) : ''
+    heap.textContent = s ? [t.heap.replace('{used}', size(s.heap.used)).replace('{limit}', size(s.heap.limit)), ...(s.lag ? [t.lag.replace('{ms}', String(s.lag.max))] : [])].join(' · ') : ''
+    heap.dataset.testid = 'res-heap'
     const openLog = document.createElement('button')
     openLog.type = 'button'
     openLog.textContent = t.openLog

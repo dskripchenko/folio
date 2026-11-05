@@ -110,3 +110,24 @@ export class Limits {
 export function heapFlag(heapGb: number): string | null {
   return heapGb > 0 ? `--max-old-space-size=${Math.round(heapGb * 1024)}` : null
 }
+
+/** When folio speaks up (ADR-008): little room on the disk, a long command done, a console grown big. */
+export interface AlertSettings {
+  /** Free space on the disk under folio-data, gigabytes; 0 — never. */
+  diskGb: number
+  /** A console's command at least this long (seconds) is told of when it ends; 0 — never. */
+  commandSec: number
+  /** A console's programs past this (gigabytes) are told of; 0 — never. */
+  consoleGb: number
+}
+
+export const ALERT_DEFAULTS: AlertSettings = { diskGb: 5, commandSec: 60, consoleGb: 8 }
+
+export function alertSettings(value: unknown): AlertSettings {
+  const v = (value ?? {}) as Partial<Record<keyof AlertSettings, unknown>>
+  const pick = (key: keyof AlertSettings, max: number) => {
+    const n = v[key]
+    return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? Math.min(max, Math.round(n * 10) / 10) : ALERT_DEFAULTS[key]
+  }
+  return { diskGb: pick('diskGb', 1024), commandSec: Math.round(pick('commandSec', 86_400)), consoleGb: pick('consoleGb', 256) }
+}

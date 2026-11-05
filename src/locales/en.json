@@ -97,7 +97,12 @@
     "claudeConnectDetail": "A hook is added to {file} (local settings, not committed). After each edit Claude Code appends the file, its session and the time to folio's data:\n\n{command}\n\nfolio's MCP server is added to Claude Code for this project (its local settings, not in the repository): the agent can show you its changes and wait for your answer, read your comments, open a file at a line. folio runs:\n\n{mcp}\n\nNothing else changes. The same command takes both out.",
     "claudeConnect": "Connect",
     "openLog": "Open the Log Folder",
-    "saveReport": "Save a Report…"
+    "saveReport": "Save a Report…",
+    "commandDone": "{console}: done",
+    "commandFailed": "{console}: failed with code {code}",
+    "attention": "{console} asks for you",
+    "attentionBody": "A program in the console is waiting.",
+    "consoleN": "Console {n}"
   },
   "window": {
     "open": "Open…",
@@ -434,7 +439,16 @@
       "lspHint": "Over it the server is started again. 0 — no limit.",
       "heapLimit": "Hard heap limit of a process, GB",
       "heapHint": "A process reaching it falls, with what is not saved: only as a last resort. Taken at the next start. 0 — V8’s own; now {now}.",
-      "applied": "Saved."
+      "applied": "Saved.",
+      "diskGb": "Warn when the disk has less free, GB",
+      "diskHint": "The disk folio-data is on. 0 — never.",
+      "commandSec": "Tell when a console’s command longer than this ends, s",
+      "commandHint": "A system notification while folio is not in front; programs asking for attention (Claude Code’s notifications, a bell) are told too. 0 — never.",
+      "consoleGb": "Tell when a console’s programs take more than, GB",
+      "consoleHint": "Only told: folio does not touch programs in its consoles. 0 — never.",
+      "dataSize": "folio-data: {total} — Chromium {chromium}, updates {update}, crash dumps {crashes}, log {logs}, unsaved {session}.",
+      "clearCaches": "Clear caches",
+      "cleared": "Caches cleared: Chromium’s cache, downloaded updates (a ready one kept), crash dumps. Unsaved changes and settings are never touched."
     },
     "exportHtml": "Export as HTML (one page)…",
     "exportDocx": "Export as Word (DOCX)…",
@@ -809,7 +823,13 @@
       "lspRestarted": "{name} took {memory}, over a language server’s limit: started again.",
       "report": "Save a report…",
       "reportSaved": "Report saved: {path}",
-      "openLog": "Open the log folder"
+      "openLog": "Open the log folder",
+      "lag": "Main process delay: up to {ms} ms",
+      "crashed": "folio did not close properly last time ({time}): stopped by the system or fallen. The log tells what happened.",
+      "diskLow": "Little room left on the disk: {free} free.",
+      "consoleBig": "{name} takes {memory}.",
+      "consoleHot": "{name} has kept the processor busy for five minutes.",
+      "closeConsole": "Close the console"
     },
     "awake": {
       "title": "Keep awake",

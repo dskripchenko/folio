@@ -137,14 +137,3 @@ export class Awake {
     this.id = this.idType = null
   }
 }
-
-/**
- * Whether a console runs a command now, from the shell integration's marks in
- * what it prints: OSC 133;C — a command begins, 133;D — it ended (or a prompt).
- */
-export function commandMarks(data: string): ('start' | 'end')[] {
-  const out: ('start' | 'end')[] = []
-  // eslint-disable-next-line no-control-regex
-  for (const m of data.matchAll(/\x1b\]133;([CDA])(?:;[^\x07\x1b]*)?(?:\x07|\x1b\\)/g)) out.push(m[1] === 'C' ? 'start' : 'end')
-  return out
-}
