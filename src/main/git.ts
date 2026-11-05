@@ -376,17 +376,55 @@ export async function statusRows(root: string, filepaths?: string[]): Promise<Ro
   return rows
 }
 
+/** A repository's status being read, and the one asked for meanwhile, which reads the disk after it. */
+const reads = new Map<string, { running: Promise<readonly Row[]> | null; queued: Promise<readonly Row[]> | null }>()
+
+/**
+ * The status of the whole repository, for what only shows it (the tree's marks,
+ * the changes panel). The tree asks once for every folder in view, again on every
+ * change on disk: each asked for itself, an agent writing files queued reads
+ * faster than they finished, and memory grew without end. Here at most one read
+ * runs per repository; whoever asks meanwhile shares the next one, which starts
+ * after it, so it still sees every change made before it was asked for.
+ */
+export function repoStatus(root: string): Promise<readonly Row[]> {
+  let r = reads.get(root)
+  if (!r) reads.set(root, (r = { running: null, queued: null }))
+  const slot = r
+  if (slot.queued) return slot.queued
+  const read = (): Promise<readonly Row[]> => {
+    const p = statusRows(root)
+    slot.running = p
+    const done = () => {
+      if (slot.running === p) slot.running = null
+      if (!slot.running && !slot.queued) reads.delete(root)
+    }
+    p.then(done, done)
+    return p
+  }
+  if (!slot.running) return read()
+  const after = () => {
+    slot.queued = null
+    return read()
+  }
+  const queued = slot.running.then(after, after)
+  slot.queued = queued
+  return queued
+}
+
 /** The status of the files under a folder of the repository, by their absolute paths. */
 export async function statusUnder(root: string, dir: string): Promise<Map<string, FileStatus>> {
   const prefix = toGit(root, dir)
   const out = new Map<string, FileStatus>()
-  let matrix: [string, number, number, number][]
+  let matrix: readonly Row[]
   try {
-    matrix = await statusRows(root, prefix === '' ? undefined : [prefix])
+    matrix = await repoStatus(root)
   } catch {
     return out
   }
+  const under = prefix === '' ? '' : `${prefix}/`
   for (const [filepath, head, workdir] of matrix) {
+    if (under && !filepath.startsWith(under)) continue
     const status: FileStatus = head === 0 ? 'new' : workdir === 0 ? 'deleted' : head !== workdir ? 'modified' : 'clean'
     if (status !== 'clean') out.set(join(root, ...filepath.split('/')), status)
   }

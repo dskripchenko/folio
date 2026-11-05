@@ -531,9 +531,40 @@ export class Sidebar {
     }
   }
 
-  /** Statuses again (after a commit, which the disk watcher does not see). */
+  /**
+   * Statuses again (after a commit, which the disk watcher does not see; after
+   * changes on disk). An agent writes for minutes on end: the folders are marked
+   * again at most every so often, and never while their last marking still runs.
+   */
   refreshStatus(): void {
-    for (const c of this.containers()) for (const ul of c.querySelectorAll<HTMLElement>('ul.tree')) void this.decorate(ul)
+    if (this.statusTimer) return
+    this.statusTimer = setTimeout(() => {
+      this.statusTimer = null
+      void this.decorateAll()
+    }, Sidebar.STATUS_PAUSE)
+  }
+
+  private static readonly STATUS_PAUSE = 300
+  private statusTimer: ReturnType<typeof setTimeout> | null = null
+  private statusRunning = false
+  private statusAgain = false
+
+  private async decorateAll(): Promise<void> {
+    if (this.statusRunning) {
+      this.statusAgain = true
+      return
+    }
+    this.statusRunning = true
+    try {
+      const lists = this.containers().flatMap((c) => [...c.querySelectorAll<HTMLElement>('ul.tree')])
+      await Promise.all(lists.map((ul) => this.decorate(ul).catch(() => undefined)))
+    } finally {
+      this.statusRunning = false
+    }
+    if (this.statusAgain) {
+      this.statusAgain = false
+      this.refreshStatus()
+    }
   }
 
   private entry(root: string, rootPath: string, entry: Entry): HTMLElement {

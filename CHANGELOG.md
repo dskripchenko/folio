@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-11-05
+
+### Fixed
+
+- folio no longer slows the computer down to a halt while an agent writes
+  files: every change on disk had each folder open in the tree read the whole
+  repository's status at once, the reads queued faster than they finished and
+  memory grew past 13 GB. Now one read per repository runs at a time and
+  everyone who asks meanwhile shares the next one; the tree's marks are drawn
+  again at most every 300 ms.
+
 ## [1.10.0] - 2026-11-05
 
 ### Added
