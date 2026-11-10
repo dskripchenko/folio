@@ -31,6 +31,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Links with the destination in angle brackets, `[text](<path/file.md>)`,
   open the file — spaces in the path too (embed 1.21.0, ui 1.47.2).
+- On Windows, what folio takes is counted right: processes that only reuse a
+  dead parent's id are no longer counted as folio's (the gauge could show
+  gigabytes over), and the processes are read without the slow performance
+  counters, which could run past the time allowed and leave the consoles out.
 
 ## [1.12.3] - 2026-11-10
 
