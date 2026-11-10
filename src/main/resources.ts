@@ -45,6 +45,8 @@ export interface OsProc {
   rss: number
   cpu: number
   comm: string
+  /** When it started (Windows: a FILETIME), where known: a child is never older than its parent. */
+  started?: number
 }
 
 /** What Electron tells of its own processes (`app.getAppMetrics()`), the fields used. */
@@ -76,19 +78,46 @@ export function parsePs(text: string): OsProc[] {
   return out
 }
 
-/** Windows' processes as the PowerShell below prints them: `pid ppid bytes cpu name`, a line each. */
-export const parseWin = (text: string): OsProc[] =>
-  text
-    .split(/\r?\n/)
-    .map((l) => l.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+([\d.,]+)\s+(.*)$/))
-    .filter((m): m is RegExpMatchArray => m !== null)
-    .map((m) => ({ pid: Number(m[1]), ppid: Number(m[2]), rss: Number(m[3]), cpu: Number(m[4]!.replace(',', '.')) || 0, comm: m[5]!.trim() }))
+/** A read of Windows' processes: when, and each one's processor time so far (by pid and start). */
+export interface WinRead {
+  at: number
+  ticks: Map<string, number>
+}
+
+/**
+ * Windows' processes as the PowerShell below prints them — `pid ppid bytes ticks started name`,
+ * a line each, the processor time and the start in 100 ns units. The processor's share is the
+ * time used since the read before (100: one core), as `ps` gives it; none on the first read.
+ */
+export function parseWin(text: string, at: number, prev: WinRead | null): { procs: OsProc[]; read: WinRead } {
+  const read: WinRead = { at, ticks: new Map() }
+  const procs: OsProc[] = []
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/)
+    if (!m) continue
+    const pid = Number(m[1])
+    const ticks = Number(m[4])
+    const started = Number(m[5])
+    const key = `${pid}:${started}`
+    read.ticks.set(key, ticks)
+    const before = prev?.ticks.get(key)
+    const ms = prev ? at - prev.at : 0
+    const cpu = before !== undefined && ms > 0 ? Math.max(0, Math.round(((ticks - before) / 1e4 / ms) * 1000) / 10) : 0
+    procs.push({ pid, ppid: Number(m[2]), rss: Number(m[3]), cpu, comm: m[6]!.trim(), ...(started > 0 ? { started } : {}) })
+  }
+  return { procs, read }
+}
 
 /** A process and all below it, by the parents' ids. */
 export function treeOf(procs: readonly OsProc[], pid: number): OsProc[] {
   const kids = new Map<number, OsProc[]>()
+  const byPid = new Map(procs.map((p) => [p.pid, p]))
   for (const p of procs) {
     if (p.pid === p.ppid) continue
+    // Windows keeps a dead parent's id, and gives it to a new process later: a "child" older than
+    // its parent is not its child.
+    const parent = byPid.get(p.ppid)
+    if (parent?.started !== undefined && p.started !== undefined && p.started < parent.started) continue
     const list = kids.get(p.ppid)
     if (list) list.push(p)
     else kids.set(p.ppid, [p])
@@ -175,15 +204,23 @@ export function buildSample(o: {
   return { at: o.at, total: sum(false), outside: sum(true), heap: o.heap, procs }
 }
 
+// Win32_Process only: the performance counters' class took seconds, past the timeout on a busy machine.
 const WIN_PS =
-  "$p=Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -Property IDProcess,PercentProcessorTime | Group-Object -AsHashTable -Property IDProcess;" +
-  "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,WorkingSetSize,Name | ForEach-Object { $c=0; if ($p -and $p[[int]$_.ProcessId]) { $c=$p[[int]$_.ProcessId][0].PercentProcessorTime }; \"$($_.ProcessId) $($_.ParentProcessId) $($_.WorkingSetSize) $c $($_.Name)\" }"
+  "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,WorkingSetSize,KernelModeTime,UserModeTime,CreationDate,Name | ForEach-Object { " +
+  "$s=0; if ($_.CreationDate) { $s=$_.CreationDate.ToFileTimeUtc() }; " +
+  "\"$($_.ProcessId) $($_.ParentProcessId) $($_.WorkingSetSize) $([uint64]$_.KernelModeTime + [uint64]$_.UserModeTime) $s $($_.Name)\" }"
+let winPrev: WinRead | null = null
 
 /** The system's processes now; none where they cannot be read. */
 export function osProcesses(platform = process.platform): Promise<OsProc[]> {
   return new Promise((resolve) => {
     const done = (parse: (t: string) => OsProc[]) => (err: Error | null, out: string) => resolve(err ? [] : parse(String(out)))
-    if (platform === 'win32') execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', WIN_PS], { windowsHide: true, timeout: 10_000, maxBuffer: 8 << 20 }, done(parseWin))
+    if (platform === 'win32')
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', WIN_PS], { windowsHide: true, timeout: 15_000, maxBuffer: 8 << 20 }, done((text) => {
+        const { procs, read } = parseWin(text, Date.now(), winPrev)
+        winPrev = read
+        return procs
+      }))
     else execFile('ps', ['-A', '-o', 'pid=,ppid=,rss=,%cpu=,comm='], { timeout: 5_000, maxBuffer: 8 << 20 }, done(parsePs))
   })
 }

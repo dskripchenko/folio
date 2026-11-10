@@ -124,7 +124,12 @@ body.sidebar-collapsed .rail-left { display: flex; }
 .tab-group:hover { filter: brightness(1.08); }
 .tab-group.drop-into { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tab-group-input { flex: none; align-self: center; width: 140px; height: 22px; margin: 0 2px 0 8px; padding: 0 8px; border: 2px solid var(--group-color); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 12px; outline: none; }
-.notice { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: color-mix(in srgb, #cf222e 12%, var(--bg)); border-bottom: 1px solid color-mix(in srgb, #cf222e 45%, var(--bg)); font-size: 13px; }
+/* A notice in the colour of what it says: news is neutral, a thing done green, a failure red. */
+.notice { --notice: var(--muted); display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; background: color-mix(in srgb, var(--notice) 10%, var(--bg)); border-bottom: 1px solid color-mix(in srgb, var(--notice) 35%, var(--bg)); font-size: 13px; }
+.notice[data-kind="success"] { --notice: #1a7f37; }
+.notice[data-kind="error"] { --notice: #cf222e; }
+.notice .notice-close { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 17px; line-height: 1; }
+.notice .notice-close:hover { background: color-mix(in srgb, var(--notice) 18%, var(--bg)); color: var(--fg); }
 .notice[hidden] { display: none; }
 .notice .notice-text { flex: 1; }
 .notice button { padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; cursor: pointer; }
@@ -236,7 +241,18 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
 .welcome p { margin: 0; color: var(--muted); }
 .view.dropping { outline: 2px dashed var(--accent); outline-offset: -8px; }
 
-.doc { max-width: 980px; margin: 0 auto; padding: 24px 40px 64px; }
+/* The page takes the window's width (Settings → View: or a column to read in); the text's size is
+   the reader's, headings and code in proportion (--doc-scale, Settings → View). */
+:root { --doc-scale: 1; }
+.doc { max-width: none; margin: 0 auto; padding: 24px 48px 64px;
+  --uid-font-size-xs: calc(12px * var(--doc-scale)); --uid-font-size-sm: calc(14px * var(--doc-scale));
+  --uid-font-size-md: calc(16px * var(--doc-scale)); --uid-font-size-lg: calc(18px * var(--doc-scale));
+  --uid-font-size-xl: calc(20px * var(--doc-scale)); --uid-font-size-2xl: calc(24px * var(--doc-scale));
+  --uid-font-size-3xl: calc(30px * var(--doc-scale)); --uid-font-size-4xl: calc(36px * var(--doc-scale)); }
+:root[data-width="readable"] .doc:not([data-format]), :root[data-width="readable"] .doc[data-format="markdown"]:not([data-edit]) { max-width: 980px; }
+/* A document zoomed when read (a pinch, ⌘/Ctrl + the wheel): its percentage in the view's corner. */
+.zoom-badge { position: absolute; z-index: 6; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--raised); color: var(--fg); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14); cursor: pointer; }
+.zoom-badge[hidden] { display: none; }
 
 /* Editing: the page is the editor — no frame of its own; its toolbar floats above the text,
    staying at hand however far down the page goes. */
@@ -260,7 +276,7 @@ body:has(.dsk-wysiwyg--fullscreen) .content > .view { border-left: 0; }
 .doc:has(.dsk-wysiwyg__source-wrap) :is(dsk-markdown-editor > .dsk-root, .dsk-md, .dsk-md__visual, .dsk-wysiwyg) { height: 100% !important; min-height: 0; }
 .doc .dsk-wysiwyg__source-wrap { min-height: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--tab); overflow: hidden; }
 .doc .dsk-wysiwyg__source { position: absolute; inset: 0; }
-.doc .dsk-wysiwyg__source, .doc .dsk-wysiwyg__source-highlight { padding: 16px 20px; font-size: 13.5px; line-height: 1.7; }
+.doc .dsk-wysiwyg__source, .doc .dsk-wysiwyg__source-highlight { padding: 16px 20px; font-size: calc(13.5px * var(--doc-scale)); line-height: 1.7; }
 .doc .dsk-md__panes .dsk-md__source { border-color: var(--line); }
 .doc[hidden] { display: none; }
 .doc-error { padding: 32px; color: #cf222e; }
@@ -303,7 +319,7 @@ body:has(.dsk-wysiwyg--fullscreen) .content > .view { border-left: 0; }
   body[data-printing] .doc:not([data-printing]) { display: none !important; }
   .view-beside { border: 0; }
   .main, .content, .view { display: block; height: auto; overflow: visible; }
-  .doc { max-width: none; margin: 0; padding: 0; }
+  .doc { max-width: none; margin: 0; padding: 0; --doc-scale: 1; zoom: 1 !important; width: auto !important; }
   .version-bar { display: none !important; }
 }
 
@@ -321,7 +337,7 @@ dialog.pdf-dialog button { padding: 4px 12px; border: 1px solid var(--line); bor
 dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
 @media (max-width: 520px) { dialog.pdf-dialog .grid { grid-template-columns: minmax(0, 1fr); } }
 /* The edited page reads as the page read: the same type. */
-.doc .dsk-wysiwyg__content { font-size: 16px; line-height: 1.65; }
+.doc .dsk-wysiwyg__content { font-size: calc(16px * var(--doc-scale)); line-height: 1.65; }
 
 /* Markdown alone, or beside the page, and a drawing's source beside its picture: the whole
    workspace, edge to edge; side by side, the two halves meet at a line, each scrolling on its own. */
@@ -333,7 +349,7 @@ dialog.pdf-dialog button.primary { border-color: var(--accent); background: var(
 .doc[data-edit] .dsk-md__preview,
 .doc[data-edit] .source-editor .source,
 .doc[data-edit] .source-editor .preview { box-sizing: border-box; height: 100%; min-height: 0; max-height: none; margin: 0; border: 0; border-radius: 0; background: var(--bg); color: var(--fg); resize: none; }
-.doc[data-edit] .dsk-md__source { padding: 24px 40px 64px; font: 13.5px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.doc[data-edit] .dsk-md__source { padding: 24px 40px 64px; font: calc(13.5px * var(--doc-scale))/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .doc[data-edit] .source-editor .source { padding: 0; }
 .doc[data-edit] .source-editor .dsk-code-editor { --dsk-code-editor-font-size: 13.5px; --dsk-code-editor-line-height: 22px; }
 .doc[data-edit] .dsk-md__source:focus-visible { outline: none; }

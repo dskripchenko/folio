@@ -62,6 +62,7 @@ import { StatusBar } from './statusBar'
 import { AwakeButton, Resources } from './resources'
 import { headingsOf, OutlinePanel, type Heading } from './outline'
 import { CommandPalette, type Command } from './commandPalette'
+import { applyView, setViewPrefs, viewPrefs, zoomDoc, zoomStep } from './docView'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
 import type { AwakeState, GitRefusal, I18nState, ResSample, UpdateState, Version, WorkspaceView } from './bridge'
@@ -89,7 +90,7 @@ let awakeButton: AwakeButton | null = null
 folio.onResSample((s) => resources?.sample(s as ResSample))
 folio.onResLimit((e) => resources?.limitEvent(e as Parameters<Resources['limitEvent']>[0]))
 folio.onAwake((s) => awakeButton?.update(s as AwakeState))
-folio.onMenuReport(() => void folio.saveReport().then((path) => path && notify(t.resources.reportSaved.replace('{path}', path))))
+folio.onMenuReport(() => void folio.saveReport().then((path) => path && notify(t.resources.reportSaved.replace('{path}', path), 'success')))
 // ADR-008: what the consoles' programs take on their tabs; a console grown big; little room on the disk; a notification clicked.
 folio.onResSample((v) => {
   const s = v as ResSample
@@ -176,6 +177,8 @@ interface Tab {
   pane: HTMLElement
   button: HTMLButtonElement
   label: HTMLElement
+  /** Its zoom when read (1: none); its own, not kept. */
+  zoom?: number
 }
 
 const tabs: Tab[] = []
@@ -205,6 +208,9 @@ function applyText(): void {
     const value = t[el.dataset.i18n as keyof typeof t]
     if (typeof value === 'string') el.textContent = value
   }
+  const close = noticeEl.querySelector<HTMLElement>('[data-action="close"]')!
+  close.title = t.close
+  close.setAttribute('aria-label', t.close)
 }
 
 function isOpened(r: OpenResult | null): r is Opened {
@@ -525,7 +531,7 @@ function render(tab: Tab): void {
       }
       const saved = await folio.saveImage(tab.path, file.name, file.type, new Uint8Array(await file.arrayBuffer()))
       if ('error' in saved) {
-        notify(t.pictureNotSaved)
+        notify(t.pictureNotSaved, 'error')
         return null
       }
       return saved.path
@@ -550,6 +556,7 @@ function render(tab: Tab): void {
 }
 
 function showBanners(): void {
+  for (const tab of [mainTab, beside]) if (tab) syncZoom(tab)
   // The network consent.
   if (active && active.blocked.length > 0) {
     bannerEl.querySelector('.banner-text')!.textContent = t.blocked.replace('{hosts}', active.blocked.join(', '))
@@ -558,6 +565,8 @@ function showBanners(): void {
   // The file and the edit disagree.
   noticeEl.hidden = !(active && (active.conflict || (active.error && active.buffer)))
   if (active && !noticeEl.hidden) {
+    clearTimeout(noticeTimer)
+    noticeEl.dataset.kind = 'error'
     noticeEl.querySelector('.notice-text')!.textContent = active.conflict ? t.conflict : t.missing
     noticeEl.querySelector<HTMLElement>('[data-action="disk"]')!.hidden = !active.conflict
     noticeEl.querySelector<HTMLElement>('[data-action="mine"]')!.hidden = !active.conflict
@@ -661,7 +670,7 @@ function buildRail(): void {
     relaunch: () => void folio.relaunch(),
     openLog: () => void folio.openLog(),
     saveReport: () => folio.saveReport(),
-    notify: (m) => notify(m),
+    notify: (m, kind) => notify(m, kind),
   })
   awakeButton ??= new AwakeButton({ text: () => t.awake, lang: () => lang, mac: folio.platform === 'darwin', get: () => folio.awakeGet(), set: (how, o) => folio.awakeSet(how, o) })
   resources.refresh()
@@ -1040,6 +1049,11 @@ const settingsDialog = new SettingsDialog({
   },
   lang: () => lang,
   units: () => t.media.units,
+  view: () => viewPrefs(),
+  setView: (v) => {
+    setViewPrefs(v)
+    for (const tab of [mainTab, beside]) if (tab) syncZoom(tab)
+  },
   dataSize: () => folio.dataSize(),
   clearCaches: () => folio.clearCaches(),
   chooseLanguage: async (code) => {
@@ -1957,10 +1971,10 @@ async function claudeConnect(on: boolean): Promise<void> {
   const repo = await repoInView()
   if (!repo) return
   const r = await folio.reviewClaudeConnect(repo, on)
-  if ('error' in r) notify(r.error === 'invalid' ? t.commands.claudeUnreadable : describeRefusal(t.historyPanel.errors, r))
+  if ('error' in r) notify(r.error === 'invalid' ? t.commands.claudeUnreadable : describeRefusal(t.historyPanel.errors, r), 'error')
   else if (r.ok) {
     const mcp = 'mcp' in r ? r.mcp : undefined
-    notify(mcp && !mcp.ok ? t.commands.claudeMcpFailed.replace('{output}', mcp.output.split('\n').slice(-2).join(' ') || '—').replace('{command}', mcp.command) : on ? t.commands.claudeConnected : t.commands.claudeDisconnected)
+    notifyResult(!(mcp && !mcp.ok), mcp && !mcp.ok ? t.commands.claudeMcpFailed.replace('{output}', mcp.output.split('\n').slice(-2).join(' ') || '—').replace('{command}', mcp.command) : on ? t.commands.claudeConnected : t.commands.claudeDisconnected)
     reviewsSoon()
   }
 }
@@ -2047,14 +2061,117 @@ function toggleEditTo(tab: Tab, view: 'read' | 'edit'): void {
   requestAnimationFrame(() => (scroller.scrollTop = ratio * scroller.scrollHeight))
 }
 
+// Zoom when read ---------------------------------------------------------------------
+
+applyView()
+
+/** A document read (not edited, not a version): the ones a pinch zooms. */
+function zoomable(tab: Tab): boolean {
+  return tab.view === 'read' && !tab.version && !tab.review && !tab.error && tab.pane.dataset.format === 'markdown'
+}
+
+/** The width the document has at 100%: the view's, or the reading column's. */
+function naturalWidth(tab: Tab): number {
+  const w = scrollerOf(tab).clientWidth
+  return viewPrefs().width === 'readable' ? Math.min(980, w) : w
+}
+
+const zoomBadges = new Map<HTMLElement, HTMLButtonElement>()
+/** The zoom of a view, in its corner while it is not 100%; a click brings 100% back. */
+function zoomBadge(scroller: HTMLElement): HTMLButtonElement {
+  let b = zoomBadges.get(scroller)
+  if (!b) {
+    b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'zoom-badge'
+    b.dataset.testid = 'zoom-badge'
+    b.hidden = true
+    b.addEventListener('click', () => {
+      const tab = scroller === besideEl ? beside : mainTab
+      if (tab) setZoom(tab, 1)
+    })
+    scroller.parentElement!.append(b)
+    zoomBadges.set(scroller, b)
+  }
+  return b
+}
+
+function syncZoom(tab: Tab): void {
+  const zoom = zoomable(tab) ? (tab.zoom ?? 1) : 1
+  zoomDoc(tab.pane, zoom, naturalWidth(tab))
+  const scroller = scrollerOf(tab)
+  const badge = zoomBadge(scroller)
+  badge.hidden = zoom === 1 || scroller.hidden
+  if (!badge.hidden) {
+    const r = scroller.getBoundingClientRect()
+    const host = badge.parentElement!.getBoundingClientRect()
+    badge.style.right = `${host.right - r.right + 16 + (scroller.offsetWidth - scroller.clientWidth)}px`
+    badge.style.bottom = `${host.bottom - r.bottom + 12}px`
+    badge.textContent = `${Math.round(zoom * 100)}%`
+    badge.title = t.zoomReset
+  }
+}
+
+/** The tab's zoom; the point at (`x`, `y`) on screen stays where it is (the view's middle without one). */
+function setZoom(tab: Tab, zoom: number, x?: number, y?: number): void {
+  const from = tab.zoom ?? 1
+  if (zoom === from) return
+  const scroller = scrollerOf(tab)
+  const view = scroller.getBoundingClientRect()
+  const cx = x ?? view.left + scroller.clientWidth / 2
+  const cy = y ?? view.top + scroller.clientHeight / 2
+  // The point in the document's own (100%) coordinates.
+  const before = tab.pane.getBoundingClientRect()
+  const px = (cx - before.left) / from
+  const py = (cy - before.top) / from
+  tab.zoom = zoom
+  syncZoom(tab)
+  const after = tab.pane.getBoundingClientRect()
+  scroller.scrollLeft += after.left + px * zoom - cx
+  scroller.scrollTop += after.top + py * zoom - cy
+}
+
+for (const scroller of [viewEl, besideEl]) {
+  scroller.addEventListener(
+    'wheel',
+    (e) => {
+      // A pinch on a trackpad comes as a wheel with Ctrl held; ⌘ + the wheel too on a Mac.
+      if (!(e.ctrlKey || e.metaKey)) return
+      const tab = scroller === besideEl ? beside : mainTab
+      if (!tab || !zoomable(tab)) return
+      e.preventDefault()
+      setZoom(tab, zoomStep(tab.zoom ?? 1, e.deltaY, e.deltaMode), e.clientX, e.clientY)
+    },
+    { passive: false },
+  )
+}
+window.addEventListener('resize', () => {
+  for (const tab of [mainTab, beside]) if (tab) syncZoom(tab)
+})
+
 // Saving ---------------------------------------------------------------------------
 
-function notify(message: string): void {
+/** What a notice says: news, a thing done (it goes by itself), or a failure. */
+type NoticeKind = 'info' | 'success' | 'error'
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
+
+function notify(message: string, kind: NoticeKind = 'info'): void {
   const text = noticeEl.querySelector('.notice-text')!
   text.textContent = message
+  noticeEl.dataset.kind = kind
   noticeEl.hidden = false
-  for (const b of noticeEl.querySelectorAll<HTMLElement>('button')) b.hidden = true
+  for (const b of noticeEl.querySelectorAll<HTMLElement>('button[data-action="disk"], button[data-action="mine"]')) b.hidden = true
+  clearTimeout(noticeTimer)
+  if (kind === 'success') noticeTimer = setTimeout(() => (noticeEl.hidden = true), 6000)
 }
+
+/** A result's notice: done or failed. */
+const notifyResult = (ok: boolean, message: string): void => notify(message, ok ? 'success' : 'error')
+
+noticeEl.querySelector('[data-action="close"]')!.addEventListener('click', () => {
+  clearTimeout(noticeTimer)
+  noticeEl.hidden = true
+})
 
 /** Saved: the tab is the file now, the buffer goes. */
 function savedAs(tab: Tab, result: Extract<SaveResult, { saved: OpenResult }>): void {
@@ -2098,7 +2215,7 @@ async function save(tab: Tab, as: boolean): Promise<boolean> {
     showBanners()
     return false
   }
-  if ('error' in result) notify(t.saveFailed.replace('{error}', result.error))
+  if ('error' in result) notify(t.saveFailed.replace('{error}', result.error), 'error')
   return false
 }
 
@@ -2260,7 +2377,7 @@ folio.onFsMoved(async (value) => {
   // Links to it, in the notes of its root, follow; notes with unsaved changes are left alone.
   const skip = tabs.filter((tab) => tab.path && isDirty(tab)).map((tab) => tab.path!)
   const changed = await folio.wikiMoved(from, to, skip)
-  if (changed > 0) notify(t.linksUpdated.replace('{n}', String(changed)))
+  if (changed > 0) notify(t.linksUpdated.replace('{n}', String(changed)), 'success')
 })
 // Put in the trash: its clean tabs close; one with unsaved changes stays, as a note to save elsewhere.
 folio.onFsRemoved((value) => {
@@ -2816,16 +2933,16 @@ let update: { state: UpdateState; auto: boolean; current: string; checkable: boo
 let askedForUpdate = false
 void folio.updateState().then((u) => {
   update = u
-  if (u.state.status === 'ready') notify(t.update.ready.replace('{v}', u.state.version))
+  if (u.state.status === 'ready') notify(t.update.ready.replace('{v}', u.state.version), 'success')
 })
 function sayUpdate(state: UpdateState): void {
   update.state = state
   const v = 'version' in state ? state.version : update.current
-  if (state.status === 'ready') notify(t.update.ready.replace('{v}', v))
+  if (state.status === 'ready') notify(t.update.ready.replace('{v}', v), 'success')
   else if (!askedForUpdate) return
   else if (state.status === 'downloading') notify(t.update.downloading.replace('{v}', v) + downloadProgress(state))
-  else if (state.status === 'latest') notify(t.update.latest.replace('{v}', v))
-  else if (state.status === 'error') notify(t.update.failed.replace('{error}', state.error))
+  else if (state.status === 'latest') notify(t.update.latest.replace('{v}', v), 'success')
+  else if (state.status === 'error') notify(t.update.failed.replace('{error}', state.error), 'error')
   if (state.status !== 'checking' && state.status !== 'downloading') askedForUpdate = false
 }
 /** How far a download is: a percent and megabytes, or the megabytes alone when the size is not known. */
@@ -3043,7 +3160,7 @@ async function exportAs(kind: 'html' | 'docx'): Promise<void> {
   }
   const result = await folio.exportFile(kind, name, payload)
   if ('canceled' in result) noticeEl.hidden = true
-  else notify('saved' in result ? t.pdf.saved.replace('{file}', result.saved) : t.pdf.failed.replace('{error}', result.error))
+  else notifyResult('saved' in result, 'saved' in result ? t.pdf.saved.replace('{file}', result.saved) : t.pdf.failed.replace('{error}', result.error))
 }
 
 function exportActive(): void {
@@ -3073,7 +3190,7 @@ async function exportSlides(tab = active): Promise<void> {
   if (!tab) return
   const result = await folio.exportPdf({ kind: 'doc', path: tab.path, text: tab.text, name: titleOf(tab), slides: true }, {})
   if ('canceled' in result) return
-  notify('saved' in result ? t.pdf.saved.replace('{file}', result.saved) : t.pdf.failed.replace('{error}', result.error))
+  notifyResult('saved' in result, 'saved' in result ? t.pdf.saved.replace('{file}', result.saved) : t.pdf.failed.replace('{error}', result.error))
 }
 folio.onExportFile((value) => exportPdf({ kind: 'doc', path: value as string }))
 folio.onExportFolder((value) => exportPdf({ kind: 'folder', dir: value as string }))
@@ -3171,7 +3288,7 @@ void folio.startup().then(async ({ tabs: restored, groups: savedGroups, active: 
     const time = r.at ? new Date(r.at).toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' }) : '—'
     resources?.toast(t.resources.crashed.replace('{time}', time), [
       [t.resources.openLog, () => void folio.openLog()],
-      [t.resources.report, () => void folio.saveReport().then((path) => path && notify(t.resources.reportSaved.replace('{path}', path)))],
+      [t.resources.report, () => void folio.saveReport().then((path) => path && notify(t.resources.reportSaved.replace('{path}', path), 'success'))],
     ])
   })
   void sidebar.load()

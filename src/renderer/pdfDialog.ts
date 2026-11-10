@@ -64,7 +64,7 @@ function check(label: string, on: boolean, testid: string): [HTMLLabelElement, H
 }
 
 /** The dialog; resolves when it is closed (with the result reported through `notify`). */
-export function openPdfDialog(t: PdfText, target: PdfTarget, notify: (message: string) => void): void {
+export function openPdfDialog(t: PdfText, target: PdfTarget, notify: (message: string, kind?: 'success' | 'error') => void): void {
   const saved = { ...DEFAULTS, ...prefs.get<Partial<Options>>('pdfOptions', {}) }
   const dialog = document.createElement('dialog')
   dialog.className = 'pdf-dialog'
@@ -122,7 +122,7 @@ export function openPdfDialog(t: PdfText, target: PdfTarget, notify: (message: s
     go.textContent = t.export
     if ('canceled' in result) return
     dialog.close()
-    notify('saved' in result ? t.saved.replace('{file}', result.saved) : t.failed.replace('{error}', result.error))
+    notify('saved' in result ? t.saved.replace('{file}', result.saved) : t.failed.replace('{error}', result.error), 'saved' in result ? 'success' : 'error')
   })
   dialog.addEventListener('close', () => dialog.remove())
   document.body.append(dialog)

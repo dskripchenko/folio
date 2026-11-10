@@ -159,3 +159,57 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
     rmSync(f.root, { recursive: true, force: true })
   }
 })
+
+test('the page: the whole width, the text at its size, a document zoomed with a pinch at the pointer', async () => {
+  const f = fixture()
+  const proj = join(f.root, 'wide')
+  mkdirSync(proj, { recursive: true })
+  writeFileSync(join(proj, 'README.md'), '# Wide\n\n' + 'Text of the page. '.repeat(400) + '\n\n```mermaid\ngraph LR\n  A --> B\n```\n')
+  const app = await electron.launch({ args: ['.', join(proj, 'README.md')], env: { ...process.env, FOLIO_DATA: f.data } })
+  try {
+    const win = await app.firstWindow()
+    await win.setViewportSize({ width: 1800, height: 900 })
+    const doc = win.locator('article.doc:not([hidden])')
+    await expect(doc.locator('dsk-markdown h1')).toHaveText('Wide')
+    const view = win.getByTestId('view')
+    const widths = async () => ({ doc: (await doc.boundingBox())!.width, view: await view.evaluate((v) => v.clientWidth) })
+    // The whole width of the view, not a column in its middle.
+    const w = await widths()
+    expect(Math.abs(w.doc - w.view)).toBeLessThan(2)
+
+    // Settings → View: the text's size, a column to read in.
+    const bodySize = () => doc.locator('.uid-markdown__body').first().evaluate((e) => parseFloat(getComputedStyle(e).fontSize))
+    expect(await bodySize()).toBe(16)
+    await win.getByTestId('rail-settings').click()
+    await win.getByTestId('open-settings').click()
+    await win.getByTestId('settings-view').click()
+    await win.getByTestId('settings-font-size').fill('20')
+    await expect.poll(bodySize).toBe(20)
+    await win.getByTestId('settings-width-readable').check()
+    await expect.poll(async () => Math.round((await widths()).doc)).toBe(980)
+    await win.getByTestId('settings-width-full').check()
+    await win.keyboard.press('Escape')
+
+    // A pinch (a wheel with Ctrl) zooms the document at the pointer; the badge brings 100% back.
+    const badge = win.getByTestId('zoom-badge').first()
+    await expect(badge).toBeHidden()
+    const box = (await view.boundingBox())!
+    const at = { x: box.x + 300, y: box.y + 200 }
+    const textAt = () => win.evaluate(({ x, y }) => document.caretRangeFromPoint(x, y)?.startOffset ?? -1, at)
+    const before = await textAt()
+    await win.mouse.move(at.x, at.y)
+    for (let i = 0; i < 6; i++) await view.dispatchEvent('wheel', { deltaY: -40, ctrlKey: true, clientX: at.x, clientY: at.y })
+    await expect(badge).toBeVisible()
+    const pct = parseInt((await badge.textContent()) ?? '0', 10)
+    expect(pct).toBeGreaterThan(150)
+    expect(Math.abs((await textAt()) - before)).toBeLessThan(6)
+    // Scrolls both ways, the lines keep their shape.
+    expect(await view.evaluate((v) => v.scrollWidth > v.clientWidth)).toBe(true)
+    await badge.click()
+    await expect(badge).toBeHidden()
+    expect(await doc.evaluate((d) => d.style.zoom)).toBe('')
+  } finally {
+    await app.close().catch(() => {})
+    rmSync(f.root, { recursive: true, force: true })
+  }
+})

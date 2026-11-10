@@ -65,6 +65,13 @@ export interface SettingsText {
   dataSize: string
   clearCaches: string
   cleared: string
+  viewTab: string
+  fontSize: string
+  fontSizeHint: string
+  width: string
+  widthFull: string
+  widthReadable: string
+  zoomHint: string
 }
 
 export interface KeyedCommand {
@@ -97,6 +104,16 @@ export interface SettingsDeps {
   clearCaches(): Promise<boolean>
   lang(): string
   units(): readonly string[]
+  /** How documents are shown: the text's size and the page's width; applied as chosen. */
+  view(): ViewPrefs
+  setView(v: Partial<ViewPrefs>): void
+}
+
+export interface ViewPrefs {
+  /** The text's size in pixels (16 as the kit has it). */
+  fontSize: number
+  /** The whole width of the view, or a column to read in. */
+  width: 'full' | 'readable'
 }
 
 const KNOWN_FORMATTERS = ['prettier', 'pint', 'gofmt', 'ruff', 'rustfmt', 'black', 'lsp']
@@ -136,7 +153,7 @@ function sameKey(a: string, b: string, mac: boolean): boolean {
 export class SettingsDialog {
   readonly el: HTMLElement
   private readonly box: HTMLElement
-  private pane: 'keys' | 'project' | 'language' | 'app' = 'keys'
+  private pane: 'keys' | 'project' | 'language' | 'view' | 'app' = 'keys'
   private list: { key: string; command: string }[] = []
   private filter = ''
   private capturing: string | null = null
@@ -201,7 +218,7 @@ export class SettingsDialog {
     title.textContent = t.title
     const tabs = document.createElement('div')
     tabs.className = 'settings-tabs'
-    for (const [pane, label] of [['keys', t.keys], ['project', t.project], ['language', t.languageTab], ['app', t.appTab]] as const) {
+    for (const [pane, label] of [['keys', t.keys], ['project', t.project], ['language', t.languageTab], ['view', t.viewTab], ['app', t.appTab]] as const) {
       const b = document.createElement('button')
       b.type = 'button'
       b.textContent = label
@@ -220,8 +237,41 @@ export class SettingsDialog {
     close.setAttribute('aria-label', t.close)
     close.addEventListener('click', () => this.close())
     head.append(title, tabs, close)
-    const body = this.pane === 'keys' ? this.keysPane() : this.pane === 'language' ? this.languagePane() : this.pane === 'app' ? await this.appPane() : await this.projectPane()
+    const body = this.pane === 'keys' ? this.keysPane() : this.pane === 'language' ? this.languagePane() : this.pane === 'view' ? this.viewPane() : this.pane === 'app' ? await this.appPane() : await this.projectPane()
     this.box.replaceChildren(head, body)
+  }
+
+  // View ------------------------------------------------------------------------------
+
+  private viewPane(): HTMLElement {
+    const t = this.deps.text()
+    const v = this.deps.view()
+    const pane = document.createElement('div')
+    pane.className = 'settings-project'
+    pane.dataset.testid = 'settings-view-form'
+    const hint = (text: string) => Object.assign(document.createElement('p'), { className: 'settings-hint', textContent: text })
+    const row = document.createElement('label')
+    row.className = 'settings-field'
+    const size = Object.assign(document.createElement('input'), { type: 'number', name: 'fontSize', min: '12', max: '28', step: '1', value: String(v.fontSize) })
+    size.dataset.testid = 'settings-font-size'
+    size.addEventListener('input', () => {
+      if (Number.isFinite(size.valueAsNumber) && size.valueAsNumber >= 12 && size.valueAsNumber <= 28) this.deps.setView({ fontSize: size.valueAsNumber })
+    })
+    row.append(Object.assign(document.createElement('span'), { textContent: t.fontSize }), size)
+    pane.append(row, hint(t.fontSizeHint))
+    const heading = Object.assign(document.createElement('p'), { className: 'settings-field', textContent: t.width })
+    pane.append(heading)
+    for (const [value, label] of [['full', t.widthFull], ['readable', t.widthReadable]] as const) {
+      const r = document.createElement('label')
+      r.className = 'settings-field settings-radio'
+      const radio = Object.assign(document.createElement('input'), { type: 'radio', name: 'width', checked: v.width === value })
+      radio.dataset.testid = `settings-width-${value}`
+      radio.addEventListener('change', () => this.deps.setView({ width: value }))
+      r.append(radio, Object.assign(document.createElement('span'), { textContent: label }))
+      pane.append(r)
+    }
+    pane.append(hint(t.zoomHint))
+    return pane
   }
 
   // The app (ADR-007) ---------------------------------------------------------------------

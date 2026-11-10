@@ -71,7 +71,7 @@ export interface ResourcesDeps {
   relaunch(): void
   openLog(): void
   saveReport(): Promise<string | null>
-  notify(message: string): void
+  notify(message: string, kind?: 'info' | 'success' | 'error'): void
 }
 
 /** A helper's service for people: `network.mojom.NetworkService` → `Network Service`. */
@@ -317,7 +317,7 @@ export class Resources {
     report.type = 'button'
     report.textContent = t.report
     report.dataset.testid = 'res-report'
-    report.addEventListener('click', () => void this.deps.saveReport().then((path) => path && this.deps.notify(t.reportSaved.replace('{path}', path))))
+    report.addEventListener('click', () => void this.deps.saveReport().then((path) => path && this.deps.notify(t.reportSaved.replace('{path}', path), 'success')))
     foot.append(heap, openLog, report)
     this.box.replaceChildren(head, body, foot)
   }

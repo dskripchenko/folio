@@ -24,10 +24,24 @@ describe('resources: what folio takes, by process', () => {
     const rows = parsePs(ps)
     expect(rows).toHaveLength(9)
     expect(rows[2]).toEqual({ pid: 102, ppid: 100, rss: 50 * MB, cpu: 1.5, comm: 'folio Helper (GPU)' })
-    expect(parseWin('4 0 8192 0 System\r\n4242 100 1048576 12 node.exe\r\n')).toEqual([
+    const first = parseWin('4 0 8192 0 0 System\r\n4242 100 1048576 50000000 1000 node.exe\r\n', 10_000, null)
+    expect(first.procs).toEqual([
       { pid: 4, ppid: 0, rss: 8192, cpu: 0, comm: 'System' },
-      { pid: 4242, ppid: 100, rss: 1048576, cpu: 12, comm: 'node.exe' },
+      { pid: 4242, ppid: 100, rss: 1048576, cpu: 0, comm: 'node.exe', started: 1000 },
     ])
+    // Two seconds later, a second of the processor used: 50% of a core. A process with the same id
+    // started anew is another one: nothing to compare with.
+    const next = parseWin('4242 100 1048576 60000000 1000 node.exe\r\n4 0 8192 5 9 System\r\n', 12_000, first.read)
+    expect(next.procs.map((p) => p.cpu)).toEqual([50, 0])
+  })
+
+  it('on Windows, takes no "child" older than its parent: a dead parent’s id given anew', () => {
+    const rows = [
+      { pid: 100, ppid: 1, rss: 1, cpu: 0, comm: 'folio.exe', started: 500 },
+      { pid: 200, ppid: 100, rss: 1, cpu: 0, comm: 'pwsh.exe', started: 600 },
+      { pid: 300, ppid: 100, rss: 4e9, cpu: 0, comm: 'old.exe', started: 100 },
+    ]
+    expect(treeOf(rows, 100).map((p) => p.pid)).toEqual([100, 200])
   })
 
   it('takes a process with all below it', () => {

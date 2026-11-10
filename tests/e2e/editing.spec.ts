@@ -130,6 +130,7 @@ test('the file changed on disk during an edit: both are kept, nothing is overwri
     await settle(win)
     writeFileSync(file, '# Other — theirs\n')
     await expect(win.getByTestId('notice')).toBeVisible()
+    await expect(win.getByTestId('notice')).toHaveAttribute('data-kind', 'error')
 
     // Save refuses to overwrite silently; keeping mine, then saving, does.
     await win.keyboard.press(`${mod}+s`)
