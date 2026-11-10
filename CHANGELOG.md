@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-11-10
+
 ### Added
 
 - **Settings → View**: the text's size (headings and code in proportion, when
