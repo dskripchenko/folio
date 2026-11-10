@@ -50,6 +50,26 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
     expect(await toolbarY(5)).toBe(rest)
     expect(await toolbarY(300)).toBe(rest)
     expect(await toolbarY(-1)).toBe(rest)
+    // Full screen: the window is the document's — the rest steps aside, the toolbar stays, the text under it.
+    await win.getByTestId('view').evaluate((v) => (v.scrollTop = 0))
+    const fsButton = bar.locator('.dsk-wysiwyg-toolbar__btn').last()
+    await fsButton.click()
+    await expect(doc.locator('.dsk-wysiwyg--fullscreen')).toHaveCount(1)
+    for (const id of ['sidebar', 'rail-right', 'tabs', 'status']) await expect(win.getByTestId(id)).toBeHidden()
+    await expect(bar.locator('.dsk-wysiwyg-toolbar')).toBeVisible()
+    const fs = await win.evaluate(() => {
+      const view = document.querySelector('[data-testid="view"]')!.getBoundingClientRect()
+      const ed = document.querySelector('article.doc:not([hidden]) .dsk-wysiwyg')!
+      const toolbar = document.querySelector('article.doc:not([hidden]) .doc-toolbar .dsk-wysiwyg-toolbar')!.getBoundingClientRect()
+      return { view, inside: getComputedStyle(ed).position !== 'fixed', below: ed.getBoundingClientRect().top >= toolbar.bottom - 1, w: innerWidth, h: innerHeight }
+    })
+    expect(fs.inside).toBe(true)
+    expect(fs.below).toBe(true)
+    expect(Math.round(fs.view.left)).toBe(0)
+    expect(Math.round(fs.view.width)).toBe(fs.w)
+    await win.keyboard.press('Escape')
+    await expect(doc.locator('.dsk-wysiwyg--fullscreen')).toHaveCount(0)
+    for (const id of ['sidebar', 'rail-right', 'tabs']) await expect(win.getByTestId(id)).toBeVisible()
 
     // Markdown and side by side, from the rail; reading again.
     await viewMode(win, 'source')
