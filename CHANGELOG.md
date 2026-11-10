@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.12.2] - 2026-11-10
+
+### Fixed
+
+- **Full screen** in the visual editor no longer breaks the window: the text
+  no longer runs, see-through, over the consoles and the panels. The document
+  now takes the whole window — the sidebar, the rails, the tabs, the status
+  line and the consoles step aside, the toolbar stays — and Esc brings them
+  back.
+
 ## [1.12.1] - 2026-11-05
 
 ### Fixed
