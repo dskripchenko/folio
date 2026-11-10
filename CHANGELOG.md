@@ -7,6 +7,29 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- **Settings → View**: the text's size (headings and code in proportion, when
+  read and in the editor) and the page's width — the whole window, or a column
+  to read in.
+- **Zoom when reading**: a pinch on the trackpad or ⌘/Ctrl + the mouse wheel
+  zooms the document at the place under the pointer — a part of a diagram can
+  be looked at closely; the view scrolls both ways, and the percentage in the
+  corner brings 100% back. Each tab has its own.
+
+### Changed
+
+- The page takes the window's whole width; a narrow column in the middle of a
+  wide screen is now a choice in Settings → View.
+- Notices are in the colour of what they say — news neutral, a thing done
+  green (and gone by itself after a few seconds), a failure red — and each has
+  a × to close it.
+
+### Fixed
+
+- Links with the destination in angle brackets, `[text](<path/file.md>)`,
+  open the file — spaces in the path too (embed 1.21.0, ui 1.47.2).
+
 ## [1.12.3] - 2026-11-10
 
 ### Fixed

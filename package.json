@@ -29,7 +29,7 @@
   "devDependencies": {
     "@dskripchenko/code-editor": "^0.4.0",
     "@dskripchenko/diagrams": "^1.4.0",
-    "@dskripchenko/embed": "1.20.0",
+    "@dskripchenko/embed": "1.21.0",
     "@dskripchenko/syntax": "^0.6.0",
     "@dskripchenko/terminal": "^0.3.0",
     "@eslint/js": "10.0.1",

@@ -62,6 +62,10 @@ test('a document and a folder exported as PDF: page size, header and footer, con
     await win.keyboard.press(`${mod}+Shift+p`)
     await exportWith(win, { size: 'A5', orientation: 'landscape', toc: true })
     await expect(win.getByTestId('notice')).toContainText('readme.pdf')
+    // A thing done: a green notice, closed with its ×.
+    await expect(win.getByTestId('notice')).toHaveAttribute('data-kind', 'success')
+    await win.getByTestId('notice').locator('[data-action="close"]').click()
+    await expect(win.getByTestId('notice')).toBeHidden()
     expect(readFileSync(one).subarray(0, 5).toString()).toBe('%PDF-')
     const raw = readFileSync(one).toString('latin1')
     expect(raw).toMatch(/\/Outlines/)
