@@ -70,6 +70,25 @@ test("the window's controls: modes on the rail, the editor's toolbar floating ov
     await win.keyboard.press('Escape')
     await expect(doc.locator('.dsk-wysiwyg--fullscreen')).toHaveCount(0)
     for (const id of ['sidebar', 'rail-right', 'tabs']) await expect(win.getByTestId(id)).toBeVisible()
+    // The HTML source: the field fills the page under the toolbar, in the pane and in full screen alike.
+    const sourceButton = bar.locator('.dsk-wysiwyg-toolbar__btn').nth(-2)
+    await sourceButton.click()
+    const source = doc.locator('.dsk-wysiwyg__source')
+    await expect(source).toBeVisible()
+    const sourceFill = () => win.evaluate(() => {
+      const ta = document.querySelector('article.doc:not([hidden]) .dsk-wysiwyg__source')!.getBoundingClientRect()
+      const view = document.querySelector('[data-testid="view"]')!.getBoundingClientRect()
+      return { h: ta.height, view: view.height, inView: ta.bottom <= view.bottom + 1 }
+    })
+    for (const full of [false, true]) {
+      if (full) await fsButton.click()
+      const s = await sourceFill()
+      expect(s.h).toBeGreaterThan(s.view * 0.6)
+      expect(s.inView).toBe(true)
+    }
+    await win.keyboard.press('Escape')
+    await sourceButton.click()
+    await expect(source).toHaveCount(0)
 
     // Markdown and side by side, from the rail; reading again.
     await viewMode(win, 'source')

@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.12.3] - 2026-11-10
+
+### Fixed
+
+- **HTML source** in the visual editor: in full screen it no longer shrinks to
+  a line or two — the source fills the page under the toolbar, in the pane and
+  in full screen alike, and scrolls inside. Clicks and scrolling now work on
+  every line, not only the first ones. The source also looks tidier: a frame,
+  padding, and the font of the Markdown source.
+
 ## [1.12.2] - 2026-11-10
 
 ### Fixed

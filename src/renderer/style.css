@@ -252,6 +252,15 @@ dialog.clone button.primary { border-color: var(--accent); background: var(--acc
 body:has(.dsk-wysiwyg--fullscreen) :is(.sidebar, .resizer, .rail, .flyout, .bar, .status, .history, .split, .console-panel) { display: none !important; }
 body:has(.dsk-wysiwyg--fullscreen) .content > .view:not(:has(.dsk-wysiwyg--fullscreen)) { display: none; }
 body:has(.dsk-wysiwyg--fullscreen) .content > .view { border-left: 0; }
+/* The editor's HTML source: the page's height, not the text's — the source scrolls inside, the toolbar
+   above it; the editor gives it no height of its own (in full screen it fell to a line, and the field
+   took clicks only on its first lines while the highlight under it showed the rest). */
+.doc:has(.dsk-wysiwyg__source-wrap) { display: flex; flex-direction: column; height: 100%; padding-bottom: 24px; }
+.doc:has(.dsk-wysiwyg__source-wrap) > dsk-markdown-editor { flex: 1 1 auto; min-height: 0; }
+.doc:has(.dsk-wysiwyg__source-wrap) :is(dsk-markdown-editor > .dsk-root, .dsk-md, .dsk-md__visual, .dsk-wysiwyg) { height: 100% !important; min-height: 0; }
+.doc .dsk-wysiwyg__source-wrap { min-height: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--tab); overflow: hidden; }
+.doc .dsk-wysiwyg__source { position: absolute; inset: 0; }
+.doc .dsk-wysiwyg__source, .doc .dsk-wysiwyg__source-highlight { padding: 16px 20px; font-size: 13.5px; line-height: 1.7; }
 .doc .dsk-md__panes .dsk-md__source { border-color: var(--line); }
 .doc[hidden] { display: none; }
 .doc-error { padding: 32px; color: #cf222e; }
