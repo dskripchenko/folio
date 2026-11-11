@@ -846,6 +846,11 @@ Deleting the program's folder therefore removes everything it ever wrote. The
 flip side: the folder must be writable, so do not unpack folio into a place
 only an administrator can write to.
 
+On macOS a downloaded `folio.app` started where it was unpacked runs from a
+read-only copy (App Translocation), where nothing can be written beside it.
+folio then offers to move itself to Applications and starts again from there;
+or move `folio.app` to any folder in the Finder before the first start.
+
 Inside it: the workspace and settings (`workspace.json`), keys of your own
 (`keybindings.json`), the network consents (`consent.json`), sync logins kept
 encrypted (`logins.json`), Shared (`library/`), the open tabs and unsaved edits

@@ -7,7 +7,7 @@ mkdirSync('dist/renderer', { recursive: true })
 
 const common = { bundle: true, sourcemap: true, logLevel: 'warning', target: 'es2023' }
 
-await build({ ...common, entryPoints: ['src/main/main.ts'], outfile: 'dist/main.cjs', platform: 'node', format: 'cjs', external: ['electron', 'node-pty'], loader: { '.zsh': 'text', '.bash': 'text', '.ps1': 'text' } })
+await build({ ...common, entryPoints: ['src/main/index.ts'], outfile: 'dist/main.cjs', platform: 'node', format: 'cjs', external: ['electron', 'node-pty'], loader: { '.zsh': 'text', '.bash': 'text', '.ps1': 'text' } })
 // The bridge an agent starts to reach folio's MCP server (R7): run by folio's executable as Node.
 await build({ ...common, sourcemap: false, entryPoints: ['src/bridge/mcpBridge.ts'], outfile: 'dist/mcp-bridge.cjs', platform: 'node', format: 'cjs' })
 await build({ ...common, entryPoints: ['src/preload/preload.ts'], outfile: 'dist/preload.cjs', platform: 'node', format: 'cjs', external: ['electron'] })

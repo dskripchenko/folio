@@ -438,6 +438,10 @@ Electron 默认把数据存放在用户配置目录中。folio 把所有数据�
 因此，删除程序所在的文件夹就会删除它写入过的一切。反过来说：该文件夹必须可写——
 不要把 folio 解压到只有管理员才能写入的位置。
 
+在 macOS 上，下载的 `folio.app` 若在解压处直接启动，会从一个只读副本运行（App
+Translocation），其旁边无法写入任何内容。此时 folio 会提议把自己移到“应用程序”
+并从那里重新启动；也可以在首次启动前用访达把 `folio.app` 移到任意文件夹。
+
 其中包括：工作区与设置（`workspace.json`）、自定义快捷键（`keybindings.json`）、网络授权（`consent.json`）、加密保存的同步登录信息（`logins.json`）、共享（`library/`）、打开的标签页和未保存的编辑（`session/`）、审阅标记——已查看的文件、评论、上次查看的检查点以及 Claude Code 报告的编辑（`review/`）——自定义语言（`locales/`）、更新（`update/`）、日志以及 Chromium 自身的数据（`chromium/`）。
 
 只有两个文件会写入你的文件夹，而且只在你要求时：设置窗口中的项目设置写入项目的 `.folio/settings.json`；**将 Claude Code 连接到 folio** 会在仓库的 `.claude/settings.local.json`（本地文件，不提交）中添加钩子，并把 folio 的 MCP 服务器加入 Claude Code 对该项目的本地设置——**断开 Claude Code** 会同时移除两者。删除 folio 不会动它们。folio 的 MCP 服务器只监听 127.0.0.1，且只响应保存在 `folio-data/review` 中的令牌。
