@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.13.2] - 2026-11-11
+
+### Fixed
+
+- Buttons say what they do on hover: folio draws its own tooltips, since the
+  system's often did not show (on macOS not at all) — the rail's icons, the
+  close ×'s, the calendar's arrows and the other icons of embedded blocks.
+
 ## [1.13.1] - 2026-11-11
 
 ### Fixed

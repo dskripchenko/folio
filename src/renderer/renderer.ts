@@ -63,6 +63,7 @@ import { AwakeButton, Resources } from './resources'
 import { headingsOf, OutlinePanel, type Heading } from './outline'
 import { CommandPalette, type Command } from './commandPalette'
 import { applyView, setViewPrefs, viewPrefs, zoomDoc, zoomStep } from './docView'
+import { installTooltips } from './tooltip'
 
 /** The palette's own words and the titles of the commands the menus name only in the main process. */
 import type { AwakeState, GitRefusal, I18nState, ResSample, UpdateState, Version, WorkspaceView } from './bridge'
@@ -2926,6 +2927,8 @@ document.addEventListener('selectionchange', () => {
 document.addEventListener('focusin', () => syncStatus())
 // The code editor's caret moved.
 document.addEventListener('dsk:selection', () => syncStatus())
+// What a button does, on hover: the app's own tooltips (the system's often do not show).
+installTooltips()
 void folio.spellcheck().then((on) => (spellOn = on))
 
 // Updates: where a check is; what it found is said when it was asked for, or when a version is ready.
