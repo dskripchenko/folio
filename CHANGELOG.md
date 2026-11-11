@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-11-11
+
 ### Fixed
 
 - macOS: folio started from a read-only copy (App Translocation — a downloaded
