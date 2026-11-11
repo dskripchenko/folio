@@ -980,3 +980,7 @@ img.uid-markdown__embed-image[data-state="missing"] { min-width: 120px; min-heig
 .res-toast > span { flex: 1 1 100%; }
 .res-dot { stroke: var(--accent); stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .console-tab-usage { margin-left: 6px; padding: 0 5px; border-radius: 8px; background: color-mix(in srgb, var(--warn-line) 22%, transparent); color: var(--fg); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+
+/* The app's own tooltip (tooltip.ts): what a button does, on hover. */
+.app-tip { position: fixed; z-index: 1000; max-width: 320px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); font-size: 12px; line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; pointer-events: none; }
+.app-tip[hidden] { display: none; }
