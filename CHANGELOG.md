@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-11-11
+
+### Fixed
+
+- macOS: folio started from a read-only copy (App Translocation — a downloaded
+  `folio.app` opened where it was unpacked) no longer fails with “ENOENT …
+  folio-data/update”; it offers to move itself to Applications and starts
+  again from there.
+
 ## [1.13.0] - 2026-11-10
 
 ### Added

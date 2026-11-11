@@ -929,6 +929,12 @@ Den Ordner des Programms zu löschen entfernt daher alles, was es je geschrieben
 hat. Die Kehrseite: Der Ordner muss beschreibbar sein — entpacken Sie folio
 nicht dorthin, wo nur ein Administrator schreiben darf.
 
+Unter macOS läuft ein heruntergeladenes `folio.app`, das dort gestartet wird, wo
+es entpackt wurde, aus einer schreibgeschützten Kopie (App Translocation), neben
+der sich nichts schreiben lässt. folio bietet dann an, sich nach „Programme“ zu
+bewegen, und startet von dort neu — oder verschieben Sie `folio.app` vor dem
+ersten Start im Finder in einen beliebigen Ordner.
+
 Darin: Arbeitsbereich und Einstellungen (`workspace.json`), eigene Tasten
 (`keybindings.json`), Netzwerkfreigaben (`consent.json`), verschlüsselte
 Anmeldungen für die Synchronisierung (`logins.json`), Gemeinsam (`library/`),

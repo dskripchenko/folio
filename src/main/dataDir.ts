@@ -36,3 +36,13 @@ export function dataDir(input: DataDirInput): string {
   const portableDir = input.env.PORTABLE_EXECUTABLE_DIR
   return join(portableDir || dirname(input.execPath), DATA_DIR)
 }
+
+/**
+ * Whether macOS runs the program from a read-only copy (App Translocation):
+ * a quarantined `.app` opened where it was downloaded or unpacked is started
+ * from `/private/var/folders/…/AppTranslocation/<id>/d/`, where nothing can be
+ * written beside it — neither `folio-data` nor an update.
+ */
+export function translocated(platform: NodeJS.Platform, execPath: string): boolean {
+  return platform === 'darwin' && /\/AppTranslocation\/[^/]+\/[^/]+\/[^/]+\.app\/Contents\/MacOS\//.test(execPath)
+}
