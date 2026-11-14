@@ -6,7 +6,8 @@ import { answerText, type McpAnswer } from '../../common/mcp'
 import { commentOf, compose, type ChangedFile, type ChangeSpec } from '../../common/review'
 import { GitError } from '../git'
 import { ReviewGit } from './git'
-import { compactEvents, hasHook, hookCommand, readEvents, readSettings, settingsFile, withHook, withoutHook, writeSettings } from './hooks'
+import { compactEvents, hasHook, journalFile, mergeEdits, readEvents, readJournal, readSettings, settingsFile, withHook, withoutHook, writeSettings } from './hooks'
+import { editsHookCommand } from './agentEdits'
 import type { ToolHandler } from './mcp'
 import { ReviewStore } from './store'
 
@@ -249,7 +250,8 @@ export function registerReview(deps: ReviewDeps): Record<string, ToolHandler> {
     const settings = readSettings(root)
     if (settings === null) throw new GitError('invalid', [settingsFile(root)])
     const t = deps.claudeText()
-    const command = hookCommand(store.eventsFile(root))
+    // The shared journal's hook (agentEdits.ts): the shell terminal reads the same edits.
+    const command = editsHookCommand()
     if (on === true) {
       const detail = t.connectDetail.replace('{file}', settingsFile(root)).replace('{command}', command).replace('{mcp}', deps.mcp.preview())
       if (!(await deps.confirmLong(t.connectQuestion, detail, t.connect))) return { ok: false }
@@ -267,8 +269,10 @@ export function registerReview(deps: ReviewDeps): Record<string, ToolHandler> {
     const asked = await repo(path)
     const root = await mainOf(asked)
     const file = store.eventsFile(root)
-    const edits = readEvents(file)
-    compactEvents(file, edits)
+    const before = readEvents(file)
+    compactEvents(file, before)
+    const journal = journalFile(root)
+    const edits = mergeEdits(before, journal ? readJournal(journal) : [])
     // Paths as the disk has them (a temporary folder is /private/var on macOS): the agent's and git's agree.
     const base = real(asked)
     return {

@@ -153,8 +153,12 @@
 - Команда «Подключить Claude Code к folio» добавляет в
   `.claude/settings.local.json` проекта хук `PostToolUse` на
   `Edit|Write|MultiEdit|NotebookEdit`. Он пишет одну строку JSON
-  (session_id, agent или субагент, путь, инструмент, время) в локальный
-  сокет или файл folio: `folio-data/review/events/<repo-hash>.jsonl`.
+  (session_id, agent или субагент, путь, инструмент, время, панель shell)
+  в общий журнал репозитория `.git/agent-edits.jsonl` (общий для его
+  worktree, не попадает в коммиты). Тот же журнал читает терминал shell:
+  хук и формат — `src/main/review/agentEdits.ts`, копия
+  `@dskripchenko/shell-integration`. Старый файл folio
+  `folio-data/review/events/<repo-hash>.jsonl` читается для прежних правок.
   Правка показывается до записи, отключение — той же командой.
 - folio читает события и подписывает ими ленту активности и worktree:
   какой агент и сессия, когда. Без хуков всё работает, только без подписей.

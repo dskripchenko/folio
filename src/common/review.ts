@@ -121,6 +121,8 @@ export interface AgentEdit {
   cwd: string
   /** Milliseconds. */
   time: number
+  /** The shell terminal's pane the agent ran in (the shared journal says it). */
+  pane?: string
   /** From the repository asked about, when the file is in it. */
   rel?: string
 }
