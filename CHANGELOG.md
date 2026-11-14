@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-11-14
+
+### Added
+
+- Pictures in the consoles (`@dskripchenko/terminal` 0.8.0): sixel and the
+  kitty graphics protocol — what chafa, timg or an image viewer draws — shown
+  over their cells, scrolled with the text, cleared with the screen. Only
+  what comes in the output is shown, never a file a program names.
+
 ### Changed
 
 - The shell integration (the scripts that mark commands in zsh, bash and
