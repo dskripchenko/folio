@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- A command line asks more of folio, a running one too: `folio file:12` opens
+  the file at line 12, `--project <folder>` adds the folder as a project,
+  `--review <repository>` opens the review of its working copy. While it runs,
+  folio leaves a small presence file (`folio-presence.json` in the user's
+  runtime or temporary folder, or `FOLIO_PRESENCE`) with how to start it and
+  what it understands, for the shell terminal to find it; it is removed on
+  exit.
+
 ### Changed
 
 - Consoles use `@dskripchenko/terminal` 0.4.0: long output no longer slows

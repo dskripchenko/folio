@@ -13,6 +13,7 @@ const listen = (channel: string) => (callback: (value: unknown) => void) => {
 contextBridge.exposeInMainWorld('folio', {
   platform: process.platform,
   startup: () => ipcRenderer.invoke('app:startup'),
+  launched: () => ipcRenderer.send('app:launched'),
   openDialog: () => ipcRenderer.invoke('doc:open-dialog'),
   open: (path: string) => ipcRenderer.invoke('doc:open', path),
   openUrl: (url: string) => ipcRenderer.invoke('doc:open-url', url),
@@ -234,6 +235,7 @@ contextBridge.exposeInMainWorld('folio', {
   onMcpAsk: listen('mcp:ask'),
   onMcpCancel: listen('mcp:cancel'),
   onMcpOpen: listen('mcp:open'),
+  onReviewOpen: listen('review:open'),
   mcpAnswer: (id: number, answer: unknown) => ipcRenderer.invoke('mcp:answer', id, answer),
   onI18nChanged: listen('i18n:changed'),
   onWelcome: listen('menu:welcome'),

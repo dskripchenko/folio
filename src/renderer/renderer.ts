@@ -2349,6 +2349,10 @@ folio.onMcpOpen((value) => {
     )
   })
 })
+// A review asked from outside (`folio --review <repo>`): the working copy of the repository.
+folio.onReviewOpen((repo) => {
+  if (typeof repo === 'string') openReview({ kind: 'working', repo })
+})
 folio.onCloseTab(() => {
   if (active) void close(active)
 })
@@ -3327,4 +3331,6 @@ void folio.startup().then(async ({ tabs: restored, groups: savedGroups, active: 
   activate(tabs[activeIndex ?? -1] ?? tabs[tabs.length - 1] ?? null)
   // The first start: what folio can do, in the language in use.
   if (welcome && tabs.length === 0) await openWelcome()
+  // What the command line asked beyond files (a line, a project, a review) comes now.
+  folio.launched()
 }).catch(startupFailed)

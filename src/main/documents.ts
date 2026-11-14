@@ -87,25 +87,59 @@ export function openDocument(file: string, workspace: Workspace, roots: Roots): 
 /** Options that take the next argument as their value (Electron's and Node's, e.g. a test runner's `-r loader.js`). */
 const WITH_VALUE = new Set(['-r', '--require', '--inspect-port', '--user-data-dir'])
 
+/** What a command line asks of folio: files (a line in one, too), a folder to add as a project, a repository to review. */
+export type LaunchRequest = {
+  files: { path: string; line: number | null }[]
+  project: string | null
+  review: string | null
+}
+
+/** `file:12` or `file:12:3` — a line (and a column, not used) after a file's path. */
+const AT_LINE = /^(.+?):(\d+)(?::\d+)?$/
+
 /**
- * The files to open from a command line: the arguments after the app (and
- * `.` in development) that are files — not options, not their values.
+ * A command line read: the arguments after the app (and `.` in development)
+ * that are files, `file:line`, `--project <folder>` and `--review <folder>` —
+ * not other options, not their values. A path that is not there is passed over.
  */
-export function filesFromArgv(argv: string[], cwd: string, isFile: (path: string) => boolean = fileExists): string[] {
+export function launchRequest(argv: string[], cwd: string, isFile: (path: string) => boolean = fileExists, isDir: (path: string) => boolean = dirExists): LaunchRequest {
   // After the executable; in development the app's folder (`.`) is a folder, not a file, and is passed over too.
   const args = argv.slice(1)
-  const out: string[] = []
+  const out: LaunchRequest = { files: [], project: null, review: null }
   for (let i = 0; i < args.length; i++) {
     const a = args[i] ?? ''
+    if (a === '--project' || a === '--review') {
+      const dir = args[++i]
+      if (dir !== undefined && isDir(resolve(cwd, dir))) out[a === '--project' ? 'project' : 'review'] = resolve(cwd, dir)
+      continue
+    }
     if (WITH_VALUE.has(a)) {
       i++
       continue
     }
     if (a.startsWith('-') || a === '.') continue
     const path = resolve(cwd, a)
-    if (isFile(path)) out.push(path)
+    if (isFile(path)) {
+      out.files.push({ path, line: null })
+      continue
+    }
+    const at = AT_LINE.exec(a)
+    if (at && isFile(resolve(cwd, at[1]!))) out.files.push({ path: resolve(cwd, at[1]!), line: Math.max(1, Number(at[2])) })
   }
   return out
+}
+
+/** The files to open from a command line (see `launchRequest`). */
+export function filesFromArgv(argv: string[], cwd: string, isFile: (path: string) => boolean = fileExists): string[] {
+  return launchRequest(argv, cwd, isFile, () => false).files.map((f) => f.path)
+}
+
+function dirExists(path: string): boolean {
+  try {
+    return statSync(path).isDirectory()
+  } catch {
+    return false
+  }
 }
 
 function fileExists(path: string): boolean {

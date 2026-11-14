@@ -44,7 +44,8 @@ import { amendLast, createTag, deleteBranch, deleteTag, lastMessage, renameBranc
 import { Buffers, hashText, newBufferId, type Buffer } from './buffers'
 import { Consent } from './consent'
 import { dataDir } from './dataDir'
-import { documentOfUrl, DocumentError, filesFromArgv, openDocument, type OpenedDocument } from './documents'
+import { documentOfUrl, DocumentError, launchRequest, openDocument, type LaunchRequest, type OpenedDocument } from './documents'
+import { CAPABILITIES, presencePath, removePresence, writePresence } from './presence'
 import { DIAGRAM_SYNTAX, formatByName, isMedia, MARKDOWN_EXT, OPENABLE_EXT, opensInFolio } from './formats'
 import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
@@ -240,7 +241,21 @@ function send(channel: string, ...args: unknown[]): void {
 }
 
 function openInWindow(paths: string[]): void {
-  for (const path of paths) send('doc:opened', open(path))
+  openRequest({ files: paths.map((path) => ({ path, line: null })), project: null, review: null })
+}
+
+/** A command line's request (another start of folio, the shell terminal): files, at a line too, a project, a review. */
+function openRequest(request: LaunchRequest): void {
+  if (request.project !== null) {
+    workspace.addProject(request.project)
+    send('ws:changed', workspaceView())
+  }
+  if (request.review !== null) send('review:open', request.review)
+  // The files last: the one at a line is the tab in front.
+  for (const { path, line } of request.files) {
+    if (line === null) send('doc:opened', open(path))
+    else send('mcp:open', { opened: open(path), line })
+  }
   if (win) {
     if (win.isMinimized()) win.restore()
     win.focus()
@@ -2024,8 +2039,19 @@ ipcMain.handle('pdf:export', async (_e, target: unknown, rawOptions: unknown) =>
   }
 })
 
+/** What the first command line asked beyond plain files, waiting for the window. */
+let launched: LaunchRequest | null = null
+ipcMain.on('app:launched', () => {
+  const request = launched
+  launched = null
+  if (request && (request.files.length > 0 || request.project !== null || request.review !== null)) openRequest(request)
+})
+
 ipcMain.handle('app:startup', () => {
-  const fromArgv = filesFromArgv(process.argv, process.cwd())
+  const request = launchRequest(process.argv, process.cwd())
+  const fromArgv = request.files.filter((f) => f.line === null).map((f) => f.path)
+  // A line, a project, a review: once the window has its tabs back (`app:launched`).
+  launched = { ...request, files: request.files.filter((f) => f.line !== null) }
   type Restored = { doc: Opened | null; buffer: Buffer | null; conflict: boolean; color?: string | null; group?: string | null; review?: ChangeSpec }
   const restore = (path: string | null, bufferId: string | null): Restored | null => {
     const buffer = bufferId ? buffers.get(bufferId) : null
@@ -2209,7 +2235,7 @@ ipcMain.handle('net:allow', (_e, scope: unknown, path: unknown) => {
 })
 
 app.on('second-instance', (_event, argv, cwd) => {
-  openInWindow(filesFromArgv(argv, cwd))
+  openRequest(launchRequest(argv, cwd))
 })
 
 // macOS: a file dropped on the Dock icon or opened with folio.
@@ -2228,6 +2254,7 @@ app.on('before-quit', (event) => {
 })
 
 app.on('will-quit', () => {
+  if (presence) removePresence(presence, process.pid, (path) => readFileSync(path, 'utf8'))
   health.stop()
   mcp.stop(MCP_INFO)
   watcher.close()
@@ -2248,6 +2275,7 @@ app.on('activate', () => {
 
 /** Run by the e2e tests: out of the way of the person at the machine. */
 const underTest = process.env.FOLIO_E2E === '1'
+let presence: string | null = null
 if (underTest && process.platform === 'darwin') {
   // A test closes the app mid-flight; macOS would offer to reopen its windows next time (the development Electron's defaults only).
   systemPreferences.setUserDefault('ApplePersistenceIgnoreState', 'boolean', true)
@@ -2267,6 +2295,11 @@ void app.whenReady().then(() => {
   win = createWindow()
   health.ready()
   void startMcp()
+  // Found by the shell terminal while it runs (under test only where a test says).
+  if (!underTest || process.env.FOLIO_PRESENCE) {
+    presence = presencePath(process.env)
+    writePresence(presence, { pid: process.pid, version: app.getVersion(), launch: app.isPackaged ? [process.execPath] : [process.execPath, app.getAppPath()], capabilities: CAPABILITIES })
+  }
   updater.tidy()
   // Once a day at start, a while after the window is up; a source checkout (no release to replace) never looks.
   if ((app.isPackaged || process.env.FOLIO_UPDATE_URL) && workspace.updates() && updater.due()) setTimeout(() => void updater.check(), 10_000)

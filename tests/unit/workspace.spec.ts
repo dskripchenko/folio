@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Consent } from '../../src/main/consent'
-import { documentOfUrl, fileOfUrl, filesFromArgv, openDocument } from '../../src/main/documents'
+import { documentOfUrl, fileOfUrl, filesFromArgv, launchRequest, openDocument } from '../../src/main/documents'
 import { isInside, resolveInside } from '../../src/main/paths'
 import { Roots } from '../../src/main/roots'
 import { Session } from '../../src/main/session'
@@ -94,6 +94,21 @@ describe('documents', () => {
     expect(filesFromArgv(['/opt/folio', '/d/b.md'], '/w', files('/d/b.md'))).toEqual([resolve('/d/b.md')])
     // A test runner's `-r loader.js` and the like are not documents; nor is what does not exist.
     expect(filesFromArgv(['/x/electron.exe', '-r', '/pw/loader.js', '--inspect=0', '.', '/d/b.md', 'gone.md'], '/w', files('/pw/loader.js', '/d/b.md'))).toEqual([resolve('/d/b.md')])
+  })
+
+  it('reads a line after a file, a project and a review from a command line', () => {
+    const files = (p: string) => p === resolve('/w/a.ts')
+    const dirs = (p: string) => p === resolve('/w/app') || p === resolve('/repo')
+    expect(launchRequest(['/opt/folio', 'a.ts:12', 'a.ts:3:7', 'gone.ts:4', '--project', 'app', '--review', '/repo'], '/w', files, dirs)).toEqual({
+      files: [
+        { path: resolve('/w/a.ts'), line: 12 },
+        { path: resolve('/w/a.ts'), line: 3 },
+      ],
+      project: resolve('/w/app'),
+      review: resolve('/repo'),
+    })
+    // A folder that is not there is passed over, and its value is not taken for a file.
+    expect(launchRequest(['/opt/folio', '--review', 'a.ts', '--project'], '/w', files, dirs)).toEqual({ files: [], project: null, review: null })
   })
 })
 
