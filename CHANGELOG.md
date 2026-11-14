@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-11-14
+
 ### Added
 
 - More shared with the shell terminal: the consoles take its colours (by day
