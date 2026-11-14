@@ -23,6 +23,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   inside folio's prompt.
 - A command's text, when bash's history has nothing (a profile that turns it
   off), is the command being run instead of empty.
+- bash no longer marks a command of its own as it starts: the integration's
+  last lines ran under its DEBUG trap and showed as a command that ended at
+  once.
 
 ## [1.13.2] - 2026-11-11
 
