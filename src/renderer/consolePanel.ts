@@ -182,7 +182,10 @@ export class ConsolePanel {
     bridge.onData((id, data) => {
       const found = this.paneOf(id)
       if (!found) return
-      found.pane.term.write(data)
+      const term = found.pane.term
+      term.write(data)
+      // At the shell's prompt, keyboard flags a program left behind (kitty protocol) are dropped: Ctrl+C reaches the shell as before.
+      if (data.includes('\x1b]133;A') && term.buffer !== term.alt && term.kittyFlags) term.write('\x1b[<99u')
       // Output in a tab not in view: a dot on the tab.
       if ((found.group !== this.active || this.el.hidden) && !found.group.activity) {
         found.group.activity = true

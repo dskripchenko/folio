@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-11-14
+
 ### Added
 
 - The shell terminal (github.com/dskripchenko/shell), when it runs: a
@@ -16,6 +18,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   on shell's tabs of the repository until it is answered. shell is found by
   its presence file (the user's own, of a live process, a local address) and
   asked over its local API with its token.
+
+### Changed
+
+- Consoles use `@dskripchenko/terminal` 0.5.0: a program that asks for the
+  kitty keyboard protocol (Claude Code, neovim, helix, fish) gets Shift+Enter,
+  Esc and keys with Ctrl or Alt of their own. Flags a program left behind are
+  dropped at the shell's prompt, so Ctrl+C still reaches the shell.
 
 ## [1.14.0] - 2026-11-14
 
