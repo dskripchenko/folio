@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-11-14
+
 ### Added
 
 - A command line asks more of folio, a running one too: `folio file:12` opens
