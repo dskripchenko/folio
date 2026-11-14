@@ -7,7 +7,7 @@ import { commentOf, compose, type ChangedFile, type ChangeSpec } from '../../com
 import { GitError } from '../git'
 import { ReviewGit } from './git'
 import { compactEvents, hasHook, journalFile, mergeEdits, readEvents, readJournal, readSettings, settingsFile, withHook, withoutHook, writeSettings } from './hooks'
-import { editsHookCommand } from './agentEdits'
+import { editsHookCommand } from '@dskripchenko/shell-integration'
 import type { ToolHandler } from './mcp'
 import { ReviewStore } from './store'
 
@@ -250,7 +250,7 @@ export function registerReview(deps: ReviewDeps): Record<string, ToolHandler> {
     const settings = readSettings(root)
     if (settings === null) throw new GitError('invalid', [settingsFile(root)])
     const t = deps.claudeText()
-    // The shared journal's hook (agentEdits.ts): the shell terminal reads the same edits.
+    // The shared journal's hook (@dskripchenko/shell-integration): the shell terminal reads the same edits.
     const command = editsHookCommand()
     if (on === true) {
       const detail = t.connectDetail.replace('{file}', settingsFile(root)).replace('{command}', command).replace('{mcp}', deps.mcp.preview())

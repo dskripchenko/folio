@@ -47,6 +47,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@dskripchenko/shell-integration": "^0.1.0",
     "node-pty": "^1.1.0"
   }
 }

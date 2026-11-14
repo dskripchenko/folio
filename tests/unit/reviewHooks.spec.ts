@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { compactEvents, hasHook, hookCommand, journalFile, mergeEdits, readEvents, readJournal, withHook, withoutHook } from '../../src/main/review/hooks'
-import { editsHookCommand } from '../../src/main/review/agentEdits'
+import { editsHookCommand } from '@dskripchenko/shell-integration'
 
 let dir = ''
 beforeEach(() => {
