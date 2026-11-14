@@ -90,3 +90,19 @@ describe('bash without its history', () => {
     expect(done.map((c) => c.text)).toEqual(['false', 'echo ok'])
   }, 120_000)
 })
+
+describe('bash at its start', () => {
+  // The integration's own lines run before the first prompt: none of them is a command typed.
+  it.skipIf(process.platform === 'win32' || !existsSync('/bin/bash'))('marks no command before the first prompt', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'folio-shell-'))
+    const env = shellEnv(process.env)
+    const launch = integrate('/bin/bash', ['-l'], dir, env)!
+    let out = ''
+    const p = spawn('/bin/bash', launch.args, { name: 'xterm-256color', cols: 100, rows: 30, cwd: tmpdir(), env: { ...env, ...launch.env, TERM: 'xterm-256color' } })
+    p.onData((d) => (out += d))
+    for (let i = 0; i < 300 && !out.includes('\x1b]133;A'); i++) await wait(100)
+    p.kill()
+    expect(out).toContain('\x1b]133;A')
+    expect(out.slice(0, out.indexOf('\x1b]133;A'))).not.toContain('633;E;')
+  }, 60_000)
+})
