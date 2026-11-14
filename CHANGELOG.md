@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-11-14
+
 ### Changed
 
 - Claude Code's edits go to a journal shared with the shell terminal:
