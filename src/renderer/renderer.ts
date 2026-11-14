@@ -2728,6 +2728,17 @@ function commands(): Command[] {
     { id: 'find', group: c.edit, title: c.find, keys: `${mod}F`, icon: 'search', when: hasText, run: () => openFind() },
     { id: 'compare-with', group: file, title: t.compareWithCommand, icon: 'split', when: () => !!active?.path && !active.doc?.media, run: () => compareWithChosen() },
     { id: 'welcome', group: view, title: t.welcomeDoc, icon: 'read', run: () => void openWelcome() },
+    {
+      id: 'shell-projects', group: view, title: c.shellProjects, icon: 'folder',
+      run: () =>
+        void folio.shellProjects().then((list) => {
+          if (!list.length) return notify(c.shellProjectsNone, 'info')
+          palette.pick(
+            list.map((p) => ({ id: `shell-project:${p.path}`, group: p.path, title: p.name, icon: 'folder', run: () => void folio.addProjectPath(p.path).then((w) => sidebar.show(w as Parameters<typeof sidebar.show>[0])) })),
+            c.shellProjectsPick,
+          )
+        }),
+    },
     { id: 'settings', group: view, title: t.settingsWindow.title, keys: `${mod},`, icon: 'settings', run: () => void settingsDialog.open() },
     { id: 'processes', group: view, title: t.resources.title, icon: 'activity', run: () => void resources?.open() },
     { id: 'keep-awake', group: view, title: t.awake.title, icon: 'awake', run: () => awakeButton?.menu() },
@@ -2783,6 +2794,10 @@ const searchPanel = new SearchPanel(
     }),
   () => syncRail(),
 )
+// The consoles in the shell terminal's colours, once it has said them (kept between runs).
+type Look = Parameters<ConsolePanel['setLook']>[0]
+void folio.consoleLook().then((look) => look && consolePanel.setLook(look as Look))
+folio.onConsoleLook((look) => consolePanel.setLook(look as Look))
 document.querySelector('.content')!.insertBefore(searchPanel.el, document.querySelector('.history'))
 
 linksPanel = new LinksPanel(

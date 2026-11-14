@@ -419,7 +419,7 @@ export class ConsolePanel {
     el.className = 'console-pane'
     el.dataset.testid = 'console'
     group.el.append(el)
-    const t = this.dark ? DARK : LIGHT
+    const t = this.theme()
     const term = new Terminal({ scrollback: 10_000, foreground: t.foreground, background: t.background })
     const pane: Pane = { id: null, term, view: null as unknown as TerminalView, el, cwd: cwd ?? '', ended: false }
     pane.view = new TerminalView(term, el, {
@@ -721,8 +721,21 @@ export class ConsolePanel {
     b.split.disabled = !this.active || this.active.panes.length >= 2
   }
 
+  /** The shell terminal's colours, when it has said them: the consoles look as its panes do. */
+  private look: { light: TerminalTheme; dark: TerminalTheme } | null = null
+
+  setLook(look: { light: TerminalTheme; dark: TerminalTheme } | null): void {
+    this.look = look
+    this.applyTheme()
+  }
+
+  private theme(): TerminalTheme {
+    if (this.look) return this.dark ? this.look.dark : this.look.light
+    return this.dark ? DARK : LIGHT
+  }
+
   private applyTheme(): void {
-    const t = this.dark ? DARK : LIGHT
+    const t = this.theme()
     this.el.style.setProperty('--console-bg', t.background)
     this.el.style.setProperty('--console-fg', t.foreground)
     for (const g of this.groups) for (const p of g.panes) p.view.setTheme(t)

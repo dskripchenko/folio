@@ -1,3 +1,4 @@
+import { consoleLookOf, type ConsoleLook } from './shellLink'
 import { mkdirSync } from 'node:fs'
 import { detectKind, type ProjectKind } from './visibility'
 import { basename, join, resolve, sep } from 'node:path'
@@ -55,6 +56,8 @@ export interface WorkspaceData {
   alerts?: Partial<AlertSettings>
   /** Staying awake keeps the display on too; unset — on. */
   awakeDisplay?: boolean
+  /** The consoles' colours as the shell terminal last said them; unset — folio's own. */
+  consoleLook?: ConsoleLook
 }
 
 export class Workspace {
@@ -76,6 +79,7 @@ export class Workspace {
       ...(loaded.limits && typeof loaded.limits === 'object' ? { limits: limitSettings(loaded.limits) } : {}),
       ...(loaded.alerts && typeof loaded.alerts === 'object' ? { alerts: alertSettings(loaded.alerts) } : {}),
       ...(typeof loaded.awakeDisplay === 'boolean' ? { awakeDisplay: loaded.awakeDisplay } : {}),
+      ...(consoleLookOf(loaded.consoleLook) ? { consoleLook: consoleLookOf(loaded.consoleLook)! } : {}),
       ...(Array.isArray(loaded.bookmarks) ? { bookmarks: loaded.bookmarks.filter((b): b is string => typeof b === 'string') } : {}),
       projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     }
@@ -128,6 +132,15 @@ export class Workspace {
 
   setSpellcheck(on: boolean): void {
     this.data.spellcheck = on
+    this.save()
+  }
+
+  consoleLook(): ConsoleLook | null {
+    return this.data.consoleLook ?? null
+  }
+
+  setConsoleLook(look: ConsoleLook): void {
+    this.data.consoleLook = look
     this.save()
   }
 

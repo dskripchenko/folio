@@ -31,7 +31,9 @@ test('a command line from another program: a file at a line, a project, a review
     // Where it runs, for the shell terminal; how to start it again with arguments.
     await expect.poll(() => existsSync(presence)).toBe(true)
     const p = JSON.parse(readFileSync(presence, 'utf8')) as { pid: number; launch: string[]; capabilities: string[] }
-    expect(p.capabilities).toEqual(['open', 'line', 'project', 'review'])
+    expect(p.capabilities).toEqual(['open', 'line', 'project', 'review', 'projects'])
+    // Its projects, for the shell terminal's switcher: the one just added among them.
+    await expect.poll(() => (JSON.parse(readFileSync(presence, 'utf8')) as { projects: { path: string }[] }).projects.map((x) => x.path)).toContain(f.folder)
     expect(p.pid).toBe(await app.evaluate(() => process.pid))
   } finally {
     await app.close()

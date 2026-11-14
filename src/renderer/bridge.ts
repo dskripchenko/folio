@@ -202,6 +202,12 @@ export interface FolioBridge {
   launched(): void
   /** The shell terminal runs and takes pasted text (its local API). */
   shellPresent(): Promise<boolean>
+  /** The shell terminal's projects (it runs). */
+  shellProjects(): Promise<{ name: string; path: string }[]>
+  /** A folder added as a project by its path. */
+  addProjectPath(path: string): Promise<unknown>
+  /** The consoles' colours as the shell terminal last said them, or null. */
+  consoleLook(): Promise<{ light: import('@dskripchenko/terminal').TerminalTheme; dark: import('@dskripchenko/terminal').TerminalTheme } | null>
   /** A text pasted into the agent's pane of a repository in shell, without Enter. */
   shellPaste(repo: string, text: string): Promise<{ ok: true; agent?: string } | { error: 'none' | 'no-pane' }>
   /** The welcome document, read-only (ADR-005). */
@@ -433,6 +439,8 @@ export interface FolioBridge {
   onMcpOpen: Listener
   /** `folio --review <repo>`: a repository's working copy to review. */
   onReviewOpen: Listener
+  /** The shell terminal's colours changed. */
+  onConsoleLook: Listener
   mcpAnswer(id: number, answer: McpAnswer): Promise<boolean>
   reviewSetViewed(root: string, key: string, hash: string | null): Promise<{ ok: true } | GitRefusal>
   reviewCheckpoint(root: string): Promise<{ ok: true } | GitRefusal>

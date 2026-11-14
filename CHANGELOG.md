@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- More shared with the shell terminal: the consoles take its colours (by day
+  and by night) when it runs, and keep them for when it does not; its
+  projects can be added from the palette (Add a Project from shell); folio's
+  own projects are in its presence file, for shell's project switcher.
+
 ## [1.16.0] - 2026-11-14
 
 ### Changed
