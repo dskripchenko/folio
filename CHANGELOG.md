@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Consoles use `@dskripchenko/terminal` 0.4.0: long output no longer slows
+  down as the scrollback fills (up to five times faster with a full one), and
+  a program that draws its frames as synchronized output (mode 2026), such as
+  Claude Code, is shown a whole frame at a time, never half of one.
+
 ## [1.13.2] - 2026-11-11
 
 ### Fixed
