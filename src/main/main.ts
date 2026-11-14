@@ -46,7 +46,7 @@ import { Consent } from './consent'
 import { dataDir } from './dataDir'
 import { documentOfUrl, DocumentError, launchRequest, openDocument, type LaunchRequest, type OpenedDocument } from './documents'
 import { CAPABILITIES, presencePath, removePresence, writePresence } from './presence'
-import { askShell, findShell } from './shellLink'
+import { askShell, consoleLookOf, findShell } from './shellLink'
 import { DIAGRAM_SYNTAX, formatByName, isMedia, MARKDOWN_EXT, OPENABLE_EXT, opensInFolio } from './formats'
 import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
@@ -486,6 +486,8 @@ function buildMenu(): void {
 
 /** What the sidebar shows: Shared and the projects, each with the root id its tree is listed by. */
 function workspaceView() {
+  // Every change of the workspace comes through here: the presence file follows its projects.
+  tellPresence()
   const shared = workspace.shared()
   const sharedId = roots.register(shared)
   watcher.add(sharedId, roots.dir(sharedId) ?? shared)
@@ -504,6 +506,29 @@ function workspaceView() {
 
 function workspaceChanged(): void {
   send('ws:changed', workspaceView())
+}
+
+/** The presence file written (again, when its projects changed): how to start folio, what it understands, its projects. */
+let presenceText = ''
+function tellPresence(): void {
+  if (!presence) return
+  const projects = workspace.projects().filter((p) => !p.hidden).map((p) => ({ name: p.name, path: p.path }))
+  const next = { pid: process.pid, version: app.getVersion(), launch: app.isPackaged ? [process.execPath] : [process.execPath, app.getAppPath()], capabilities: CAPABILITIES, projects }
+  const text = JSON.stringify(next)
+  if (text === presenceText) return
+  presenceText = text
+  writePresence(presence, next)
+}
+
+/** The consoles' colours as the shell terminal has them, when it runs; kept for when it does not. */
+async function lookFromShell(): Promise<void> {
+  const link = shellOf()
+  if (!link?.capabilities.includes('look')) return
+  const r = await askShell(link, '/api/look', {})
+  const look = r.status === 200 ? consoleLookOf(r.body) : null
+  if (!look || JSON.stringify(look) === JSON.stringify(workspace.consoleLook())) return
+  workspace.setConsoleLook(look)
+  send('console:look', look)
 }
 
 ipcMain.handle('ws:get', () => workspaceView())
@@ -1367,6 +1392,25 @@ function tellShellReview(spec: ChangeSpec, state: 'waiting' | 'none', message?: 
 }
 
 ipcMain.handle('shell:present', () => !!shellOf()?.capabilities.includes('paste'))
+ipcMain.handle('console:look', () => workspace.consoleLook())
+/** The shell terminal's projects (it runs): name and folder. */
+ipcMain.handle('shell:projects', async () => {
+  const link = shellOf()
+  if (!link?.capabilities.includes('projects')) return []
+  const r = await askShell(link, '/api/projects', {})
+  const list = r.status === 200 && Array.isArray(r.body?.projects) ? (r.body.projects as unknown[]) : []
+  return list
+    .filter((p): p is { name: string; root: string } => !!p && typeof (p as { name?: unknown }).name === 'string' && typeof (p as { root?: unknown }).root === 'string' && isAbsolute((p as { root: string }).root))
+    .map((p) => ({ name: p.name, path: p.root }))
+})
+/** A folder added as a project by its path (one of the shell terminal's). */
+ipcMain.handle('ws:add-project-path', (_e, path: unknown) => {
+  if (typeof path === 'string' && isAbsolute(path) && existsSync(path) && statSync(path).isDirectory()) {
+    workspace.addProject(path)
+    workspaceChanged()
+  }
+  return workspaceView()
+})
 ipcMain.handle('shell:paste', async (_e, repo: unknown, text: unknown) => {
   const link = shellOf()
   if (!link || typeof repo !== 'string' || typeof text !== 'string') return { error: 'none' }
@@ -2329,8 +2373,11 @@ void app.whenReady().then(() => {
   // Found by the shell terminal while it runs (under test only where a test says).
   if (!underTest || process.env.FOLIO_PRESENCE) {
     presence = presencePath(process.env)
-    writePresence(presence, { pid: process.pid, version: app.getVersion(), launch: app.isPackaged ? [process.execPath] : [process.execPath, app.getAppPath()], capabilities: CAPABILITIES })
+    tellPresence()
   }
+  // The shell terminal's look for the consoles, asked now and whenever folio comes to the front (shell's theme may have changed).
+  void lookFromShell()
+  app.on('browser-window-focus', () => void lookFromShell())
   updater.tidy()
   // Once a day at start, a while after the window is up; a source checkout (no release to replace) never looks.
   if ((app.isPackaged || process.env.FOLIO_UPDATE_URL) && workspace.updates() && updater.due()) setTimeout(() => void updater.check(), 10_000)

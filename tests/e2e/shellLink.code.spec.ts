@@ -25,6 +25,11 @@ test('the shell terminal, when it runs: the review’s comments pasted into its 
     req.on('data', (c: Buffer) => (body += c.toString()))
     req.on('end', () => {
       asked.push({ path: req.url ?? '', auth: req.headers.authorization ?? '', body: JSON.parse(body || '{}') as Record<string, unknown> })
+      if (req.url === '/api/look') {
+        const t = { background: '#123456', foreground: '#fedcba', cursor: '#ffffff', selection: '#333333', ansi: Array(16).fill('#808080') }
+        return void res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ light: t, dark: t, font: { family: 'Menlo', size: 13 } }))
+      }
+      if (req.url === '/api/projects') return void res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ projects: [{ name: 'from-shell', root: shellProject, color: '#3b82f6' }] }))
       if (req.url === '/api/paste') {
         pastes++
         if (pastes === 1) return void res.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"no pane"}')
@@ -33,10 +38,12 @@ test('the shell terminal, when it runs: the review’s comments pasted into its 
       res.writeHead(204).end()
     })
   })
+  const shellProject = join(f.root, 'from-shell')
+  mkdirSync(shellProject)
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
   const port = (server.address() as { port: number }).port
   const presence = join(f.root, 'shell-presence.json')
-  writeFileSync(presence, JSON.stringify({ pid: process.pid, version: '0.4.0', url: `http://127.0.0.1:${port}`, token: 'tok', capabilities: ['open-tab', 'paste', 'review'] }))
+  writeFileSync(presence, JSON.stringify({ pid: process.pid, version: '0.4.0', url: `http://127.0.0.1:${port}`, token: 'tok', capabilities: ['open-tab', 'paste', 'review', 'look', 'projects'] }))
 
   const app = await electron.launch({ args: ['.'], env: { ...process.env, FOLIO_DATA: f.data, SHELL_PRESENCE: presence } })
   try {
@@ -74,6 +81,17 @@ test('the shell terminal, when it runs: the review’s comments pasted into its 
     await expect(dialog).toBeHidden()
     await expect(a.getByTestId('review-comment')).toHaveAttribute('data-sent', '')
     const paste = asked.filter((x) => x.path === '/api/paste').at(-1)!
+    // shell's look in the consoles; its projects added from the palette.
+    await win.keyboard.press('Control+Backquote')
+    await expect.poll(() => win.getByTestId('console-panel').evaluate((e) => getComputedStyle(e).getPropertyValue('--console-bg').trim())).toBe('#123456')
+    // From outside the console: there the keys are its program's.
+    await win.getByTestId('toggle-console').click()
+    await win.keyboard.press(process.platform === 'darwin' ? 'Meta+k' : 'Control+k')
+    await win.keyboard.type('shell')
+    await win.locator('[data-command="shell-projects"]').click()
+    await expect(win.getByText('from-shell', { exact: true })).toBeVisible()
+    await win.keyboard.press('Enter')
+    await expect(win.getByTestId('projects').locator('.project', { hasText: 'from-shell' })).toHaveCount(1)
     expect(paste.auth).toBe('Bearer tok')
     expect(paste.body.repo).toBe(realpathSync(proj))
     expect(String(paste.body.text)).toMatch(/a\.ts[\s\S]*Make b a named constant\./)

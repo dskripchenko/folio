@@ -83,3 +83,36 @@ export async function askShell(link: ShellLink, path: string, body: object): Pro
     return { status: 0, body: null }
   }
 }
+
+/** A terminal's colours, as @dskripchenko/terminal takes them. */
+export interface ConsoleTheme {
+  background: string
+  foreground: string
+  cursor: string
+  selection: string
+  ansi: string[]
+}
+
+export interface ConsoleLook {
+  light: ConsoleTheme
+  dark: ConsoleTheme
+}
+
+const COLOR = /^(#[0-9a-fA-F]{3,8}|rgba?\([\d\s.,%]+\))$/
+
+function themeOf(v: unknown): ConsoleTheme | null {
+  if (!v || typeof v !== 'object') return null
+  const t = v as Record<string, unknown>
+  const ok = (x: unknown): x is string => typeof x === 'string' && COLOR.test(x.trim())
+  if (![t.background, t.foreground, t.cursor, t.selection].every(ok) || !Array.isArray(t.ansi) || t.ansi.length !== 16 || !t.ansi.every(ok)) return null
+  return { background: t.background as string, foreground: t.foreground as string, cursor: t.cursor as string, selection: t.selection as string, ansi: [...(t.ansi as string[])] }
+}
+
+/** shell's answer to `/api/look`, checked: colours only, sixteen of them. */
+export function consoleLookOf(body: unknown): ConsoleLook | null {
+  if (!body || typeof body !== 'object') return null
+  const b = body as Record<string, unknown>
+  const light = themeOf(b.light)
+  const dark = themeOf(b.dark)
+  return light && dark ? { light, dark } : null
+}

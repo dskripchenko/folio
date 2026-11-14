@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 /** What the command line understands (see `launchRequest`). */
-export const CAPABILITIES = ['open', 'line', 'project', 'review'] as const
+export const CAPABILITIES = ['open', 'line', 'project', 'review', 'projects'] as const
 
 export interface Presence {
   pid: number
@@ -16,6 +16,8 @@ export interface Presence {
   /** The command that starts folio; arguments go after it. A running folio takes them over. */
   launch: string[]
   capabilities: readonly string[]
+  /** The projects in the sidebar (not the hidden ones): the shell terminal lists them in its project switcher. */
+  projects: { name: string; path: string }[]
 }
 
 /** `$FOLIO_PRESENCE`, else the user's runtime folder (`$XDG_RUNTIME_DIR` on Linux) or temporary folder. */

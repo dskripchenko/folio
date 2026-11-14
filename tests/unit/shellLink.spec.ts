@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { findShell, shellPresencePath } from '../../src/main/shellLink'
+import { consoleLookOf, findShell, shellPresencePath } from '../../src/main/shellLink'
 
 const at = join('/tmp', 'shell-presence.json')
 const input = (presence: object | null, over: object = {}) => ({
@@ -32,5 +32,13 @@ describe('the shell terminal', () => {
     expect(shellPresencePath({ SHELL_PRESENCE: '/x.json' }, '/tmp')).toBe('/x.json')
     expect(shellPresencePath({ XDG_RUNTIME_DIR: '/run/user/1' }, '/tmp')).toBe(join('/run/user/1', 'shell-presence.json'))
     expect(shellPresencePath({}, '/tmp')).toBe(at)
+  })
+
+  it('its look is taken for the consoles only as colours, sixteen of them', () => {
+    const t = { background: '#1c1c1e', foreground: '#e5e5e7', cursor: '#fff', selection: 'rgba(10, 132, 255, 0.35)', ansi: Array(16).fill('#808080') }
+    expect(consoleLookOf({ light: t, dark: t, font: {} })).toEqual({ light: t, dark: t })
+    expect(consoleLookOf({ light: t, dark: { ...t, ansi: ['#000'] } })).toBeNull()
+    expect(consoleLookOf({ light: { ...t, background: 'url(x)' }, dark: t })).toBeNull()
+    expect(consoleLookOf(null)).toBeNull()
   })
 })
