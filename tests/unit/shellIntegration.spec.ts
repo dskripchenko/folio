@@ -68,6 +68,18 @@ describe('shell integration on real shells', () => {
   }
 })
 
+describe('bash with a profile’s own prompt command', () => {
+  // systemd's profile on Ubuntu 26.04 adds a function to the PROMPT_COMMAND array (run by bash 5.1+).
+  it.skipIf(process.platform === 'win32' || !existsSync('/bin/bash'))('it is not taken for a command typed', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'folio-home-'))
+    // As systemd's 80-systemd-osc-context.sh does: an empty first element, its own function after it.
+    writeFileSync(join(home, '.bash_profile'), "__extra_precmd() { :; }\nPROMPT_COMMAND+=('')\nPROMPT_COMMAND+=(__extra_precmd)\n")
+    const term = await run('/bin/bash', ['-l'], ['false', 'echo ok'], { HOME: home })
+    const done = term.commands.filter((c) => c.end !== undefined)
+    expect(done.map((c) => [c.text, c.exitCode === 0 ? 0 : 'fail'])).toEqual([['false', 'fail'], ['echo ok', 0]])
+  }, 120_000)
+})
+
 describe('bash without its history', () => {
   // A profile that turns history off (some CI images' do): the text comes from the command being run.
   it.skipIf(process.platform === 'win32' || !existsSync('/bin/bash'))('commands still marked with their text', async () => {
