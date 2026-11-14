@@ -29,10 +29,18 @@ __folio_preexec() {
   __folio_ran=1
   local cmd
   cmd=$(HISTTIMEFORMAT= history 1 | sed 's/^ *[0-9]* *//')
+  # History off (some profiles turn it off) or not kept yet: the command being run.
+  [ -z "$cmd" ] && cmd=$BASH_COMMAND
   cmd=${cmd//\\/\\\\}
   cmd=${cmd//;/\\x3b}
   printf '\e]633;E;%s\a' "$cmd"
   printf '\e]133;C\a'
 }
 trap '__folio_preexec' DEBUG
-PROMPT_COMMAND="__folio_ret=\$?; __folio_in_prompt=1; __folio_prompt; ${PROMPT_COMMAND:+$PROMPT_COMMAND;} __folio_mark_input; __folio_in_prompt="
+# PROMPT_COMMAND may be an array (bash 5.1+; systemd's profile adds to it on Ubuntu 26.04): every
+# part of it runs inside folio's, so none is taken for a command typed.
+__folio_pc=
+for __folio_c in "${PROMPT_COMMAND[@]}"; do [ -n "$__folio_c" ] && __folio_pc="$__folio_pc$__folio_c; "; done
+unset PROMPT_COMMAND
+PROMPT_COMMAND="__folio_ret=\$?; __folio_in_prompt=1; __folio_prompt; ${__folio_pc}__folio_mark_input; __folio_in_prompt="
+unset __folio_c __folio_pc

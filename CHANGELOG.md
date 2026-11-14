@@ -14,6 +14,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   a program that draws its frames as synchronized output (mode 2026), such as
   Claude Code, is shown a whole frame at a time, never half of one.
 
+### Fixed
+
+- A console's bash on Ubuntu 26.04 marks the commands typed, not systemd's
+  prompt function: systemd's profile adds it to the `PROMPT_COMMAND` array
+  (run by bash 5.1+), where it ran outside folio's prompt and was taken for a
+  command, shifting every mark by one. Every part of the array now runs
+  inside folio's prompt.
+- A command's text, when bash's history has nothing (a profile that turns it
+  off), is the command being run instead of empty.
+
 ## [1.13.2] - 2026-11-11
 
 ### Fixed
