@@ -8,7 +8,7 @@ import { chmodSync, existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { IPty } from 'node-pty'
-import { consoleEvents } from './consoleEvents'
+import { EventReader } from '@dskripchenko/shell-integration'
 import { integrate } from './shellIntegration'
 
 export interface ConsoleSink {
@@ -128,8 +128,12 @@ export class Consoles {
     let typed: string | null = null
     let pending = ''
     let timer: ReturnType<typeof setTimeout> | null = null
+    // The marks read across pieces of output: a sequence cut between two is read whole.
+    const reader = new EventReader()
     p.onData((data) => {
-      for (const e of consoleEvents(data)) {
+      for (const e of reader.read(data)) {
+        // The folder said (OSC 7) is the terminal view's to read, not an event here.
+        if (e.kind === 'cwd') continue
         if (e.kind === 'command') typed = e.text
         else if (command !== undefined) {
           if (e.kind === 'notify' || e.kind === 'bell') this.sink.attention?.(id, e.kind === 'notify' ? e.text : null)

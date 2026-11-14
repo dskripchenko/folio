@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- The shell integration (the scripts that mark commands in zsh, bash and
+  PowerShell, the reader of the marks) and the journal of agents' edits come
+  from `@dskripchenko/shell-integration`, shared with the shell terminal,
+  instead of copies. The marks are now read across pieces of output: one cut
+  between two is no longer missed. `FOLIO_SHELL_INTEGRATION=0` still turns
+  the integration off.
+
 ## [1.17.0] - 2026-11-14
 
 ### Added

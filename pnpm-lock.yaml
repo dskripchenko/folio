@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@dskripchenko/shell-integration':
+        specifier: ^0.1.0
+        version: 0.1.0
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0
@@ -82,6 +85,10 @@ packages:
 
   '@dskripchenko/embed@1.21.0':
     resolution: {integrity: sha512-1GUu6t9Y16EQwfvuyVCIr0kgYCsjpdNboeG8AAfo/ydJQhasbD+76cFvt9Bb7Qefyl8qKlJQO+4KiJqLHtU10A==}
+    engines: {node: '>=20'}
+
+  '@dskripchenko/shell-integration@0.1.0':
+    resolution: {integrity: sha512-9VMxFu9xoymOYDwd7B3iXg48PgXPifHRXf+iM1Z+NuA8fn+quJtk+pvsCRnYzaxcByh1mML1rXNroTWFSg2l2w==}
     engines: {node: '>=20'}
 
   '@dskripchenko/syntax@0.5.0':
@@ -2113,6 +2120,8 @@ snapshots:
   '@dskripchenko/diagrams@1.4.0': {}
 
   '@dskripchenko/embed@1.21.0': {}
+
+  '@dskripchenko/shell-integration@0.1.0': {}
 
   '@dskripchenko/syntax@0.5.0': {}
 

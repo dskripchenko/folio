@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { isAbsolute, join, resolve } from 'node:path'
 import type { AgentEdit } from '../../common/review'
 import { writeFileWhileBusy } from '../busy'
-import { compactEdits, EDITS_MARK, JOURNAL, readEdits } from './agentEdits'
+import { compactEdits, EDITS_MARK, JOURNAL, readEdits } from '@dskripchenko/shell-integration'
 
 /**
  * Claude Code tells folio what it edits (ADR-006, R6): a `PostToolUse` hook
@@ -34,7 +34,7 @@ interface Matcher {
   hooks?: { type?: string; command?: string }[]
 }
 
-/** folio's hook: the shared journal's (agentEdits.ts), or the one before it, writing to folio's own file. */
+/** folio's hook: the shared journal's (@dskripchenko/shell-integration), or the one before it, writing to folio's own file. */
 const ours = (m: Matcher) => (m.hooks ?? []).some((h) => typeof h.command === 'string' && (h.command.includes(MARK) || h.command.includes(`# ${EDITS_MARK}`)))
 
 /** The repository's git folder (a main copy's `.git`), where the shared journal is. */
