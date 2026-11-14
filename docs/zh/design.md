@@ -393,6 +393,8 @@ Windows 上为 PowerShell；项目或文件夹菜单中的**在此打开控制�
 
 审阅评论会作为一次粘贴发送到控制台（见*审阅智能体的工作*）：folio 只会粘贴到能把粘贴当作整体接收的程序中——zsh、bash 5.1+、PowerShell、智能体的 CLI——并且从不按回车。
 
+控制台中的图片与终端应用中一样显示：sixel 和 kitty 图形协议——`chafa`、`timg` 或图片查看器绘制的内容——显示在所占的单元格上，随文本滚动，随清屏消失；只显示输出中传来的内容，绝不打开程序指名的文件。请求 kitty 键盘协议的程序（Claude Code、neovim、helix、fish）可以区分 Shift+Enter、Esc 以及带 Ctrl 或 Alt 的按键；程序遗留的标志会在下一个提示符处清除，因此 Ctrl+C 仍能到达 shell。命令标记来自与 shell 终端共用的 [`@dskripchenko/shell-integration`](https://www.npmjs.com/package/@dskripchenko/shell-integration)，即使转义序列被拆分在两段输出之间，也能完整读取。
+
 ## 资源占用、日志、保持唤醒
 
 右侧栏底部的**指示器**显示 folio 占用的内存——主进程、窗口、图形、Chromium 的辅助进程、它启动的语言服务器——下方的进度条以内存上限为满格：超过上限的四分之三变黄，超过上限变红。提示中还显示处理器占用。点击打开**进程**窗口：每个进程的内存和处理器，最近半小时的内存曲线及上限线，用**重新启动**重启语言服务器，用**关闭**关闭控制台。在 folio 控制台中运行的程序（代理、构建）单独列在**控制台中（不计入）**下：它们不属于 folio，不计入其总量和上限。每 15 秒采样一次，窗口打开时每 2 秒一次。
@@ -422,6 +424,21 @@ Windows 上为 PowerShell；项目或文件夹菜单中的**在此打开控制�
 
 点击通知会把 folio 带到前台并定位到该控制台。每个控制台标签的提示显示其程序的内存和处理器占用；程序占用超过 1 GB 的标签会直接显示。超过 8 GB（**应用**；0 表示从不）或处理器连续忙碌五分钟时，folio 会提示并提供**进程**和**关闭控制台**——但自身不做任何操作：那些不是它的程序。
 
+## 与 shell 终端配合
+
+[shell](https://github.com/dskripchenko/shell) 是同一作者为配合 AI 智能体工作而做的终端。两者都在电脑上时会自动找到对方，但任何一方都不依赖另一方运行。
+
+- **命令行打开 folio**（也适用于已在运行的 folio）：`folio 文件:12` 在第 12 行打开文件（`文件:12:3` 也可以），`--project <文件夹>` 把文件夹添加为项目，`--review <仓库>` 打开其工作副本的审阅。shell 就是这样在 folio 中打开文件、项目和审阅的。
+- **folio 的在线文件**：folio 运行期间会在用户的运行时目录或临时目录中保存 `folio-presence.json`（`FOLIO_PRESENCE` 可指定其他位置）——如何启动它、它支持什么、以及它的项目（隐藏的除外），这样 shell 就能在项目切换器中列出它们。该文件属于用户本人，folio 退出时删除。
+- **在 shell 中打开标签**：shell 运行时，出现在文件夹或项目的菜单中。
+- 审阅的 **发送给智能体** 中的 **粘贴到 shell**：评论进入 shell 中该仓库智能体所在的窗格——只粘贴、不发送：Enter 在那里按。
+- **等待中的审阅**：智能体通过 MCP 等待你的回答期间，shell 中该仓库的标签会显示出来，直到你回答。
+- **控制台颜色**：shell 运行时使用其终端主题（日间与夜间）；shell 未运行时 folio 保留上次的颜色。
+- 命令面板中的 **从 shell 添加项目…** 可以添加 shell 的项目。
+- **同一份智能体修改日志**：**将 Claude Code 连接到 folio** 会添加与 shell 相同的钩子——每次修改后，Claude Code 向仓库的 `.git/agent-edits.jsonl` 追加一行（其所有 worktree 共用，不会被提交），并记录智能体所在的 shell 窗格。相同的钩子无论在哪里设置，Claude Code 只运行一次；folio 旧钩子写下的修改仍然可读。
+
+folio 通过 shell 自己的在线文件找到它（`shell-presence.json`——属于用户本人、对应存活的进程、地址在 127.0.0.1），并用其令牌调用其本地 API；不会向其他任何地方发送数据。
+
 ## 数据存放在哪里
 
 Electron 默认把数据存放在用户配置目录中。folio 把所有数据——设置、缓存、会话数据、
@@ -445,6 +462,8 @@ Translocation），其旁边无法写入任何内容。此时 folio 会提议把
 其中包括：工作区与设置（`workspace.json`）、自定义快捷键（`keybindings.json`）、网络授权（`consent.json`）、加密保存的同步登录信息（`logins.json`）、共享（`library/`）、打开的标签页和未保存的编辑（`session/`）、审阅标记——已查看的文件、评论、上次查看的检查点以及 Claude Code 报告的编辑（`review/`）——自定义语言（`locales/`）、更新（`update/`）、日志以及 Chromium 自身的数据（`chromium/`）。
 
 只有两个文件会写入你的文件夹，而且只在你要求时：设置窗口中的项目设置写入项目的 `.folio/settings.json`；**将 Claude Code 连接到 folio** 会在仓库的 `.claude/settings.local.json`（本地文件，不提交）中添加钩子，并把 folio 的 MCP 服务器加入 Claude Code 对该项目的本地设置——**断开 Claude Code** 会同时移除两者。删除 folio 不会动它们。folio 的 MCP 服务器只监听 127.0.0.1，且只响应保存在 `folio-data/review` 中的令牌。
+
+folio 运行期间，用户运行时目录或临时目录中的 `folio-presence.json` 说明它在哪里（见 *与 shell 终端配合*）；folio 退出时删除。Claude Code 的修改记录保存在仓库自己的 `.git/agent-edits.jsonl` 中，folio 和 shell 都会读取。
 
 ## 更新
 
