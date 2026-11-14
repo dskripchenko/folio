@@ -91,14 +91,20 @@ describe('bash without its history', () => {
   }, 120_000)
 })
 
-describe('bash at its start', () => {
-  // The integration's own lines run before the first prompt: none of them is a command typed.
-  it.skipIf(process.platform === 'win32' || !existsSync('/bin/bash'))('marks no command before the first prompt', async () => {
+describe('a shell at its start', () => {
+  // The integration's own run comes before the first prompt (bash: its last lines; PowerShell: its
+  // encoded command, kept in its history): none of it is a command typed.
+  const cases: [string, string, string[], boolean][] = [
+    ['bash', '/bin/bash', ['-l'], process.platform !== 'win32' && existsSync('/bin/bash')],
+    ['powershell', 'powershell.exe', ['-NoLogo'], process.platform === 'win32'],
+  ]
+  for (const [name, shell, args, present] of cases)
+  it.skipIf(!present)(`${name}: marks no command at the first prompt`, async () => {
     const dir = mkdtempSync(join(tmpdir(), 'folio-shell-'))
     const env = shellEnv(process.env)
-    const launch = integrate('/bin/bash', ['-l'], dir, env)!
+    const launch = integrate(shell, args, dir, env)!
     let out = ''
-    const p = spawn('/bin/bash', launch.args, { name: 'xterm-256color', cols: 100, rows: 30, cwd: tmpdir(), env: { ...env, ...launch.env, TERM: 'xterm-256color' } })
+    const p = spawn(shell, launch.args, { name: 'xterm-256color', cols: 100, rows: 30, cwd: tmpdir(), env: { ...env, ...launch.env, TERM: 'xterm-256color' } })
     p.onData((d) => (out += d))
     for (let i = 0; i < 300 && !out.includes('\x1b]133;A'); i++) await wait(100)
     p.kill()

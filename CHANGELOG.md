@@ -26,6 +26,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - bash no longer marks a command of its own as it starts: the integration's
   last lines ran under its DEBUG trap and showed as a command that ended at
   once.
+- PowerShell no longer marks a command of its own at its first prompt: the
+  integration's encoded command, which PowerShell keeps in its history, was
+  taken for a command typed.
 
 ## [1.13.2] - 2026-11-11
 
