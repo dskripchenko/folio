@@ -198,6 +198,8 @@ export type UpdateState =
 export interface FolioBridge {
   platform: string
   startup(): Promise<{ tabs: RestoredTab[]; groups: GroupData[]; active: number | null; locale: string; shared: string; i18n: I18nState; welcome: boolean }>
+  /** The window has its tabs back: what the command line asked beyond files comes now. */
+  launched(): void
   /** The welcome document, read-only (ADR-005). */
   openWelcome(): Promise<OpenResult>
   onWelcome: Listener
@@ -425,6 +427,8 @@ export interface FolioBridge {
   onMcpAsk: Listener
   onMcpCancel: Listener
   onMcpOpen: Listener
+  /** `folio --review <repo>`: a repository's working copy to review. */
+  onReviewOpen: Listener
   mcpAnswer(id: number, answer: McpAnswer): Promise<boolean>
   reviewSetViewed(root: string, key: string, hash: string | null): Promise<{ ok: true } | GitRefusal>
   reviewCheckpoint(root: string): Promise<{ ok: true } | GitRefusal>
