@@ -25,8 +25,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       '@dskripchenko/terminal':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.4.0
+        version: 0.4.0
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.14.0(jiti@2.7.0))
@@ -92,8 +92,8 @@ packages:
     resolution: {integrity: sha512-TfcUG2pJxPX4lJDzKpWvDxWqm/0T7hn4tBrxyxAWQoWczZr2Jj/WOpDx847O5LqGsZscSWaHqqeY6C3tiyp+RA==}
     engines: {node: '>=20'}
 
-  '@dskripchenko/terminal@0.3.0':
-    resolution: {integrity: sha512-uaKoZodU927cHJqKuVXjD7u/BE95Kztcmmua2/b+c+ucnyx72MU9bVh9/RcAXJCQW6j1BFaNyWlE9GbKZvbBQQ==}
+  '@dskripchenko/terminal@0.4.0':
+    resolution: {integrity: sha512-GWWVOT7MF+O/Xjwt0AHrBPyvNvPO66hNXu9YbFHvY/bAbXHh9w8u8mTcw4BJ7LimSsv4r5AkeTXwhvZpDLxD8w==}
     engines: {node: '>=20'}
 
   '@electron-internal/extract-zip@1.0.8':
@@ -2118,7 +2118,7 @@ snapshots:
 
   '@dskripchenko/syntax@0.6.0': {}
 
-  '@dskripchenko/terminal@0.3.0': {}
+  '@dskripchenko/terminal@0.4.0': {}
 
   '@electron-internal/extract-zip@1.0.8': {}
 
