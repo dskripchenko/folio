@@ -814,6 +814,8 @@ eines Agenten prüfen*): folio fügt nur in ein Programm ein, das ein Einfügen 
 Ganzes nimmt — zsh, bash 5.1+, PowerShell, die CLI eines Agenten — und drückt
 nie Enter.
 
+Bilder erscheinen in einer Konsole wie in einer Terminal-App: Sixel und das kitty-Grafikprotokoll — was `chafa`, `timg` oder ein Bildbetrachter zeichnet — über den Zellen, die sie belegen, mit dem Text gescrollt, mit dem Bildschirm gelöscht; angezeigt wird nur, was in der Ausgabe kommt, nie eine Datei, die ein Programm nennt. Ein Programm, das das kitty-Tastaturprotokoll anfordert (Claude Code, neovim, helix, fish), unterscheidet Umschalt+Enter, Esc und Tasten mit Strg oder Alt; Flags, die ein Programm zurücklässt, werden beim nächsten Prompt aufgehoben, sodass Strg+C weiter die Shell erreicht. Die Marken kommen aus [`@dskripchenko/shell-integration`](https://www.npmjs.com/package/@dskripchenko/shell-integration), gemeinsam mit dem Terminal shell, und werden ganz gelesen, auch wenn eine Sequenz zwischen zwei Stücken der Ausgabe getrennt ist.
+
 ## Was folio belegt, sein Protokoll, wach bleiben
 
 **Die Anzeige** unten in der rechten Leiste zeigt den Speicher, den folio belegt —
@@ -911,6 +913,21 @@ Programme mehr als ein Gigabyte belegen, zeigt es an. Über 8 GB (**App**; 0 —
 bei fünf Minuten ausgelastetem Prozessor sagt folio es mit **Prozesse** und **Konsole
 schließen** — und tut selbst nichts: es sind nicht seine Programme.
 
+## Neben dem Terminal shell
+
+[shell](https://github.com/dskripchenko/shell) ist das Terminal desselben Autors für die Arbeit neben KI-Agenten. Sind beide auf dem Rechner, finden sie einander — und keines braucht das andere, um zu funktionieren.
+
+- **folio von der Kommandozeile**, auch ein laufendes: `folio datei:12` öffnet die Datei in Zeile 12 (auch `datei:12:3`), `--project <Ordner>` fügt den Ordner als Projekt hinzu, `--review <Repository>` öffnet das Review seiner Arbeitskopie. So öffnet shell Dateien, Projekte und Reviews in folio.
+- **Die Anwesenheit von folio**: Solange folio läuft, hält es `folio-presence.json` im Laufzeit- oder temporären Ordner des Benutzers (`FOLIO_PRESENCE` nennt einen anderen Ort) — wie es zu starten ist, was es versteht, und seine Projekte (ohne die verborgenen), damit shell sie in seinem Projektumschalter zeigt. Die Datei gehört dem Benutzer und verschwindet, wenn folio beendet wird.
+- **Tab in shell öffnen** im Menü eines Ordners oder Projekts, wenn shell läuft.
+- **In shell einfügen** in **An den Agenten senden** des Reviews: Die Kommentare gehen in den Bereich des Agenten dieses Repositorys in shell — eingefügt, nicht gesendet: Enter drückt man dort.
+- **Ein wartendes Review**: Solange ein Agent über MCP auf Ihre Antwort wartet, zeigen die Tabs von shell zu diesem Repository es an, bis es beantwortet ist.
+- **Die Farben der Konsolen** sind das Terminal-Theme von shell, bei Tag und bei Nacht, wenn shell läuft; folio behält sie für die Zeit, in der es nicht läuft.
+- **Projekt aus shell hinzufügen…** in der Befehlspalette fügt eines der Projekte von shell hinzu.
+- **Ein Journal der Bearbeitungen von Agenten**: **Claude Code mit folio verbinden** setzt denselben Hook, den auch shell setzt — nach jeder Bearbeitung hängt Claude Code eine Zeile an `.git/agent-edits.jsonl` des Repositorys an (dasselbe für seine Worktrees, nie committet), mit dem Bereich von shell, in dem der Agent läuft. Denselben Hook führt Claude Code einmal aus, wo immer er gesetzt ist; was der frühere Hook von folio schrieb, wird weiter gelesen.
+
+shell wird über seine eigene Anwesenheitsdatei gefunden (`shell-presence.json` — die des Benutzers, eines lebenden Prozesses, eine Adresse auf 127.0.0.1) und über seine lokale API mit seinem Token gefragt; sonst wird nichts gesendet.
+
 ## Wo die Daten liegen
 
 Electron legt seine Daten standardmäßig im Benutzerprofil ab. folio verlegt sie
@@ -951,6 +968,8 @@ Commit) und folios MCP-Server in Claude Codes lokale Einstellungen für das
 Projekt — **Claude Code trennen** entfernt beides. Das Löschen von folio lässt
 sie stehen. folios MCP-Server hört nur auf 127.0.0.1 und antwortet nur mit
 einem Token, das in `folio-data/review` liegt.
+
+Solange folio läuft, sagt `folio-presence.json` im Laufzeit- oder temporären Ordner des Benutzers, wo es ist (siehe *Neben dem Terminal shell*); die Datei verschwindet, wenn folio beendet wird. Die Bearbeitungen von Claude Code liegen im Repository selbst, in `.git/agent-edits.jsonl`, gelesen von folio wie von shell.
 
 ## Aktualisierungen
 

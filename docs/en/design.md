@@ -736,6 +736,8 @@ Review comments go to a console as one paste (see *Reviewing an agent's work*):
 folio pastes only into a program that takes a paste as one — zsh, bash 5.1+,
 PowerShell, an agent's CLI — and never presses Enter.
 
+Pictures show in a console as in a terminal app: sixel and the kitty graphics protocol — what `chafa`, `timg` or an image viewer draws — over the cells they take, scrolled with the text, cleared with the screen; only what comes in the output is shown, never a file a program names. A program that asks for the kitty keyboard protocol (Claude Code, neovim, helix, fish) gets Shift+Enter, Esc and keys with Ctrl or Alt of their own; flags a program left behind are dropped at the next prompt, so Ctrl+C still reaches the shell. The marks come from [`@dskripchenko/shell-integration`](https://www.npmjs.com/package/@dskripchenko/shell-integration), shared with the shell terminal, and are read whole even when a sequence is cut between two pieces of output.
+
 ## What folio takes, its log, staying awake
 
 **The gauge** at the bottom of the right rail shows the memory folio takes — the
@@ -829,6 +831,21 @@ programs take more than a gigabyte shows it. Past 8 GB (**App**; 0 — never), o
 the processor busy for five minutes, folio says so with **Processes** and **Close
 the console** — and does nothing by itself: they are not its programs.
 
+## Beside the shell terminal
+
+[shell](https://github.com/dskripchenko/shell) is the same author's terminal for working beside AI agents. When both are on the machine they find each other, and neither needs the other to work.
+
+- **folio from the command line**, a running one too: `folio file:12` opens the file at line 12 (`file:12:3` as well), `--project <folder>` adds the folder as a project, `--review <repository>` opens the review of its working copy. shell opens files, projects and reviews in folio this way.
+- **folio's presence**: while folio runs it keeps `folio-presence.json` in the user's runtime or temporary folder (`FOLIO_PRESENCE` names another place) — how to start it, what it understands and its projects (not the hidden ones), so shell lists them in its project switcher. The file is the user's own and goes when folio quits.
+- **Open a Tab in shell** in a folder's or a project's menu, when shell runs.
+- **Paste into shell** in the review's **Send to the agent**: the comments go into the agent's pane of the repository in shell — pasted, not sent: Enter is pressed there.
+- **A review waiting**: while an agent waits over MCP for your answer, shell's tabs of the repository say so, until it is answered.
+- **The consoles' colours** are shell's terminal theme, by day and by night, when shell runs; folio keeps them for when it does not.
+- **Add a Project from shell…** in the command palette adds one of shell's projects.
+- **One journal of agents' edits**: **Connect Claude Code to folio** adds the hook that shell adds too — after each edit Claude Code appends a line to `.git/agent-edits.jsonl` of the repository (the same for its worktrees, never committed), with the shell pane the agent runs in. Claude Code runs the same hook once, wherever it is set; edits folio's older hook wrote are still read.
+
+shell is found by its own presence file (`shell-presence.json`, the user's own, of a live process, an address on 127.0.0.1) and asked over its local API with its token; nothing else is sent.
+
 ## Where the data lives
 
 Electron keeps its data in the user profile by default. folio moves all of it —
@@ -865,6 +882,8 @@ settings from the settings window go to its `.folio/settings.json`, and
 server to Claude Code's local settings for the project — **Disconnect Claude
 Code** takes both out. Deleting folio leaves them. folio's MCP server listens
 on 127.0.0.1 only, and answers only with a token kept in `folio-data/review`.
+
+While folio runs, `folio-presence.json` in the user's runtime or temporary folder says where it is (see *Beside the shell terminal*); it goes when folio quits. Claude Code's edits are kept in the repository's own `.git/agent-edits.jsonl`, read by folio and shell alike.
 
 ## Updates
 

@@ -11,7 +11,7 @@ notation, OpenAPI and AsyncAPI references, BPMN and DMN, draw.io, process
 flows, kanban boards, calendars and whiteboards, slides — on macOS, Windows and Linux, without
 installing anything.
 
-> Status: **1.8.** It reads a Markdown file with every block live, offline;
+> Status: **1.18.** It reads a Markdown file with every block live, offline;
 > edits it visually or as Markdown, keeping quick notes and unsaved edits
 > through restarts; keeps a git history per folder; links notes with
 > `[[links]]`, tags, aliases, embeds, a graph and a tasks panel; opens diagram,
@@ -25,8 +25,10 @@ installing anything.
 > prints and exports PDF;
 > runs consoles; reviews an AI agent's work — changes as a pull request,
 > what changed since the last look, its worktrees, comments sent to its
-> console; keeps tabs in coloured groups; speaks English and Russian (and
-> languages of your own); and updates itself.
+> console, an agent's answer awaited over MCP; shows pictures in its consoles;
+> keeps tabs in coloured groups; works hand in hand with the
+> [shell](https://github.com/dskripchenko/shell) terminal when it is there;
+> speaks English and Russian (and languages of your own); and updates itself.
 
 Documentation: [English](docs/en/) · [Русский](docs/ru/) · [Deutsch](docs/de/) ·
 [中文](docs/zh/)
@@ -191,6 +193,14 @@ The same rules as [portable](https://github.com/dskripchenko/portable):
 | 17 | An agent asks for a review over MCP and waits for the answer — **1.8** |
 | 18 | A tab's file shown in the tree, console tabs coloured and grouped, the wheel by rows — **1.9** |
 | 19 | Files marked by type in their stack's colour, the review's files as a tree — **1.10** |
+| 20 | What folio takes, a log, memory limits, keeping the computer awake — **1.11** |
+| 21 | Notifications from the consoles, after a crash, little room on the disk — **1.12** |
+| 22 | The text's size, zoom when reading, the page's whole width, its own tooltips — **1.13** |
+| 23 | A command line with `file:line`, `--project`, `--review`; folio's presence for other programs — **1.14** |
+| 24 | The shell terminal: a tab in a folder, review comments to its agent's pane, a waiting review on its tabs; the kitty keyboard protocol — **1.15** |
+| 25 | One journal of agents' edits with shell (`.git/agent-edits.jsonl`) — **1.16** |
+| 26 | The consoles in shell's colours, projects both ways — **1.17** |
+| 27 | Pictures in the consoles (sixel, kitty); shell integration from its package — **1.18** |
 
 ## Development
 
