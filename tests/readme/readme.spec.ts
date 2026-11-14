@@ -111,9 +111,9 @@ test('the README screenshots', async () => {
   // Claude Code connected; its edits reported.
   const settingsFile = join(proj, '.claude', 'settings.local.json')
   await win.keyboard.press(mod + '+k'); await win.keyboard.type('Claude'); await win.locator('[data-command="claude-connect"]').click()
-  await expect.poll(() => (existsSync(settingsFile) ? readFileSync(settingsFile, 'utf8') : '')).toContain('folio-review-events')
-  const command: string = JSON.parse(readFileSync(settingsFile, 'utf8')).hooks.PostToolUse[0].hooks[0].command
-  const events = /'([^']+)' # folio-review-events$/.exec(command)![1]!
+  await expect.poll(() => (existsSync(settingsFile) ? readFileSync(settingsFile, 'utf8') : '')).toContain('agent-edits.jsonl')
+  // The shared journal in the repository's git folder.
+  const events = join(proj, '.git', 'agent-edits.jsonl')
   const now = Math.floor(Date.now() / 1000)
   for (const [file, cwd, s, t] of [['src/cart.ts', proj, 'a3f9c2e1-main', 'Edit'], ['src/discount.ts', proj, 'a3f9c2e1-main', 'Write'], ['README.md', proj, 'a3f9c2e1-main', 'Edit'], ['src/cart.test.ts', wt, '7b21d04f-sub', 'Write'], ['README.md', wt, '7b21d04f-sub', 'Edit']] as const)
     appendFileSync(events, JSON.stringify({ t: now - 40, e: { session_id: s, cwd, tool_name: t, tool_input: { file_path: join(cwd, file) } } }) + '\n')

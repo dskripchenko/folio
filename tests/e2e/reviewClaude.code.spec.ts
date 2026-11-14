@@ -38,17 +38,16 @@ test('Claude Code connected: its hook in the local settings; its edits signed in
     await win.keyboard.press(`${mod}+k`)
     await win.keyboard.type('Claude')
     await win.locator('[data-command="claude-connect"]').click()
-    await expect.poll(() => JSON.stringify(settings())).toContain('folio-review-events')
+    await expect.poll(() => JSON.stringify(settings())).toContain('agent-edits.jsonl')
     expect(settings().permissions).toEqual({ allow: ['Bash(ls)'] })
     const command: string = settings().hooks.PostToolUse[0].hooks[0].command
 
     // Claude Code edits a.ts, and its hook tells folio.
     writeFileSync(join(proj, 'a.ts'), 'export const a = 2\n')
     const input = JSON.stringify({ session_id: 'c0ffee42-session', cwd: proj, hook_event_name: 'PostToolUse', tool_name: 'Edit', tool_input: { file_path: join(proj, 'a.ts') } })
-    if (process.platform === 'win32') {
-      const events = /'([^']+)' # folio-review-events$/.exec(command)![1]!
-      appendFileSync(events, `{"t":${Math.floor(Date.now() / 1000)},"e":${input}}\n`)
-    } else execFileSync('bash', ['-c', command], { input })
+    // The shared journal in the repository's git folder (the shell terminal reads it too).
+    if (process.platform === 'win32') appendFileSync(join(proj, '.git', 'agent-edits.jsonl'), `{"t":${Math.floor(Date.now() / 1000)},"pane":"","e":${input}}\n`)
+    else execFileSync('bash', ['-c', command], { input, cwd: proj })
 
     // Signed in the review, and in the worktrees.
     await win.getByTestId('toggle-changes').click()
@@ -62,7 +61,7 @@ test('Claude Code connected: its hook in the local settings; its edits signed in
     await win.keyboard.press(`${mod}+k`)
     await win.keyboard.type('Claude')
     await win.locator('[data-command="claude-disconnect"]').click()
-    await expect.poll(() => JSON.stringify(settings())).not.toContain('folio-review-events')
+    await expect.poll(() => JSON.stringify(settings())).not.toContain('agent-edits')
     expect(settings()).toEqual({ permissions: { allow: ['Bash(ls)'] } })
   } finally {
     await app.close()

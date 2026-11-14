@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { isAbsolute, join, resolve } from 'node:path'
 import type { AgentEdit } from '../../common/review'
 import { writeFileWhileBusy } from '../busy'
+import { compactEdits, EDITS_MARK, JOURNAL, readEdits } from './agentEdits'
 
 /**
  * Claude Code tells folio what it edits (ADR-006, R6): a `PostToolUse` hook
@@ -33,7 +34,57 @@ interface Matcher {
   hooks?: { type?: string; command?: string }[]
 }
 
-const ours = (m: Matcher) => (m.hooks ?? []).some((h) => typeof h.command === 'string' && h.command.includes(MARK))
+/** folio's hook: the shared journal's (agentEdits.ts), or the one before it, writing to folio's own file. */
+const ours = (m: Matcher) => (m.hooks ?? []).some((h) => typeof h.command === 'string' && (h.command.includes(MARK) || h.command.includes(`# ${EDITS_MARK}`)))
+
+/** The repository's git folder (a main copy's `.git`), where the shared journal is. */
+export function journalFile(root: string): string | null {
+  const git = join(root, '.git')
+  try {
+    if (statSync(git).isDirectory()) return join(git, JOURNAL)
+    // A worktree: its .git file names its folder, whose `commondir` names the repository's.
+    const own = /^gitdir:\s*(.+)$/m.exec(readFileSync(git, 'utf8'))?.[1]?.trim()
+    if (!own) return null
+    const dir = resolve(root, own)
+    const common = existsSync(join(dir, 'commondir')) ? resolve(dir, readFileSync(join(dir, 'commondir'), 'utf8').trim()) : dir
+    return join(common, JOURNAL)
+  } catch {
+    return null
+  }
+}
+
+/** The edits of the shared journal, as folio reads its own; the journal written again small once it has grown. */
+export function readJournal(file: string): AgentEdit[] {
+  let text: string
+  try {
+    if (statSync(file).size > 64 << 20) return []
+    text = readFileSync(file, 'utf8')
+  } catch {
+    return []
+  }
+  const edits = readEdits(text)
+  if (text.length > 4 << 20) {
+    try {
+      writeFileWhileBusy(file, compactEdits(edits.slice(-20_000)))
+    } catch {
+      // Read again next time.
+    }
+  }
+  return edits.map((e) => ({ path: isAbsolute(e.path) ? resolve(e.path) : resolve(e.cwd, e.path), session: e.session, tool: e.tool, cwd: e.cwd, time: e.time, ...(e.pane ? { pane: e.pane } : {}) }))
+}
+
+/** Edits of both places, once each, oldest first. */
+export function mergeEdits(...lists: AgentEdit[][]): AgentEdit[] {
+  const seen = new Set<string>()
+  const out: AgentEdit[] = []
+  for (const e of lists.flat().sort((a, b) => a.time - b.time)) {
+    const key = `${e.time}|${e.path}|${e.session}|${e.tool}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(e)
+  }
+  return out
+}
 
 /** The settings with folio's hook (once, the old one replaced). */
 export function withHook(settings: Settings, command: string): Settings {

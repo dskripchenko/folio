@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Claude Code's edits go to a journal shared with the shell terminal:
+  `.git/agent-edits.jsonl` of the repository (the same for its worktrees,
+  never committed), written by one hook that both apps install the same way —
+  Claude Code runs it once. Connecting Claude Code puts it in place of
+  folio's older hook; edits from before are still read. A line also says the
+  shell pane the agent ran in.
+
 ## [1.15.0] - 2026-11-14
 
 ### Added

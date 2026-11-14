@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { compactEvents, hasHook, hookCommand, readEvents, withHook, withoutHook } from '../../src/main/review/hooks'
+import { compactEvents, hasHook, hookCommand, journalFile, mergeEdits, readEvents, readJournal, withHook, withoutHook } from '../../src/main/review/hooks'
+import { editsHookCommand } from '../../src/main/review/agentEdits'
 
 let dir = ''
 beforeEach(() => {
@@ -44,5 +45,33 @@ describe('Claude Code hooks', () => {
     expect(statSync(file).size).toBeLessThan(10_000)
     expect(readEvents(file).map((e) => e.path)).toEqual(edits.map((e) => e.path))
     expect(readFileSync(file, 'utf8')).not.toContain('xxxx')
+  })
+
+  it('the shared journal: its hook takes the old one’s place; its edits read from the git folder, a worktree’s too, once with the old ones', () => {
+    const old = withHook({}, hookCommand('/tmp/e.jsonl'))
+    const now = withHook(old, editsHookCommand())
+    expect(now.hooks!.PostToolUse).toHaveLength(1)
+    expect(hasHook(now)).toBe(true)
+    expect(withoutHook(now)).toEqual({})
+
+    const dir = mkdtempSync(join(tmpdir(), 'folio-journal-'))
+    const repo = join(dir, 'repo')
+    mkdirSync(join(repo, '.git'), { recursive: true })
+    expect(journalFile(repo)).toBe(join(repo, '.git', 'agent-edits.jsonl'))
+    // A worktree: .git names its folder, which names the repository's.
+    const wt = join(dir, 'wt')
+    mkdirSync(join(repo, '.git', 'worktrees', 'wt'), { recursive: true })
+    writeFileSync(join(repo, '.git', 'worktrees', 'wt', 'commondir'), '../..\n')
+    mkdirSync(wt)
+    writeFileSync(join(wt, '.git'), `gitdir: ${join(repo, '.git', 'worktrees', 'wt')}\n`)
+    expect(journalFile(wt)).toBe(join(repo, '.git', 'agent-edits.jsonl'))
+
+    const input = { session_id: 's1', tool_name: 'Edit', cwd: repo, tool_input: { file_path: 'a.ts' } }
+    writeFileSync(journalFile(repo)!, `{"t":5,"pane":"p1","e":${JSON.stringify(input)}}\n`)
+    const shared = readJournal(journalFile(repo)!)
+    expect(shared).toEqual([{ path: join(repo, 'a.ts'), session: 's1', tool: 'Edit', cwd: repo, time: 5000, pane: 'p1' }])
+    const same = { ...shared[0]! }
+    delete same.pane
+    expect(mergeEdits([same, { ...same, time: 1000 }], shared)).toHaveLength(2)
   })
 })
