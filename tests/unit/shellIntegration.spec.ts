@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdtempSync, statSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -16,9 +16,9 @@ if (process.platform === 'darwin') {
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** A real shell with folio's integration: commands typed, the screen read back. */
-async function run(shell: string, args: string[], lines: string[]): Promise<Terminal> {
+async function run(shell: string, args: string[], lines: string[], extraEnv: Record<string, string> = {}): Promise<Terminal> {
   const dir = mkdtempSync(join(tmpdir(), 'folio-shell-'))
-  const env = shellEnv(process.env)
+  const env = { ...shellEnv(process.env), ...extraEnv }
   const launch = integrate(shell, args, dir, env)!
   expect(launch).not.toBeNull()
   const term = new Terminal({ cols: 100, rows: 30 })
@@ -66,4 +66,15 @@ describe('shell integration on real shells', () => {
       expect(term.cwd?.replace(/^\/([A-Za-z]:)/, '$1').toLowerCase().replace(/\\/g, '/')).toContain(target.split(/[\\/]/).pop()!.toLowerCase())
     }, 120_000)
   }
+})
+
+describe('bash without its history', () => {
+  // A profile that turns history off (some CI images' do): the text comes from the command being run.
+  it.skipIf(process.platform === 'win32' || !existsSync('/bin/bash'))('commands still marked with their text', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'folio-home-'))
+    writeFileSync(join(home, '.bash_profile'), 'set +o history\n')
+    const term = await run('/bin/bash', ['-l'], ['false', 'echo ok'], { HOME: home })
+    const done = term.commands.filter((c) => c.end !== undefined)
+    expect(done.map((c) => c.text)).toEqual(['false', 'echo ok'])
+  }, 120_000)
 })

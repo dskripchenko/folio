@@ -29,6 +29,8 @@ __folio_preexec() {
   __folio_ran=1
   local cmd
   cmd=$(HISTTIMEFORMAT= history 1 | sed 's/^ *[0-9]* *//')
+  # History off (some profiles turn it off) or not kept yet: the command being run.
+  [ -z "$cmd" ] && cmd=$BASH_COMMAND
   cmd=${cmd//\\/\\\\}
   cmd=${cmd//;/\\x3b}
   printf '\e]633;E;%s\a' "$cmd"

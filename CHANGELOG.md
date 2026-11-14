@@ -14,6 +14,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   a program that draws its frames as synchronized output (mode 2026), such as
   Claude Code, is shown a whole frame at a time, never half of one.
 
+### Fixed
+
+- A console's bash marks each command with its text even when its history
+  has nothing (a profile that turns history off; the first command on
+  GitHub's Ubuntu 26.04 runners): the text was empty, now it is the command
+  being run.
+
 ## [1.13.2] - 2026-11-11
 
 ### Fixed
