@@ -200,6 +200,10 @@ export interface FolioBridge {
   startup(): Promise<{ tabs: RestoredTab[]; groups: GroupData[]; active: number | null; locale: string; shared: string; i18n: I18nState; welcome: boolean }>
   /** The window has its tabs back: what the command line asked beyond files comes now. */
   launched(): void
+  /** The shell terminal runs and takes pasted text (its local API). */
+  shellPresent(): Promise<boolean>
+  /** A text pasted into the agent's pane of a repository in shell, without Enter. */
+  shellPaste(repo: string, text: string): Promise<{ ok: true; agent?: string } | { error: 'none' | 'no-pane' }>
   /** The welcome document, read-only (ADR-005). */
   openWelcome(): Promise<OpenResult>
   onWelcome: Listener

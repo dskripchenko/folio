@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- The shell terminal (github.com/dskripchenko/shell), when it runs: a
+  folder's or a project's menu opens a tab in shell there; the review's
+  comments go to the agent's pane of the repository in shell (pasted, not
+  sent: Enter is pressed there); a review an agent waits for over MCP shows
+  on shell's tabs of the repository until it is answered. shell is found by
+  its presence file (the user's own, of a live process, a local address) and
+  asked over its local API with its token.
+
 ## [1.14.0] - 2026-11-14
 
 ### Added

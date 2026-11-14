@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('folio', {
   platform: process.platform,
   startup: () => ipcRenderer.invoke('app:startup'),
   launched: () => ipcRenderer.send('app:launched'),
+  shellPresent: () => ipcRenderer.invoke('shell:present'),
+  shellPaste: (repo: string, text: string) => ipcRenderer.invoke('shell:paste', repo, text),
   openDialog: () => ipcRenderer.invoke('doc:open-dialog'),
   open: (path: string) => ipcRenderer.invoke('doc:open', path),
   openUrl: (url: string) => ipcRenderer.invoke('doc:open-url', url),
