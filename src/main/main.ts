@@ -46,6 +46,7 @@ import { Consent } from './consent'
 import { dataDir } from './dataDir'
 import { documentOfUrl, DocumentError, launchRequest, openDocument, type LaunchRequest, type OpenedDocument } from './documents'
 import { CAPABILITIES, presencePath, removePresence, writePresence } from './presence'
+import { askShell, findShell } from './shellLink'
 import { DIAGRAM_SYNTAX, formatByName, isMedia, MARKDOWN_EXT, OPENABLE_EXT, opensInFolio } from './formats'
 import { gateNetwork, type NetworkGate } from './network'
 import { handleScheme, registerScheme } from './protocol'
@@ -1348,6 +1349,32 @@ ipcMain.handle('image:save', (_e, note: unknown, name: unknown, type: unknown, b
   })
 })
 
+/** The shell terminal, when it runs (shellLink.ts): looked for at each use, it may have started or ended since. */
+const shellOf = () => findShell({ env: process.env, platform: process.platform, uid: process.getuid?.() })
+
+/** "Open a tab in shell" for a folder's menu, when shell runs. */
+function shellTabItem(dir: string): Electron.MenuItemConstructorOptions[] {
+  const link = shellOf()
+  if (!link?.capabilities.includes('open-tab')) return []
+  return [{ label: L().shellHere, click: () => void askShell(link, '/api/open-tab', { cwd: dir }) }]
+}
+
+/** A review waiting for the person (an agent asked over MCP), shown on shell's tabs of the repository; or no longer. */
+function tellShellReview(spec: ChangeSpec, state: 'waiting' | 'none', message?: string): void {
+  const link = shellOf()
+  if (!link?.capabilities.includes('review')) return
+  void askShell(link, '/api/review', { repo: spec.kind === 'worktree' ? spec.path : spec.repo, state, ...(message ? { message } : {}) })
+}
+
+ipcMain.handle('shell:present', () => !!shellOf()?.capabilities.includes('paste'))
+ipcMain.handle('shell:paste', async (_e, repo: unknown, text: unknown) => {
+  const link = shellOf()
+  if (!link || typeof repo !== 'string' || typeof text !== 'string') return { error: 'none' }
+  const r = await askShell(link, '/api/paste', { repo, text })
+  if (r.status === 200) return { ok: true, ...(typeof r.body?.agent === 'string' ? { agent: r.body.agent } : {}) }
+  return { error: r.status === 404 ? 'no-pane' : 'none' }
+})
+
 /** A file chosen in the tree to compare another with ("Select for compare", as in VS Code). */
 let compareFrom: string | null = null
 
@@ -1367,6 +1394,7 @@ ipcMain.on('tree:menu', (_e, root: unknown, rel: unknown) => {
     { type: 'separator' },
     { label: folder ? L().exportFolderPdf : L().exportPdf, click: () => send(folder ? 'menu:export-folder' : 'menu:export-file', file) },
     { label: L().consoleHere, click: () => send('menu:console', folder ? file : dirname(file)) },
+    ...shellTabItem(folder ? file : dirname(file)),
     { label: revealLabel(), click: () => shell.showItemInFolder(file) },
     // Two files compared: one chosen first, the other compared with it.
     ...(folder
@@ -1418,6 +1446,7 @@ ipcMain.on('ws:project-menu', (_e, id: unknown) => {
     { type: 'separator' },
     { label: L().exportFolderPdf, click: () => send('menu:export-folder', project.path) },
     { label: L().consoleHere, click: () => send('menu:console', project.path) },
+    ...shellTabItem(project.path),
     { label: revealLabel(), click: () => void shell.openPath(project.path) },
     {
       label: L().remove,
@@ -1794,6 +1823,7 @@ const mcpTools = registerReview({
       const id = ++askSeq
       const finish = (a: McpAnswer) => {
         if (!asks.delete(id)) return
+        tellShellReview(spec, 'none')
         signal.removeEventListener('abort', gone)
         win?.removeListener('closed', closed)
         resolve(a)
@@ -1808,6 +1838,7 @@ const mcpTools = registerReview({
       signal.addEventListener('abort', gone)
       win.once('closed', closed)
       send('mcp:ask', { id, spec, message })
+      tellShellReview(spec, 'waiting', message)
       if (win.isMinimized()) win.restore()
       // Under test the window is not brought forward (out of the way of the person at the machine).
       if (!underTest) win.show()

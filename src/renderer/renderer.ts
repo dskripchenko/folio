@@ -1918,6 +1918,8 @@ function openReview(spec: ChangeSpec, focus = true, look: Partial<Pick<Tab, 'col
     consoles: () => consolePanel.targets(),
     paste: (id, text) => consolePanel.pasteTo(id, text),
     openConsole: (cwd) => void consolePanel.open(cwd),
+    shellPresent: () => folio.shellPresent(),
+    pasteShell: (repo, text) => folio.shellPaste(repo, text),
   })
   tab = makeTab({ path: null, text: '', saved: '', review, ...look })
   void review.refresh()

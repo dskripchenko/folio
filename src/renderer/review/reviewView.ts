@@ -38,6 +38,9 @@ export interface ReviewDeps {
   consoles: () => { id: number; label: string; cwd: string; running: string | null }[]
   paste: (id: number, text: string) => 'ok' | 'gone' | 'unsafe'
   openConsole: (cwd: string) => void
+  /** The shell terminal, when it runs: the text pasted into the agent's pane of the repository there. */
+  shellPresent: () => Promise<boolean>
+  pasteShell: (repo: string, text: string) => Promise<{ ok: true; agent?: string } | { error: 'none' | 'no-pane' }>
 }
 
 interface FileView {
@@ -1093,9 +1096,27 @@ export class ReviewView {
       this.deps.openConsole(rootOf(this.spec))
       setTimeout(fill, 600)
     })
+    const shellBtn = button(t.toShell, 'review-send-shell', () => {
+      shellBtn.disabled = true
+      void this.deps.pasteShell(root, area.value).then((r) => {
+        shellBtn.disabled = false
+        if ('error' in r) {
+          hint.textContent = r.error === 'no-pane' ? t.shellNoPane : t.noConsoles
+          if (r.error === 'none') shellBtn.hidden = true
+          return
+        }
+        this.markSent(root, comments)
+        close()
+      })
+    })
+    shellBtn.hidden = true
+    void this.deps.shellPresent().then((yes) => {
+      shellBtn.hidden = !yes
+      if (yes) shellBtn.title = t.toShellHint
+    })
     const copyBtn = button(t.copy, 'review-send-copy', () => void navigator.clipboard.writeText(area.value).then(() => (hint.textContent = t.copied)))
     const cancel = button(t.cancel, 'review-send-cancel', close)
-    row.append(select, openBtn, pasteBtn, copyBtn, cancel)
+    row.append(select, openBtn, pasteBtn, shellBtn, copyBtn, cancel)
     box.append(title, area, hint, row)
     dialog.append(box)
     dialog.addEventListener('mousedown', (e) => e.target === dialog && close())
